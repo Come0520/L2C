@@ -21,7 +21,7 @@ export default defineConfig({
     /* Shared settings for all the projects below. See https://playwright.dev/docs/test-use-options. */
     use: {
         /* Base URL to use in actions like `await page.goto('/')`. */
-        baseURL: 'http://localhost:3001',
+        baseURL: 'http://localhost:3000',
 
         /* Collect trace on retry failed test. See https://playwright.dev/docs/trace-viewer */
         trace: 'on-first-retry',
@@ -42,7 +42,7 @@ export default defineConfig({
             name: 'api',
             testMatch: /mobile-api-.*\.spec\.ts/,
             use: {
-                baseURL: 'http://localhost:3001',
+                baseURL: 'http://localhost:3000',
             },
         },
         {
@@ -88,11 +88,11 @@ export default defineConfig({
         },
     ],
 
-    /* 在测试前自动启动 dev server */
-    webServer: {
-        command: 'pnpm dev -p 3001',
-        url: 'http://localhost:3001',
-        reuseExistingServer: !process.env.CI,
-        timeout: 300 * 1000, // 5 分钟启动超时
-    },
+    /* 在测试前自动启动 dev server (手动启动以查看日志) */
+    // webServer: {
+    //     command: 'pnpm dev',
+    //     url: 'http://localhost:3000',
+    //     reuseExistingServer: !process.env.CI,
+    //     timeout: 300 * 1000,
+    // },
 });

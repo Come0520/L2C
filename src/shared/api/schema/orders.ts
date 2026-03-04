@@ -152,6 +152,7 @@ export const orderItems = pgTable(
     height: decimal('height', { precision: 10, scale: 2 }),
 
     unitPrice: decimal('unit_price', { precision: 10, scale: 2 }).notNull(),
+    costPrice: decimal('cost_price', { precision: 10, scale: 2 }).notNull(),
     subtotal: decimal('subtotal', { precision: 12, scale: 2 }).notNull(),
 
     // 拆单关联 (Split logic)

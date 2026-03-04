@@ -316,6 +316,13 @@
       "when": 1772628803796,
       "tag": "0044_yielding_payback",
       "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1772629516584,
+      "tag": "0045_light_ricochet",
+      "breakpoints": true
     }
   ]
 }

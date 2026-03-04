@@ -326,6 +326,7 @@ export class QuoteLifecycleService {
         width: qItem.width?.toString(),
         height: qItem.height?.toString(),
         unitPrice: qItem.unitPrice.toString(),
+        costPrice: qItem.costPrice?.toString() || '0',
         subtotal: qItem.subtotal.toString(),
         status: 'PENDING',
         sortOrder: qItem.sortOrder,

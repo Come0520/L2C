@@ -144,6 +144,7 @@ export class OrderService {
           width: item.width,
           height: item.height,
           unitPrice: item.unitPrice,
+          costPrice: item.costPrice || '0',
           subtotal: item.subtotal,
           status: 'PENDING' as const,
           createdBy: userId,

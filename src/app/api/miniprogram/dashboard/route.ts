@@ -11,12 +11,18 @@ import { quotes, customers, salesTargets } from '@/shared/api/schema';
 import { eq, and, count, sql } from 'drizzle-orm';
 import { getMiniprogramUser } from '../auth-utils';
 import { CacheService } from '@/shared/services/miniprogram/cache.service';
+import { isDevMockUser, MOCK_DASHBOARD } from '../__mocks__';
 
 export async function GET(request: NextRequest) {
   try {
     const user = await getMiniprogramUser(request);
     if (!user || !user.tenantId) {
       return apiError('未授权', 401);
+    }
+
+    // 开发环境 mock 用户：直接返回模拟数据，不查数据库
+    if (isDevMockUser(user.id, user.tenantId)) {
+      return apiSuccess(MOCK_DASHBOARD);
     }
 
     const data: Record<string, unknown> = {

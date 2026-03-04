@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
+import { PhoneInput } from '@/components/ui/phone-input';
 import { Label } from '@/shared/ui/label';
 import { Textarea } from '@/shared/ui/textarea';
 import { Alert, AlertDescription } from '@/shared/ui/alert';
@@ -283,13 +284,11 @@ export default function TenantRegisterPage() {
                 <Label htmlFor="phone" className="text-foreground">
                   手机号 <span className="text-red-500">*</span>
                 </Label>
-                <Input
+                <PhoneInput
                   id="phone"
-                  type="tel"
                   placeholder="11位手机号"
                   value={formData.phone}
-                  onChange={(e) => handleChange('phone', e.target.value)}
-                  required
+                  onChange={(val) => handleChange('phone', val || '')}
                   className="input-base"
                 />
               </div>

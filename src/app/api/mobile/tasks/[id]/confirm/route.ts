@@ -8,7 +8,7 @@ import { NextRequest } from 'next/server';
 import { db } from '@/shared/api/db';
 import { installTasks } from '@/shared/api/schema';
 import { eq, and } from 'drizzle-orm';
-import { apiSuccess, apiError, apiNotFound } from '@/shared/lib/api-response';
+import { apiSuccess, apiNotFound, apiBadRequest, apiServerError } from '@/shared/lib/api-response';
 import { createLogger } from '@/shared/lib/logger';
 import { authenticateMobile } from '@/shared/middleware/mobile-auth';
 import { AuditService } from '@/shared/services/audit-service';
@@ -43,11 +43,11 @@ async function confirmHandler(request: NextRequest, { params }: RouteParams) {
       const body = await request.json();
       const result = ConfirmSchema.safeParse(body);
       if (!result.success) {
-        return apiError(result.error.issues[0].message, 400);
+        return apiBadRequest(result.error.issues[0].message);
       }
       validatedData = result.data;
     } catch {
-      return apiError('请求体格式错误', 400);
+      return apiBadRequest('请求体格式错误');
     }
 
     const { signatureUrl } = validatedData;
@@ -69,12 +69,12 @@ async function confirmHandler(request: NextRequest, { params }: RouteParams) {
     // 4. 状态校验：只允许 PENDING_CONFIRM 或 COMPLETED（未签字）状态确认
     const allowedStatuses = ['PENDING_CONFIRM', 'COMPLETED'];
     if (!allowedStatuses.includes(task.status)) {
-      return apiError(`当前状态 ${task.status} 不允许签字确认`, 400);
+      return apiBadRequest(`当前状态 ${task.status} 不允许签字确认`);
     }
 
     // 防止重复签字
     if (task.customerSignatureUrl) {
-      return apiError('该任务已完成签字确认，请勿重复操作', 400);
+      return apiBadRequest('该任务已完成签字确认，请勿重复操作');
     }
 
     // 5. 更新签字信息
@@ -113,7 +113,7 @@ async function confirmHandler(request: NextRequest, { params }: RouteParams) {
       { error: error instanceof Error ? error.message : String(error) },
       error
     );
-    return apiError('签字确认失败，请稍后重试', 500);
+    return apiServerError('签字确认失败，请稍后重试');
   }
 }
 

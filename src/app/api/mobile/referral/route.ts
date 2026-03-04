@@ -9,7 +9,7 @@ import { db } from '@/shared/api/db';
 import { customers } from '@/shared/api/schema';
 import { eq, and } from 'drizzle-orm';
 import { authenticateMobile, requireCustomer } from '@/shared/middleware/mobile-auth';
-import { apiSuccess, apiError } from '@/shared/lib/api-response';
+import { apiSuccess, apiServerError, apiNotFound } from '@/shared/lib/api-response';
 import { createLogger } from '@/shared/lib/logger';
 
 /**
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
     });
 
     if (!customer) {
-      return apiError('客户信息不存在', 404);
+      return apiNotFound('客户信息不存在');
     }
 
     // 4. 生成推荐码（基于客户ID的短码）
@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     log.error('推荐码获取错误', {}, error);
-    return apiError('获取推荐码失败', 500);
+    return apiServerError('获取推荐码失败');
   }
 }
 

@@ -58,10 +58,6 @@ const createProductActionInternal = createSafeAction(
         processingCost: data.processingCost.toString(),
         lossRate: data.lossRate.toString(),
         retailPrice: data.retailPrice.toString(),
-        // [Refactor] 移除渠道相关字段
-        // channelPriceMode: data.channelPriceMode,
-        // channelPrice: data.channelPrice.toString(),
-        // channelDiscountRate: data.channelDiscountRate.toString(),
         floorPrice: data.floorPrice.toString(),
 
         isToBEnabled: data.isToBEnabled,
@@ -126,10 +122,6 @@ const updateProductActionInternal = createSafeAction(
         processingCost: updates.processingCost?.toString(),
         lossRate: updates.lossRate?.toString(),
         retailPrice: updates.retailPrice?.toString(),
-        // [Refactor] 移除渠道相关字段
-        // channelPriceMode: updates.channelPriceMode,
-        // channelPrice: updates.channelPrice?.toString(),
-        // channelDiscountRate: updates.channelDiscountRate?.toString(),
         floorPrice: updates.floorPrice?.toString(),
 
         isToBEnabled: updates.isToBEnabled,

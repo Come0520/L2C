@@ -1,1 +1,185 @@
-"use strict";require("../sub-vendors.js");(wx["webpackJsonp"]=wx["webpackJsonp"]||[]).push([[3192],{9464:function(s,e,a){var c=a(8870),t=a(5544),i=a(118),l=a(758),r=a.n(l),n=a(6540),o=a(4848);function h(){var s=(0,n.useState)([{id:1,type:"article",title:"2026 \u7a97\u5e18\u6d41\u884c\u8d8b\u52bf\u5927\u76d8\u70b9",views:1205,shares:45,cover:"https://via.placeholder.com/300x200"},{id:2,type:"case",title:"\u661f\u6cb3\u6e7e 180\u5e73\u6781\u7b80\u539f\u6728\u98ce\u5168\u6848",views:890,shares:32,cover:"https://via.placeholder.com/300x200"},{id:3,type:"poster",title:"\u56fd\u5e86\u5927\u4fc3\u9650\u91cf\u6d77\u62a5",views:500,shares:120,cover:"https://via.placeholder.com/300x400"}]),e=(0,t.A)(s,1),a=e[0],c=function(s){r().showActionSheet({itemList:["\u53d1\u9001\u7ed9\u670b\u53cb (\u8ffd\u8e2a\u7ebf\u7d22)","\u751f\u6210\u4e13\u5c5e\u6d77\u62a5"],success:function(s){0===s.tapIndex?r().showToast({title:"\u8bf7\u70b9\u51fb\u53f3\u4e0a\u89d2\u8f6c\u53d1",icon:"none"}):(r().showLoading({title:"\u6d77\u62a5\u751f\u6210\u4e2d..."}),setTimeout(function(){r().hideLoading(),r().showToast({title:"\u5df2\u4fdd\u5b58\u81f3\u76f8\u518c",icon:"success"})},1e3))}})};return(0,o.jsxs)(i.Ss,{className:"share-hub-page",children:[(0,o.jsxs)(i.Ss,{className:"header-stats",children:[(0,o.jsxs)(i.Ss,{className:"stat-box",children:[(0,o.jsx)(i.EY,{className:"val",children:"128"}),(0,o.jsx)(i.EY,{className:"lbl",children:"\u4eca\u65e5\u5f15\u6d41"})]}),(0,o.jsxs)(i.Ss,{className:"stat-box",children:[(0,o.jsx)(i.EY,{className:"val",children:"1,509"}),(0,o.jsx)(i.EY,{className:"lbl",children:"\u7d2f\u8ba1\u5f15\u6d41"})]}),(0,o.jsxs)(i.Ss,{className:"stat-box",children:[(0,o.jsx)(i.EY,{className:"val",children:"42"}),(0,o.jsx)(i.EY,{className:"lbl",children:"\u6536\u83b7\u7ebf\u7d22"})]})]}),(0,o.jsx)(i.BM,{scrollY:!0,className:"material-list",children:a.map(function(s){return(0,o.jsxs)(i.Ss,{className:"material-card card",children:[(0,o.jsx)(i._V,{src:s.cover,mode:"aspectFill",className:"cover-img"}),(0,o.jsxs)(i.Ss,{className:"info-area",children:[(0,o.jsxs)(i.Ss,{children:[(0,o.jsx)(i.EY,{className:"title",children:s.title}),(0,o.jsxs)(i.Ss,{className:"metrics",children:[(0,o.jsx)(i.EY,{className:"tag",children:"article"===s.type?"\u6587\u7ae0":"case"===s.type?"\u6848\u4f8b":"\u6d77\u62a5"}),(0,o.jsxs)(i.EY,{className:"num",children:[s.views," \u6d4f\u89c8 \xb7 ",s.shares," \u8f6c\u53d1"]})]})]}),(0,o.jsx)(i.$n,{className:"btn-share",onClick:function(){return c(s)},children:"\u5206\u4eab\u62d3\u5ba2"})]})]},s.id)})})]})}var d={navigationBarTitleText:"\u5206\u4eab\u4e2d\u5fc3",backgroundColor:"#F2F2F7"},m=(0,c.eU)(h,"packageSales/share-hub/index",{root:{cn:[]}},d||{});h&&h.behaviors&&(m.behaviors=(m.behaviors||[]).concat(h.behaviors));Page(m)}},function(s){var e=function(e){return s(s.s=e)};s.O(0,[6907,8096],function(){return e(9464)});s.O()}]);
+"use strict";require("../sub-vendors.js");
+(wx["webpackJsonp"] = wx["webpackJsonp"] || []).push([["packageSales/share-hub/index"],{
+
+/***/ "./node_modules/@tarojs/taro-loader/lib/entry-cache.js?name=packageSales/share-hub/index!./src/packageSales/share-hub/index.tsx":
+/*!**************************************************************************************************************************************!*\
+  !*** ./node_modules/@tarojs/taro-loader/lib/entry-cache.js?name=packageSales/share-hub/index!./src/packageSales/share-hub/index.tsx ***!
+  \**************************************************************************************************************************************/
+/***/ (function(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": function() { return /* binding */ ShareHubPage; }
+/* harmony export */ });
+/* harmony import */ var C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/slicedToArray.js */ "./node_modules/@babel/runtime/helpers/esm/slicedToArray.js");
+/* harmony import */ var _tarojs_components__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @tarojs/components */ "./node_modules/@tarojs/plugin-platform-weapp/dist/components-react.js");
+/* harmony import */ var _tarojs_taro__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @tarojs/taro */ "webpack/container/remote/@tarojs/taro");
+/* harmony import */ var _tarojs_taro__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(_tarojs_taro__WEBPACK_IMPORTED_MODULE_2__);
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! react */ "webpack/container/remote/react");
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_3___default = /*#__PURE__*/__webpack_require__.n(react__WEBPACK_IMPORTED_MODULE_3__);
+/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! react/jsx-runtime */ "webpack/container/remote/react/jsx-runtime");
+/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4___default = /*#__PURE__*/__webpack_require__.n(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__);
+
+
+
+
+
+
+function ShareHubPage() {
+  var _useState = (0,react__WEBPACK_IMPORTED_MODULE_3__.useState)([{
+      id: 1,
+      type: 'article',
+      title: '2026 窗帘流行趋势大盘点',
+      views: 1205,
+      shares: 45,
+      cover: 'https://via.placeholder.com/300x200'
+    }, {
+      id: 2,
+      type: 'case',
+      title: '星河湾 180平极简原木风全案',
+      views: 890,
+      shares: 32,
+      cover: 'https://via.placeholder.com/300x200'
+    }, {
+      id: 3,
+      type: 'poster',
+      title: '国庆大促限量海报',
+      views: 500,
+      shares: 120,
+      cover: 'https://via.placeholder.com/300x400'
+    }]),
+    _useState2 = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_0__["default"])(_useState, 1),
+    materials = _useState2[0];
+  var handleShare = function handleShare(_item) {
+    _tarojs_taro__WEBPACK_IMPORTED_MODULE_2___default().showActionSheet({
+      itemList: ['发送给朋友 (追踪线索)', '生成专属海报'],
+      success: function success(res) {
+        if (res.tapIndex === 0) {
+          _tarojs_taro__WEBPACK_IMPORTED_MODULE_2___default().showToast({
+            title: '请点击右上角转发',
+            icon: 'none'
+          });
+        } else {
+          _tarojs_taro__WEBPACK_IMPORTED_MODULE_2___default().showLoading({
+            title: '海报生成中...'
+          });
+          setTimeout(function () {
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_2___default().hideLoading();
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_2___default().showToast({
+              title: '已保存至相册',
+              icon: 'success'
+            });
+          }, 1000);
+        }
+      }
+    });
+  };
+  return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_1__.View, {
+    className: "share-hub-page",
+    children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_1__.View, {
+      className: "header-stats",
+      children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_1__.View, {
+        className: "stat-box",
+        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_1__.Text, {
+          className: "val",
+          children: "128"
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_1__.Text, {
+          className: "lbl",
+          children: "\u4ECA\u65E5\u5F15\u6D41"
+        })]
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_1__.View, {
+        className: "stat-box",
+        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_1__.Text, {
+          className: "val",
+          children: "1,509"
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_1__.Text, {
+          className: "lbl",
+          children: "\u7D2F\u8BA1\u5F15\u6D41"
+        })]
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_1__.View, {
+        className: "stat-box",
+        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_1__.Text, {
+          className: "val",
+          children: "42"
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_1__.Text, {
+          className: "lbl",
+          children: "\u6536\u83B7\u7EBF\u7D22"
+        })]
+      })]
+    }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_1__.ScrollView, {
+      scrollY: true,
+      className: "material-list",
+      children: materials.map(function (item) {
+        return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_1__.View, {
+          className: "material-card card",
+          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_1__.Image, {
+            src: item.cover,
+            mode: "aspectFill",
+            className: "cover-img"
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_1__.View, {
+            className: "info-area",
+            children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_1__.View, {
+              children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_1__.Text, {
+                className: "title",
+                children: item.title
+              }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_1__.View, {
+                className: "metrics",
+                children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_1__.Text, {
+                  className: "tag",
+                  children: item.type === 'article' ? '文章' : item.type === 'case' ? '案例' : '海报'
+                }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_1__.Text, {
+                  className: "num",
+                  children: [item.views, " \u6D4F\u89C8 \xB7 ", item.shares, " \u8F6C\u53D1"]
+                })]
+              })]
+            }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_4__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_1__.Button, {
+              className: "btn-share",
+              onClick: function onClick() {
+                return handleShare(item);
+              },
+              children: "\u5206\u4EAB\u62D3\u5BA2"
+            })]
+          })]
+        }, item.id);
+      })
+    })]
+  });
+}
+
+/***/ }),
+
+/***/ "./src/packageSales/share-hub/index.tsx":
+/*!**********************************************!*\
+  !*** ./src/packageSales/share-hub/index.tsx ***!
+  \**********************************************/
+/***/ (function(__unused_webpack_module, __unused_webpack___webpack_exports__, __webpack_require__) {
+
+/* harmony import */ var _tarojs_runtime__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @tarojs/runtime */ "webpack/container/remote/@tarojs/runtime");
+/* harmony import */ var _tarojs_runtime__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_tarojs_runtime__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _node_modules_tarojs_taro_loader_lib_entry_cache_js_name_packageSales_share_hub_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! !!../../../node_modules/@tarojs/taro-loader/lib/entry-cache.js?name=packageSales/share-hub/index!./index.tsx */ "./node_modules/@tarojs/taro-loader/lib/entry-cache.js?name=packageSales/share-hub/index!./src/packageSales/share-hub/index.tsx");
+
+
+var config = {"navigationBarTitleText":"分享中心","backgroundColor":"#F2F2F7"};
+
+
+
+var taroOption = (0,_tarojs_runtime__WEBPACK_IMPORTED_MODULE_0__.createPageConfig)(_node_modules_tarojs_taro_loader_lib_entry_cache_js_name_packageSales_share_hub_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"], 'packageSales/share-hub/index', {root:{cn:[]}}, config || {})
+if (_node_modules_tarojs_taro_loader_lib_entry_cache_js_name_packageSales_share_hub_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"] && _node_modules_tarojs_taro_loader_lib_entry_cache_js_name_packageSales_share_hub_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"].behaviors) {
+  taroOption.behaviors = (taroOption.behaviors || []).concat(_node_modules_tarojs_taro_loader_lib_entry_cache_js_name_packageSales_share_hub_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"].behaviors)
+}
+var inst = Page(taroOption)
+
+
+
+/* unused harmony default export */ var __WEBPACK_DEFAULT_EXPORT__ = (_node_modules_tarojs_taro_loader_lib_entry_cache_js_name_packageSales_share_hub_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"]);
+
+
+/***/ })
+
+},
+/******/ function(__webpack_require__) { // webpackRuntimeModules
+/******/ var __webpack_exec__ = function(moduleId) { return __webpack_require__(__webpack_require__.s = moduleId); }
+/******/ __webpack_require__.O(0, ["taro","vendors","common"], function() { return __webpack_exec__("./src/packageSales/share-hub/index.tsx"); });
+/******/ var __webpack_exports__ = __webpack_require__.O();
+/******/ }
+]);
+//# sourceMappingURL=index.js.map

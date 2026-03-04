@@ -24,35 +24,35 @@ export default function Acceptance() {
     })
 
     useEffect(() => {
+        const initCanvas = () => {
+            Taro.nextTick(() => {
+                Taro.createSelectorQuery()
+                    .select(`#${canvasId}`)
+                    .fields({ node: true, size: true })
+                    .exec((res) => {
+                        if (res && res[0] && res[0].node) {
+                            const canvas = res[0].node
+                            const ctx = canvas.getContext('2d')
+
+                            // Set true size
+                            canvas.width = res[0].width * dpr
+                            canvas.height = res[0].height * dpr
+
+                            ctx.scale(dpr, dpr)
+                            ctx.lineCap = 'round'
+                            ctx.lineJoin = 'round'
+                            ctx.lineWidth = 4
+                            ctx.strokeStyle = '#1D1D1F' // $text-title
+
+                            ctxRef.current = ctx
+                            canvasNodeRef.current = canvas
+                        }
+                    })
+            })
+        }
+
         initCanvas()
-    }, [])
-
-    const initCanvas = () => {
-        Taro.nextTick(() => {
-            Taro.createSelectorQuery()
-                .select(`#${canvasId}`)
-                .fields({ node: true, size: true })
-                .exec((res) => {
-                    if (res && res[0] && res[0].node) {
-                        const canvas = res[0].node
-                        const ctx = canvas.getContext('2d')
-
-                        // Set true size
-                        canvas.width = res[0].width * dpr
-                        canvas.height = res[0].height * dpr
-
-                        ctx.scale(dpr, dpr)
-                        ctx.lineCap = 'round'
-                        ctx.lineJoin = 'round'
-                        ctx.lineWidth = 4
-                        ctx.strokeStyle = '#1D1D1F' // $text-title
-
-                        ctxRef.current = ctx
-                        canvasNodeRef.current = canvas
-                    }
-                })
-        })
-    }
+    }, [dpr])
 
     // --- 照片上传 ---
     const handleChooseImage = () => {

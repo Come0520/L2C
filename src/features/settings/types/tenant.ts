@@ -18,6 +18,8 @@ export interface TenantInfo {
   slogan: string | null;
   /** 门店详细地址，用于落地页和预约 */
   detailAddress: string | null;
+  /** 租户所属地区（省市级别） */
+  region: string | null;
   /** 客服微信号，用于小程序引导用户联系销售 */
   contactWechat: string | null;
   /** 落地页封面图/背景图 URL */

@@ -2,6 +2,8 @@
 
 import { SignJWT, jwtVerify, JWTPayload } from 'jose';
 import { env } from '@/shared/config/env';
+import { SystemRoleType } from '@/shared/types/roles';
+import { logger } from '@/shared/lib/logger';
 
 /**
  * JWT Token 有效期配置
@@ -10,48 +12,16 @@ const ACCESS_TOKEN_EXPIRY = '24h'; // 访问令牌：24小时
 const REFRESH_TOKEN_EXPIRY = '7d'; // 刷新令牌：7天
 
 /**
- * 移动端用户角色
- * 统一管理角色定义，避免循环依赖
+ * 移动端/小程序端 通用 Token 载荷接口
  */
-export type MobileRole = 'WORKER' | 'SALES' | 'ADMIN' | 'PURCHASER' | 'CUSTOMER';
-
-/**
- * 移动端 Token 载荷接口
- */
-export interface MobileTokenPayload extends JWTPayload {
-  userId: string;
-  tenantId: string;
-  phone: string;
-  role: MobileRole;
-  type: 'access' | 'refresh' | 'pre-auth';
-}
-
-// ... (existing getSecretKey)
-
-/**
- * 生成预授权令牌 (Pre-Auth Token) for MFA
- * 有效期：5分钟
- */
-export async function generatePreAuthToken(
-  userId: string,
-  tenantId: string,
-  phone: string,
-  role: string
-): Promise<string> {
-  const token = await new SignJWT({
-    userId,
-    tenantId,
-    phone,
-    role: role as MobileRole,
-    type: 'pre-auth',
-  })
-    .setProtectedHeader({ alg: 'HS256' })
-    .setIssuedAt()
-    .setExpirationTime('5m')
-    .setIssuer('l2c-mobile')
-    .sign(getSecretKey());
-
-  return token;
+export interface AppTokenPayload extends JWTPayload {
+  userId?: string;
+  tenantId?: string;
+  phone?: string;
+  role?: SystemRoleType | string;
+  type: string; // 'access' | 'refresh' | 'pre-auth' | 'miniprogram' | 'REGISTER' | 'TEMP_LOGIN'
+  openId?: string;
+  unionId?: string;
 }
 
 /**
@@ -60,7 +30,7 @@ export async function generatePreAuthToken(
  * @throws 如果 AUTH_SECRET 未设置或长度不足 32 字符
  */
 function getSecretKey(): Uint8Array {
-  const secret = env.AUTH_SECRET;
+  const secret = env.AUTH_SECRET || process.env.AUTH_SECRET;
   if (!secret || secret.length < 32) {
     throw new Error(
       '安全配置错误: AUTH_SECRET 环境变量未设置或长度不足 32 字符。' +
@@ -70,26 +40,41 @@ function getSecretKey(): Uint8Array {
   return new TextEncoder().encode(secret);
 }
 
-/**
- * 生成访问令牌 (Access Token)
- * @param userId 用户ID
- * @param tenantId 租户ID
- * @param phone 手机号
- * @param role 用户角色
- */
+// ==========================================
+// 移动端专用 Token (Issuer: l2c-mobile)
+// ==========================================
+
+export async function generatePreAuthToken(
+  userId: string,
+  tenantId: string,
+  phone: string,
+  role: string
+): Promise<string> {
+  return await new SignJWT({
+    userId,
+    tenantId,
+    phone,
+    role,
+    type: 'pre-auth',
+  })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime('5m')
+    .setIssuer('l2c-mobile')
+    .sign(getSecretKey());
+}
+
 export async function generateAccessToken(
   userId: string,
   tenantId: string,
   phone: string,
   role: string
 ): Promise<string> {
-  // 简单验证 role 是否合法，或者做转换
-  // 这里为了兼容性，暂时接受 string，但 Payload 需断言
-  const token = await new SignJWT({
+  return await new SignJWT({
     userId,
     tenantId,
     phone,
-    role: role as MobileRole,
+    role,
     type: 'access',
   })
     .setProtectedHeader({ alg: 'HS256' })
@@ -97,28 +82,19 @@ export async function generateAccessToken(
     .setExpirationTime(ACCESS_TOKEN_EXPIRY)
     .setIssuer('l2c-mobile')
     .sign(getSecretKey());
-
-  return token;
 }
 
-/**
- * 生成刷新令牌 (Refresh Token)
- * @param userId 用户ID
- * @param tenantId 租户ID
- * @param phone 手机号
- * @param role 用户角色 (刷新 Token 也包含 role 以便恢复)
- */
 export async function generateRefreshToken(
   userId: string,
   tenantId: string,
   phone: string,
   role: string
 ): Promise<string> {
-  const token = await new SignJWT({
+  return await new SignJWT({
     userId,
     tenantId,
     phone,
-    role: role as MobileRole,
+    role,
     type: 'refresh',
   })
     .setProtectedHeader({ alg: 'HS256' })
@@ -126,39 +102,125 @@ export async function generateRefreshToken(
     .setExpirationTime(REFRESH_TOKEN_EXPIRY)
     .setIssuer('l2c-mobile')
     .sign(getSecretKey());
-
-  return token;
 }
 
-/**
- * 验证并解析 Token
- * @param token JWT Token
- * @returns 解析后的载荷，失败返回 null
- */
-export async function verifyToken(token: string): Promise<MobileTokenPayload | null> {
+export async function verifyToken(token: string): Promise<AppTokenPayload | null> {
   try {
     const { payload } = await jwtVerify(token, getSecretKey(), {
       issuer: 'l2c-mobile',
     });
-
-    return payload as MobileTokenPayload;
+    return payload as AppTokenPayload;
   } catch {
     return null;
   }
 }
 
-/**
- * 从 Authorization Header 提取并验证 Token
- * @param authHeader Authorization 请求头
- * @returns 解析后的载荷，失败返回 null
- */
 export async function extractAndVerifyToken(
   authHeader: string | null
-): Promise<MobileTokenPayload | null> {
+): Promise<AppTokenPayload | null> {
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return null;
   }
-
-  const token = authHeader.slice(7); // 移除 "Bearer " 前缀
+  const token = authHeader.slice(7);
   return verifyToken(token);
+}
+
+// ==========================================
+// 小程序端专用 Token (Issuer: l2c-miniprogram)
+// ==========================================
+
+export async function generateMiniprogramToken(
+  userId: string,
+  tenantId: string,
+  role?: string,
+  options?: {
+    type?: string;
+    expiresIn?: string;
+    phone?: string;
+  }
+): Promise<string> {
+  const type = options?.type ?? 'miniprogram';
+  const expiresIn = options?.expiresIn ?? '7d';
+
+  const token = await new SignJWT({
+    userId,
+    tenantId,
+    role,
+    type,
+    phone: options?.phone,
+  })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime(expiresIn)
+    .setIssuer('l2c-miniprogram')
+    .sign(getSecretKey());
+
+  logger.info('[Auth] Miniprogram Token 已签发', {
+    route: 'shared/lib/jwt',
+    userId,
+    tenantId,
+    type,
+    role,
+    expiresIn,
+  });
+
+  return token;
+}
+
+export async function verifyMiniprogramToken(token: string): Promise<AppTokenPayload | null> {
+  try {
+    const { payload } = await jwtVerify(token, getSecretKey(), {
+      issuer: 'l2c-miniprogram',
+    });
+    return payload as AppTokenPayload;
+  } catch {
+    return null;
+  }
+}
+
+export async function generateRegisterToken(openId: string, unionId?: string): Promise<string> {
+  return new SignJWT({ openId, unionId, type: 'REGISTER' })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime('10m')
+    .setIssuer('l2c-miniprogram') // 明确 Issuer，防止跨平台 Token 混用
+    .sign(getSecretKey());
+}
+
+export async function verifyRegisterToken(
+  token: string
+): Promise<{ openId: string; unionId?: string } | null> {
+  try {
+    const { payload } = await jwtVerify(token, getSecretKey(), {
+      issuer: 'l2c-miniprogram', // 验证 Issuer，防止 Token 混用攻击
+    });
+    if (payload.type !== 'REGISTER' || !payload.openId) return null;
+    return {
+      openId: payload.openId as string,
+      unionId: payload.unionId as string | undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export async function generateTempLoginToken(userId: string): Promise<string> {
+  return new SignJWT({ userId, type: 'TEMP_LOGIN' })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime('10m')
+    .setIssuer('l2c-web') // 明确 Issuer，仅允许 Web 端使用
+    .sign(getSecretKey());
+}
+
+export async function verifyTempLoginToken(token: string): Promise<string | null> {
+  try {
+    const { payload } = await jwtVerify(token, getSecretKey(), {
+      issuer: 'l2c-web', // 验证 Issuer，防止其他平台 Token 被复用
+    });
+    if (payload.type !== 'TEMP_LOGIN' || !payload.userId) return null;
+    return payload.userId as string;
+  } catch {
+    return null;
+  }
 }

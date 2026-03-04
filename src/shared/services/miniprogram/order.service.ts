@@ -23,6 +23,8 @@ export interface GetOrdersParams {
   page: number;
   limit: number;
   cursor?: string;
+  /** 客户 ID（传入时强制过滤，用于 CUSTOMER 角色的数据隔离） */
+  customerId?: string;
 }
 
 /**
@@ -38,7 +40,7 @@ export class OrderService {
    * @returns 订单列表数据
    */
   static async getOrders(tenantId: string, params: GetOrdersParams) {
-    const { status, page, limit, cursor } = params;
+    const { status, page, limit, cursor, customerId } = params;
 
     const conditions = [eq(orders.tenantId, tenantId)];
 
@@ -49,6 +51,11 @@ export class OrderService {
     ) {
       // 避免使用 as any，直接断言为支持的联合类型或交由 Drizzle 推导
       conditions.push(eq(orders.status, status as (typeof VALID_STATUSES)[number]));
+    }
+
+    // 安全隔离：当传入 customerId 时（即 CUSTOMER 角色），强制将训单范围限定在自己的档案
+    if (customerId) {
+      conditions.push(eq(orders.customerId, customerId));
     }
 
     if (cursor) {

@@ -10,7 +10,7 @@ const log = createLogger('mobile:tasks:complete');
 import { db } from '@/shared/api/db';
 import { measureTasks, installTasks } from '@/shared/api/schema';
 import { eq, and } from 'drizzle-orm';
-import { apiSuccess, apiError, apiNotFound } from '@/shared/lib/api-response';
+import { apiSuccess, apiNotFound, apiBadRequest, apiServerError } from '@/shared/lib/api-response';
 import { authenticateMobile, requireWorker } from '@/shared/middleware/mobile-auth';
 import { z } from 'zod';
 import { AuditService } from '@/shared/services/audit-service';
@@ -64,11 +64,11 @@ async function completeHandler(
     const body = await request.json();
     const result = CompleteSchema.safeParse(body);
     if (!result.success) {
-      return apiError('输入校验失败: ' + result.error.issues.map((e) => e.message).join(', '), 400);
+      return apiBadRequest('输入校验失败: ' + result.error.issues.map((e) => e.message).join(', '));
     }
     validatedData = result.data;
   } catch {
-    return apiError('请求体格式错误', 400);
+    return apiBadRequest('请求体格式错误');
   }
 
   const { photos, remark, signatureUrl, issues } = validatedData;
@@ -115,7 +115,7 @@ async function completeHandler(
     const validStatus = ['PENDING_VISIT', 'IN_PROGRESS'];
     const statusToCheck = currentStatus || '';
     if (!validStatus.includes(statusToCheck)) {
-      return apiError(`当前状态 ${statusToCheck} 不允许提交完工`, 400);
+      return apiBadRequest(`当前状态 ${statusToCheck} 不允许提交完工`);
     }
 
     const now = new Date();
@@ -181,7 +181,7 @@ async function completeHandler(
       { taskId, error: error instanceof Error ? error.message : String(error) },
       error
     );
-    return apiError('提交完工失败，请稍后重试', 500);
+    return apiServerError('提交完工失败，请稍后重试');
   }
 }
 

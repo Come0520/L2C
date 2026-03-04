@@ -9,7 +9,7 @@ import { tenants, users } from '@/shared/api/schema';
 import { hash } from 'bcryptjs';
 import { nanoid } from 'nanoid';
 import { eq, or } from 'drizzle-orm';
-import { apiSuccess, apiError } from '@/shared/lib/api-response';
+import { apiSuccess, apiBadRequest, apiServerError } from '@/shared/lib/api-response';
 import { logger } from '@/shared/lib/logger';
 import { generateMiniprogramToken } from '../../auth-utils';
 import { AuditService } from '@/shared/services/audit-service';
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     // 1. Zod 安全校验
     const validation = RegisterSchema.safeParse(body);
     if (!validation.success) {
-      return apiError(validation.error.issues[0].message, 400);
+      return apiBadRequest(validation.error.issues[0].message);
     }
 
     const {
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (existingUser) {
-      return apiError('该手机号或邮箱已被注册，请直接登录', 400);
+      return apiBadRequest('该手机号或邮箱已被注册，请直接登录');
     }
 
     // 3. 生成唯一租户代码 (高强度 ID)
@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
     });
 
     // 5. 签发受限 Token（待审批用户仅 24h 有效期）
-    const token = await generateMiniprogramToken(result.user.id, result.tenant.id, {
+    const token = await generateMiniprogramToken(result.user.id, result.tenant.id, 'USER', {
       type: 'miniprogram_pending',
       expiresIn: '24h',
     });
@@ -135,6 +135,6 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     logger.error('[TenantApply] 租户申请异常', { route: 'tenant/apply', error });
     // 安全：不向客户端暴露 error.message 技术细节
-    return apiError('提交失败，请稍后重试', 500);
+    return apiServerError('提交失败，请稍后重试');
   }
 }

@@ -10,7 +10,7 @@ import { NextRequest } from 'next/server';
 import { db } from '@/shared/api/db';
 import { orders, leads, paymentBills } from '@/shared/api/schema';
 import { eq, and, gte, lte, sql } from 'drizzle-orm';
-import { apiSuccess, apiError } from '@/shared/lib/api-response';
+import { apiSuccess, apiServerError } from '@/shared/lib/api-response';
 import { authenticateMobile, requireBoss } from '@/shared/middleware/mobile-auth';
 import { createLogger } from '@/shared/lib/logger';
 import { dashboardCache } from '@/shared/lib/cache-utils';
@@ -171,6 +171,6 @@ export const GET = withTiming(async (request: NextRequest) => {
     return apiSuccess(result);
   } catch (error) {
     log.error('仪表盘数据查询错误', {}, error);
-    return apiError('查询仪表盘数据失败', 500);
+    return apiServerError('查询仪表盘数据失败');
   }
 });

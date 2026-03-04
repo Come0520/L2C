@@ -29,7 +29,7 @@ export function LeadAnalyticsDashboard() {
   const [funnelData, setFunnelData] = useState<FunnelStage[]>([]);
   const [roiStats, setRoiStats] = useState<LeadChannelROIStats[]>([]);
 
-  const handleExport = () => {
+  const handleExport = async () => {
     if (roiStats.length === 0) {
       toast.error('暂无数据可导出');
       return;
@@ -49,8 +49,13 @@ export function LeadAnalyticsDashboard() {
     const dateStr = dateRange?.from
       ? `_${format(dateRange.from, 'yyyyMMdd')}_${format(dateRange.to || new Date(), 'yyyyMMdd')}`
       : '';
-    exportToExcel(roiStats, columns, `线索渠道ROI分析报告${dateStr}`);
-    toast.success('报告导出成功');
+
+    try {
+      await exportToExcel(roiStats, columns, `线索渠道ROI分析报告${dateStr}`);
+      toast.success('报告导出成功');
+    } catch (_err) {
+      toast.error('报告导出失败');
+    }
   };
 
   const loadData = useCallback(() => {
@@ -70,7 +75,9 @@ export function LeadAnalyticsDashboard() {
         };
 
         const formattedFunnel: FunnelStage[] = Object.entries(statusMap).map(([status, label]) => {
-          const found = funnelRes.find((s) => s.status === status);
+          const found = funnelRes.find(
+            (s: { status: string; count: number | string }) => s.status === status
+          );
           return {
             stage: label,
             count: Number(found?.count || 0),

@@ -9,7 +9,7 @@ import { VerificationCodeService } from '@/shared/services/verification-code.ser
 vi.mock('@/shared/api/db', () => ({
   db: {
     query: {
-      users: { findFirst: vi.fn() },
+      users: { findFirst: vi.fn(), findMany: vi.fn() },
       tenants: { findFirst: vi.fn() },
     },
   },
@@ -58,10 +58,12 @@ describe('移动端登录 API', () => {
   it('错误密码应返回 401 模糊错误', async () => {
     const req = createReq({ phone: '13800138000', password: 'wrong' });
 
-    vi.mocked(db.query.users.findFirst).mockResolvedValue({
-      id: 'u1',
-      passwordHash: 'hashed',
-    } as any);
+    vi.mocked(db.query.users.findMany).mockResolvedValue([
+      {
+        id: 'u1',
+        passwordHash: 'hashed',
+      },
+    ] as any);
 
     vi.mocked(compare).mockResolvedValue(false);
 
@@ -74,8 +76,8 @@ describe('移动端登录 API', () => {
   it('禁用账号应无法登录', async () => {
     const req = createReq({ phone: '13811112222', password: 'pwd' });
 
-    // SQL where 中包含 isActive: true，如果是禁用账号 findFirst 会返回 null
-    vi.mocked(db.query.users.findFirst).mockResolvedValue(undefined as any);
+    // SQL where 中包含 isActive: true，如果是禁用账号 findMany 会返回 []
+    vi.mocked(db.query.users.findMany).mockResolvedValue([]);
 
     const res = await rateLimitedLoginHandler(req);
     expect(res.status).toBe(401);
@@ -86,13 +88,15 @@ describe('移动端登录 API', () => {
   it('MFA 开启时应返回 preAuthToken', async () => {
     const req = createReq({ phone: '13822223333', password: 'right' });
 
-    vi.mocked(db.query.users.findFirst).mockResolvedValue({
-      id: 'u1',
-      phone: '13822223333',
-      passwordHash: 'hashed',
-      tenantId: 't1',
-      role: 'WORKER',
-    } as any);
+    vi.mocked(db.query.users.findMany).mockResolvedValue([
+      {
+        id: 'u1',
+        phone: '13822223333',
+        passwordHash: 'hashed',
+        tenantId: 't1',
+        role: 'WORKER',
+      },
+    ] as any);
     vi.mocked(compare).mockResolvedValue(true);
 
     vi.mocked(db.query.tenants.findFirst).mockResolvedValue({
@@ -116,14 +120,16 @@ describe('移动端登录 API', () => {
   it('正确凭证应返回 Token 对', async () => {
     const req = createReq({ phone: '13833334444', password: 'pwd' });
 
-    vi.mocked(db.query.users.findFirst).mockResolvedValue({
-      id: 'u1',
-      phone: '13833334444',
-      passwordHash: 'hashed',
-      tenantId: 't1',
-      role: 'SALES',
-      name: 'Sales1',
-    } as any);
+    vi.mocked(db.query.users.findMany).mockResolvedValue([
+      {
+        id: 'u1',
+        phone: '13833334444',
+        passwordHash: 'hashed',
+        tenantId: 't1',
+        role: 'SALES',
+        name: 'Sales1',
+      },
+    ] as any);
     vi.mocked(compare).mockResolvedValue(true);
     vi.mocked(db.query.tenants.findFirst).mockResolvedValue(null as any); // no MFA
 

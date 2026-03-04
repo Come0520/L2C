@@ -5,7 +5,13 @@ const log = createLogger('mobile:tasks:install-check-in');
 import { db } from '@/shared/api/db';
 import { installTasks } from '@/shared/api/schema';
 import { eq, and } from 'drizzle-orm';
-import { apiSuccess, apiError } from '@/shared/lib/api-response';
+import {
+  apiSuccess,
+  apiBadRequest,
+  apiServerError,
+  apiNotFound,
+  apiForbidden,
+} from '@/shared/lib/api-response';
 import { authenticateMobile, requireWorker } from '@/shared/middleware/mobile-auth';
 import { AuditService } from '@/shared/services/audit-service';
 
@@ -36,7 +42,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const { latitude, longitude, accuracy, address } = body;
 
     if (!latitude || !longitude) {
-      return apiError('缺少 GPS 位置信息', 400);
+      return apiBadRequest('缺少 GPS 位置信息');
     }
 
     // 3. 查任务 & 权限状态校验
@@ -50,18 +56,18 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     });
 
     if (!task) {
-      return apiError('任务不存在', 404);
+      return apiNotFound('任务不存在');
     }
 
     // 只能签到自己的任务
     if (task.installerId !== session.userId) {
-      return apiError('只能签到指派给您的任务', 403);
+      return apiForbidden('只能签到指派给您的任务');
     }
 
     // 状态校验：必须是 PENDING_VISIT (待上门)
     // 允许 IN_PROGRESS 补签? 通常第一次签到转为 IN_PROGRESS。暂定严格校验 PENDING_VISIT。
     if (task.status !== 'PENDING_VISIT') {
-      return apiError(`当前状态(${task.status})不可签到，需为待上门状态`, 400);
+      return apiBadRequest(`当前状态(${task.status})不可签到，需为待上门状态`);
     }
 
     // 4. 执行签到更新
@@ -110,6 +116,6 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       { taskId, error: error instanceof Error ? error.message : String(error) },
       error
     );
-    return apiError('签到失败', 500);
+    return apiServerError('签到失败');
   }
 }

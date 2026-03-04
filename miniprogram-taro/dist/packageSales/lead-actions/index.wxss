@@ -1,1 +1,137 @@
-.lead-actions-page{background-color:#f2f2f7;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;min-height:100vh}.lead-actions-page .content-scroll{-webkit-flex:1;-ms-flex:1;flex:1;padding-bottom:env(safe-area-inset-bottom)}.lead-actions-page .section{margin-top:32rpx}.lead-actions-page .section .section-title{color:#6e6e73;display:block;font-size:24rpx;margin-bottom:16rpx;padding:0 24rpx;text-transform:uppercase}.lead-actions-page .section .card{background-color:#fff;border-bottom:1rpx solid rgba(0,0,0,.03);margin:0;padding:24rpx}.lead-actions-page .section .card:active{background-color:#f9f9f9}.lead-actions-page .section .picker-card{display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-justify-content:space-between;-ms-flex-pack:justify;-webkit-align-items:center;justify-content:space-between;-ms-flex-align:center;align-items:center}.lead-actions-page .section .picker-card .label{color:#1d1d1f;font-size:30rpx}.lead-actions-page .section .picker-card .picker-value{-webkit-align-items:center;display:-webkit-flex;display:-ms-flexbox;display:flex;-ms-flex-align:center;align-items:center}.lead-actions-page .section .picker-card .picker-value .val-text{color:#0071e3;font-size:30rpx;margin-right:12rpx}.lead-actions-page .section .picker-card .picker-value .arrow{color:#aeaeb2;font-size:24rpx}.lead-actions-page .section .action-card{display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-justify-content:space-between;-ms-flex-pack:justify;-webkit-align-items:center;justify-content:space-between;-ms-flex-align:center;align-items:center}.lead-actions-page .section .action-card .info .title{color:#1d1d1f;display:block;font-size:30rpx;font-weight:500}.lead-actions-page .section .action-card .info .desc{color:#6e6e73;display:block;font-size:24rpx;margin-top:4rpx}.lead-actions-page .section .action-card .arrow{color:#aeaeb2;font-size:24rpx}.lead-actions-page .section .action-card.danger .title{color:#ff3b30}.lead-actions-page .section .btn-primary{-webkit-align-items:center;background-color:#0071e3;border-radius:28rpx;color:#fff;display:-webkit-flex;display:-ms-flexbox;display:flex;height:96rpx;margin:32rpx 24rpx;-ms-flex-align:center;align-items:center;-webkit-justify-content:center;-ms-flex-pack:center;font-size:30rpx;font-weight:500;justify-content:center}.lead-actions-page .section .btn-primary::after{border:none}.lead-actions-page .section .btn-primary:active{opacity:.8}
+@charset "UTF-8";/*!***************************************************************************************************************************************************************************************************************************************************************************************************************************************!*\
+  !*** css ./node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[1].oneOf[2].use[1]!./node_modules/postcss-loader/dist/cjs.js??ruleSet[1].rules[1].oneOf[2].use[2]!./node_modules/resolve-url-loader/index.js!./node_modules/sass-loader/dist/cjs.js??ruleSet[1].rules[1].oneOf[2].use[4]!./src/packageSales/lead-actions/index.scss ***!
+  \***************************************************************************************************************************************************************************************************************************************************************************************************************************************/
+
+/* ====================================================
+ * Apple Design System - 变量与常量定义
+ *
+ * @description 提取最核心的 iOS 18 和 Apple 官网设计规范。
+ * 所有 px 值在 Taro 构建时自动 1:1 转为 rpx (designWidth=750)。
+ * 因此这里的 px 值 = rpx 值，需按真实小程序比例书写。
+ *
+ * 参考：750rpx = iPhone 6/7/8 屏幕宽度 (375pt × 2)
+ *        1rpx ≈ 0.5pt
+ *
+ * ==================================================== */
+.lead-actions-page {
+  background-color: #F2F2F7;
+  min-height: 100vh;
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-flex-direction: column;
+      -ms-flex-direction: column;
+          flex-direction: column;
+}
+.lead-actions-page .content-scroll {
+  -webkit-flex: 1;
+      -ms-flex: 1;
+          flex: 1;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.lead-actions-page .section {
+  margin-top: 32rpx;
+}
+.lead-actions-page .section .section-title {
+  font-size: 24rpx;
+  color: #6E6E73;
+  padding: 0 24rpx;
+  margin-bottom: 16rpx;
+  display: block;
+  text-transform: uppercase;
+}
+.lead-actions-page .section .card {
+  background-color: #fff;
+  margin: 0;
+  padding: 24rpx;
+  border-bottom: 1rpx solid rgba(0, 0, 0, 0.03);
+}
+.lead-actions-page .section .card:active {
+  background-color: #f9f9f9;
+}
+.lead-actions-page .section .picker-card {
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-justify-content: space-between;
+      -ms-flex-pack: justify;
+          justify-content: space-between;
+  -webkit-align-items: center;
+      -ms-flex-align: center;
+          align-items: center;
+}
+.lead-actions-page .section .picker-card .label {
+  font-size: 30rpx;
+  color: #1D1D1F;
+}
+.lead-actions-page .section .picker-card .picker-value {
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-align-items: center;
+      -ms-flex-align: center;
+          align-items: center;
+}
+.lead-actions-page .section .picker-card .picker-value .val-text {
+  font-size: 30rpx;
+  color: #0071E3;
+  margin-right: 12rpx;
+}
+.lead-actions-page .section .picker-card .picker-value .arrow {
+  color: #AEAEB2;
+  font-size: 24rpx;
+}
+.lead-actions-page .section .action-card {
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-justify-content: space-between;
+      -ms-flex-pack: justify;
+          justify-content: space-between;
+  -webkit-align-items: center;
+      -ms-flex-align: center;
+          align-items: center;
+}
+.lead-actions-page .section .action-card .info .title {
+  font-size: 30rpx;
+  color: #1D1D1F;
+  display: block;
+  font-weight: 500;
+}
+.lead-actions-page .section .action-card .info .desc {
+  font-size: 24rpx;
+  color: #6E6E73;
+  display: block;
+  margin-top: 4rpx;
+}
+.lead-actions-page .section .action-card .arrow {
+  color: #AEAEB2;
+  font-size: 24rpx;
+}
+.lead-actions-page .section .action-card.danger .title {
+  color: #FF3B30;
+}
+.lead-actions-page .section .btn-primary {
+  margin: 32rpx 24rpx;
+  background-color: #0071E3;
+  color: #fff;
+  border-radius: 28rpx;
+  height: 96rpx;
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-align-items: center;
+      -ms-flex-align: center;
+          align-items: center;
+  -webkit-justify-content: center;
+      -ms-flex-pack: center;
+          justify-content: center;
+  font-size: 30rpx;
+  font-weight: 500;
+}
+.lead-actions-page .section .btn-primary::after {
+  border: none;
+}
+.lead-actions-page .section .btn-primary:active {
+  opacity: 0.8;
+}

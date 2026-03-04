@@ -1,7 +1,6 @@
-'use client';
-
 import * as React from 'react';
-import * as xlsx from 'xlsx';
+import { Workbook } from 'exceljs';
+import { saveAs } from 'file-saver';
 import { toast } from 'sonner';
 import { UploadCloud, FileType, Loader2 } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
@@ -31,27 +30,25 @@ export function ExpenseImport({ accounts, onSuccess }: ExpenseImportProps) {
   const [createVoucher, setCreateVoucher] = React.useState(false);
 
   // 生成并下载模板
-  const handleDownloadTemplate = () => {
-    const wb = xlsx.utils.book_new();
-    // 表头
-    const headers = [['科目编码', '金额', '发生日期(YYYY-MM-DD)', '费用摘要']];
-    // 示例数据
-    const examples = [
+  const handleDownloadTemplate = async () => {
+    const workbook = new Workbook();
+
+    // 费用导入模板 Sheet
+    const ws = workbook.addWorksheet('费用导入模板');
+    const headers = ['科目编码', '金额', '发生日期(YYYY-MM-DD)', '费用摘要'];
+    ws.addRow(headers);
+    ws.addRows([
       ['6602', '150.00', '2024-03-20', '打车费用'],
       ['6601', '3000.00', '2024-03-21', '部分设备维修'],
-    ];
+    ]);
 
-    const ws = xlsx.utils.aoa_to_sheet([...headers, ...examples]);
+    // 可用科目对照表 Sheet
+    const wsRef = workbook.addWorksheet('可用科目对照表(仅供参考)');
+    wsRef.addRow(['科目编码', '科目名称']);
+    accounts.forEach((a) => wsRef.addRow([a.code, a.name]));
 
-    // 可选：添加科目对照表用于参考
-    const accountRef = [['科目编码', '科目名称']];
-    accounts.forEach((a) => accountRef.push([a.code, a.name]));
-    const wsRef = xlsx.utils.aoa_to_sheet(accountRef);
-
-    xlsx.utils.book_append_sheet(wb, ws, '费用导入模板');
-    xlsx.utils.book_append_sheet(wb, wsRef, '可用科目对照表(仅供参考)');
-
-    xlsx.writeFile(wb, '费用批量导入模板.xlsx');
+    const buffer = await workbook.xlsx.writeBuffer();
+    saveAs(new Blob([buffer], { type: 'application/octet-stream' }), '费用批量导入模板.xlsx');
   };
 
   // 文件上传与解析
@@ -62,24 +59,29 @@ export function ExpenseImport({ accounts, onSuccess }: ExpenseImportProps) {
     setIsParsing(true);
 
     const reader = new FileReader();
-    reader.onload = (evt) => {
+    reader.onload = async (evt) => {
       try {
-        const bstr = evt.target?.result;
-        const wb = xlsx.read(bstr, { type: 'binary', cellDates: true });
-        const wsname = wb.SheetNames[0];
-        const ws = wb.Sheets[wsname];
+        const arrayBuffer = evt.target?.result as ArrayBuffer;
+        const workbook = new Workbook();
+        await workbook.xlsx.load(arrayBuffer);
+        const ws = workbook.worksheets[0];
 
-        // 将 Excel 转换为 JSON 对象数组，跳过表头
-        const data = xlsx.utils.sheet_to_json(ws, { header: 1 }) as unknown[][];
-        if (data.length <= 1) {
+        if (!ws || ws.rowCount <= 1) {
           toast.error('文件中没有数据');
           setFile(null);
           setPreviewData([]);
           return;
         }
 
+        const data: unknown[][] = [];
+        ws.eachRow((row, rowNumber) => {
+          if (rowNumber === 1) return; // 跳过表头
+          const rowValues = row.values as any[];
+          // row.values 从 1 开始索引
+          data.push([rowValues[1], rowValues[2], rowValues[3], rowValues[4]]);
+        });
+
         const rows = data
-          .slice(1)
           .map((row) => {
             const dateVal = row[2];
             let expenseDate = new Date(); // fallback to current date
@@ -108,7 +110,7 @@ export function ExpenseImport({ accounts, onSuccess }: ExpenseImportProps) {
         setIsParsing(false);
       }
     };
-    reader.readAsBinaryString(uploadedFile);
+    reader.readAsArrayBuffer(uploadedFile);
   };
 
   const handleImportSubmit = async () => {

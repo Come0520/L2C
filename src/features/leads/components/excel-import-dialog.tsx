@@ -90,14 +90,44 @@ export function ExcelImportDialog({ onSuccess }: ExcelImportDialogProps) {
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
 
   const downloadTemplate = async () => {
-    const XLSX = await import('xlsx');
-    const ws = XLSX.utils.aoa_to_sheet([
-      TEMPLATE_HEADER,
-      ['张三', '13800138000', 'wx123', '万科城', '1栋101', '50000', '老客户推荐'],
-    ]);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, '线索导入模版');
-    XLSX.writeFile(wb, '线索导入模版.xlsx');
+    const { Workbook } = await import('exceljs');
+    const { saveAs } = await import('file-saver');
+
+    const workbook = new Workbook();
+    const ws = workbook.addWorksheet('线索导入模版');
+    ws.addRow(TEMPLATE_HEADER);
+    ws.addRow(['张三', '13800138000', 'wx123', '万科城', '1栋101', '50000', '老客户推荐']);
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    saveAs(new Blob([buffer], { type: 'application/octet-stream' }), '线索导入模版.xlsx');
+  };
+
+  const parseExcelArrayBuffer = async (buffer: ArrayBuffer): Promise<Record<string, unknown>[]> => {
+    const { Workbook } = await import('exceljs');
+    const workbook = new Workbook();
+    await workbook.xlsx.load(buffer);
+    const ws = workbook.worksheets[0];
+
+    const jsonData: Record<string, unknown>[] = [];
+    if (ws) {
+      const headers: string[] = [];
+      ws.getRow(1).eachCell((cell, colNumber) => {
+        headers[colNumber] = cell.value ? String(cell.value) : `Column${colNumber}`;
+      });
+
+      ws.eachRow((row, rowNumber) => {
+        if (rowNumber === 1) return;
+        const rowData: Record<string, unknown> = {};
+        row.eachCell((cell, colNumber) => {
+          const header = headers[colNumber];
+          if (header) {
+            rowData[header] = cell.value;
+          }
+        });
+        jsonData.push(rowData);
+      });
+    }
+    return jsonData;
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -109,18 +139,18 @@ export function ExcelImportDialog({ onSuccess }: ExcelImportDialogProps) {
 
     const reader = new FileReader();
     reader.onload = async (e) => {
-      const data = new Uint8Array(e.target?.result as ArrayBuffer);
-      const XLSX = await import('xlsx');
-      const workbook = XLSX.read(data, { type: 'array' });
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      const jsonData = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet);
+      try {
+        const buffer = e.target?.result as ArrayBuffer;
+        const jsonData = await parseExcelArrayBuffer(buffer);
 
-      // 映射字段（统一使用工具函数）
-      const mappedData = jsonData.map(mapExcelRowToLead);
+        // 映射字段（统一使用工具函数）
+        const mappedData = jsonData.map(mapExcelRowToLead);
 
-      setPreviewData(mappedData.slice(0, 5)); // 预览前 5 条
-      setStats({ total: mappedData.length, valid: mappedData.length }); // Simple stat
+        setPreviewData(mappedData.slice(0, 5)); // 预览前 5 条
+        setStats({ total: mappedData.length, valid: mappedData.length }); // Simple stat
+      } catch (err) {
+        toast.error('解析文件失败');
+      }
     };
     reader.readAsArrayBuffer(selectedFile);
   };
@@ -132,12 +162,8 @@ export function ExcelImportDialog({ onSuccess }: ExcelImportDialogProps) {
     const reader = new FileReader();
     reader.onload = async (e) => {
       try {
-        const data = new Uint8Array(e.target?.result as ArrayBuffer);
-        const XLSX = await import('xlsx');
-        const workbook = XLSX.read(data, { type: 'array' });
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
-        const jsonData = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet);
+        const buffer = e.target?.result as ArrayBuffer;
+        const jsonData = await parseExcelArrayBuffer(buffer);
 
         // 映射字段（统一使用工具函数）
         const mappedData = jsonData.map(mapExcelRowToLead);

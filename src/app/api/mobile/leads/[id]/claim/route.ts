@@ -4,7 +4,13 @@
  */
 
 import { NextRequest } from 'next/server';
-import { apiSuccess, apiError, apiNotFound } from '@/shared/lib/api-response';
+import {
+  apiSuccess,
+  apiError,
+  apiNotFound,
+  apiBadRequest,
+  apiServerError,
+} from '@/shared/lib/api-response';
 import { authenticateMobile, requireSales } from '@/shared/middleware/mobile-auth';
 import { LeadService } from '@/services/lead.service';
 import { z } from 'zod';
@@ -33,7 +39,7 @@ export async function POST(request: NextRequest, { params }: ClaimParams) {
   const { id: leadId } = await params;
 
   if (!z.string().uuid().safeParse(leadId).success) {
-    return apiError('无效的线索ID', 400);
+    return apiBadRequest('无效的线索ID');
   }
 
   try {
@@ -64,6 +70,6 @@ export async function POST(request: NextRequest, { params }: ClaimParams) {
       return apiError('客户已被领取', 409);
     }
 
-    return apiError(message, 500);
+    return apiServerError(message);
   }
 }

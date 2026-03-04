@@ -4,7 +4,7 @@
  */
 
 import { NextRequest } from 'next/server';
-import { apiSuccess, apiError } from '@/shared/lib/api-response';
+import { apiSuccess, apiBadRequest } from '@/shared/lib/api-response';
 import { authenticateMobile, requireSales } from '@/shared/middleware/mobile-auth';
 
 /**
@@ -62,24 +62,24 @@ export async function POST(request: NextRequest) {
   try {
     body = await request.json();
   } catch {
-    return apiError('请求体格式错误', 400);
+    return apiBadRequest('请求体格式错误');
   }
 
   const { category, windowCount, avgWidth = 2, avgHeight = 2.5, grade, hasElectric = false } = body;
 
   // 4. 参数校验
   if (!category || !windowCount || !grade) {
-    return apiError('缺少必要参数: category, windowCount, grade', 400);
+    return apiBadRequest('缺少必要参数: category, windowCount, grade');
   }
 
   if (windowCount <= 0 || windowCount > 50) {
-    return apiError('窗户数量应在 1-50 之间', 400);
+    return apiBadRequest('窗户数量应在 1-50 之间');
   }
 
   // 5. 计算报价
   const prices = PRICE_CONFIG[category]?.[grade];
   if (!prices) {
-    return apiError('无效的品类或档位', 400);
+    return apiBadRequest('无效的品类或档位');
   }
 
   // 计算面积

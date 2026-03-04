@@ -4,20 +4,19 @@
  * GET /api/miniprogram/payment/config
  */
 import { NextRequest } from 'next/server';
-import { apiSuccess, apiError } from '@/shared/lib/api-response';
+import { apiSuccess, apiServerError, apiUnauthorized } from '@/shared/lib/api-response';
 import { logger } from '@/shared/lib/logger';
 import { db } from '@/shared/api/db';
 import { tenants } from '@/shared/api/schema';
 import { eq } from 'drizzle-orm';
-import { getMiniprogramUser } from '../../auth-utils';
+import { withMiniprogramAuth } from '../../auth-utils';
 import { CacheService } from '@/shared/services/miniprogram/cache.service';
 
-export async function GET(request: NextRequest) {
+export const GET = withMiniprogramAuth(async (request: NextRequest, user) => {
   try {
-    const user = await getMiniprogramUser(request);
     const tenantId = user?.tenantId;
     if (!tenantId) {
-      return apiError('未授权', 401);
+      return apiUnauthorized('未授权');
     }
 
     const cacheKey = `payment-config:${tenantId}`;
@@ -46,6 +45,6 @@ export async function GET(request: NextRequest) {
     return response;
   } catch (error) {
     logger.error('Get Payment Config Error:', error);
-    return apiError('Failed', 500);
+    return apiServerError('Failed');
   }
-}
+});

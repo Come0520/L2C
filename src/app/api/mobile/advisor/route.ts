@@ -10,7 +10,7 @@ import { NextRequest } from 'next/server';
 import { db } from '@/shared/api/db';
 import { customers, users } from '@/shared/api/schema';
 import { eq } from 'drizzle-orm';
-import { apiSuccess, apiError } from '@/shared/lib/api-response';
+import { apiSuccess, apiServerError } from '@/shared/lib/api-response';
 import { authenticateMobile, requireCustomer } from '@/shared/middleware/mobile-auth';
 import { createLogger } from '@/shared/lib/logger';
 
@@ -69,6 +69,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     log.error('查询顾问信息失败', { customerId: session.userId }, error);
-    return apiError('查询顾问信息失败', 500);
+    return apiServerError('查询顾问信息失败');
   }
 }

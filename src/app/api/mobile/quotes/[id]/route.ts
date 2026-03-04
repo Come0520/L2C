@@ -9,7 +9,7 @@ import { NextRequest } from 'next/server';
 import { db } from '@/shared/api/db';
 import { quotes } from '@/shared/api/schema';
 import { eq, and, isNull } from 'drizzle-orm';
-import { apiSuccess, apiError, apiNotFound } from '@/shared/lib/api-response';
+import { apiSuccess, apiNotFound, apiServerError } from '@/shared/lib/api-response';
 import { authenticateMobile, requireSales } from '@/shared/middleware/mobile-auth';
 import { createLogger } from '@/shared/lib/logger';
 
@@ -153,7 +153,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
     return apiSuccess(result);
   } catch (error) {
     log.error('报价详情查询错误', { userId: session.userId, quoteId }, error);
-    return apiError('查询报价详情失败', 500);
+    return apiServerError('查询报价详情失败');
   }
 }
 

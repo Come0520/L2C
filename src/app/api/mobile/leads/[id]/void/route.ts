@@ -1,5 +1,11 @@
 import { NextRequest } from 'next/server';
-import { apiError, apiSuccess } from '@/shared/lib/api-response';
+import {
+  apiSuccess,
+  apiBadRequest,
+  apiServerError,
+  apiNotFound,
+  apiForbidden,
+} from '@/shared/lib/api-response';
 import { authenticateMobile, requireSales } from '@/shared/middleware/mobile-auth';
 import { LeadService } from '@/services/lead.service';
 import { z } from 'zod';
@@ -24,17 +30,17 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const { id } = await params;
 
     if (!z.string().uuid().safeParse(id).success) {
-      return apiError('无效的线索ID', 400);
+      return apiBadRequest('无效的线索ID');
     }
 
     const json = await request.json();
 
     // 验证线索归属
     const lead = await LeadService.getLead(id, session.tenantId);
-    if (!lead) return apiError('线索不存在', 404);
+    if (!lead) return apiNotFound('线索不存在');
     // 验证线索归属：仅允许归属销售作废自己的线索
     if (lead.assignedSalesId !== session.userId) {
-      return apiError('无权作废他人的线索', 403);
+      return apiForbidden('无权作废他人的线索');
     }
 
     // 验证作废参数 { reason: string }
@@ -42,7 +48,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     // Ignore id from body
     const parseResult = voidLeadSchema.safeParse({ id, reason: json.reason });
     if (!parseResult.success) {
-      return apiError(parseResult.error.issues[0].message, 400);
+      return apiBadRequest(parseResult.error.issues[0].message);
     }
     const { reason } = parseResult.data;
 
@@ -51,6 +57,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return apiSuccess({ success: true });
   } catch (error) {
     log.error('作废线索失败', {}, error);
-    return apiError('作废线索失败', 500);
+    return apiServerError('作废线索失败');
   }
 }

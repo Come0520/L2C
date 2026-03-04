@@ -1,9 +1,8 @@
 import { db, type DbTransaction } from '@/shared/api/db';
-import { tenants, users } from '@/shared/api/schema';
-import { eq, and } from 'drizzle-orm';
+import { tenants, users, leads } from '@/shared/api/schema';
+import { eq, and, sql } from 'drizzle-orm';
 import { getSettingInternal } from '@/features/settings/actions/system-settings-actions';
 import { AuditService } from '@/shared/services/audit-service';
-import { logger } from '@/shared/lib/logger';
 
 /**
  * 分配策略类型
@@ -18,6 +17,8 @@ interface DistributionConfig {
   strategy: DistributionStrategy;
   nextSalesIndex: number;
   salesPool: string[]; // 参与轮转的销售ID列表
+  channelMapping?: Record<string, string[]>;
+  channelPointers?: Record<string, number>;
 }
 
 /**
@@ -106,7 +107,8 @@ async function getAvailableSalesList(tenantId: string): Promise<{ id: string; na
  */
 export async function distributeToNextSales(
   tenantId: string,
-  externalTx?: DbTransaction // 使用统一的事务类型定义
+  externalTx?: DbTransaction,
+  channelId?: string
 ): Promise<{
   salesId: string | null;
   salesName: string | null;
@@ -187,12 +189,136 @@ export async function distributeToNextSales(
       };
     }
 
-    // 暂未实现的策略
-    if (config.strategy === 'LOAD_BALANCE' || config.strategy === 'CHANNEL_SPECIFIC') {
-      logger.warn(
-        `[Distribution] Strategy ${config.strategy} is not yet implemented. Falling back to MANUAL.`
-      );
-      return { salesId: null, salesName: null, strategy: config.strategy };
+    // 负载均衡：分配给当前未完结线索最少的销售
+    if (config.strategy === 'LOAD_BALANCE') {
+      const activeStats = await tx
+        .select({ assignedSalesId: leads.assignedSalesId, count: sql<number>`count(*)` })
+        .from(leads)
+        .where(eq(leads.tenantId, tenantId))
+        .groupBy(leads.assignedSalesId);
+
+      const statsMap = new Map(activeStats.map((s) => [s.assignedSalesId, Number(s.count)]));
+      let minCount = Infinity;
+      let targetSales = salesList[0];
+
+      for (const sales of salesList) {
+        const currentCount = statsMap.get(sales.id) || 0;
+        if (currentCount < minCount) {
+          minCount = currentCount;
+          targetSales = sales;
+        }
+      }
+
+      await AuditService.log(tx as unknown as Parameters<typeof AuditService.log>[0], {
+        tableName: 'leads',
+        recordId: tenantId,
+        action: 'AUTO_ASSIGN',
+        tenantId,
+        details: {
+          strategy: 'LOAD_BALANCE',
+          assignedSalesId: targetSales.id,
+          assignedSalesName: targetSales.name,
+        },
+      });
+
+      return {
+        salesId: targetSales.id,
+        salesName: targetSales.name,
+        strategy: 'LOAD_BALANCE' as DistributionStrategy,
+      };
+    }
+
+    // 渠道专属：匹配渠道专属销售圈并轮转，若未满足条件则降级
+    if (config.strategy === 'CHANNEL_SPECIFIC') {
+      const channelMapping = config.channelMapping || {};
+      const channelPointers = config.channelPointers || {};
+
+      let targetSalesId: string | undefined;
+      let targetSalesName: string | undefined;
+      let fallback = false;
+
+      if (channelId && channelMapping[channelId] && channelMapping[channelId].length > 0) {
+        const pool = channelMapping[channelId];
+        // 过滤出当前仍然在职且可用的销售
+        const activePool = pool.filter((id) => salesList.some((s) => s.id === id));
+
+        if (activePool.length > 0) {
+          const pointer = channelPointers[channelId] || 0;
+          const currentIndex = pointer % activePool.length;
+          targetSalesId = activePool[currentIndex];
+          targetSalesName = salesList.find((s) => s.id === targetSalesId)?.name;
+
+          const newPointers = {
+            ...channelPointers,
+            [channelId]: (currentIndex + 1) % activePool.length,
+          };
+          const currentSettings = (tenant.settings as TenantSettings) || {};
+          const newSettings: TenantSettings = {
+            ...currentSettings,
+            distribution: {
+              ...currentSettings.distribution,
+              channelPointers: newPointers,
+            },
+          };
+          await tx.update(tenants).set({ settings: newSettings }).where(eq(tenants.id, tenantId));
+        } else {
+          fallback = true;
+        }
+      } else {
+        fallback = true;
+      }
+
+      if (!fallback && targetSalesId) {
+        await AuditService.log(tx as unknown as Parameters<typeof AuditService.log>[0], {
+          tableName: 'leads',
+          recordId: tenantId,
+          action: 'AUTO_ASSIGN',
+          tenantId,
+          details: {
+            strategy: 'CHANNEL_SPECIFIC',
+            channelId,
+            assignedSalesId: targetSalesId,
+            assignedSalesName: targetSalesName,
+          },
+        });
+        return {
+          salesId: targetSalesId,
+          salesName: targetSalesName || '',
+          strategy: 'CHANNEL_SPECIFIC' as DistributionStrategy,
+        };
+      } else {
+        // Fallback to ROUND_ROBIN
+        const currentIndex = (config.nextSalesIndex || 0) % salesList.length;
+        const nextSales = salesList[currentIndex];
+        const newIndex = (currentIndex + 1) % salesList.length;
+
+        const currentSettings = (tenant.settings as TenantSettings) || {};
+        const newSettings: TenantSettings = {
+          ...currentSettings,
+          distribution: {
+            ...currentSettings.distribution,
+            nextSalesIndex: newIndex,
+          },
+        };
+        await tx.update(tenants).set({ settings: newSettings }).where(eq(tenants.id, tenantId));
+
+        await AuditService.log(tx as unknown as Parameters<typeof AuditService.log>[0], {
+          tableName: 'leads',
+          recordId: tenantId,
+          action: 'AUTO_ASSIGN',
+          tenantId,
+          details: {
+            strategy: 'CHANNEL_SPECIFIC_FALLBACK_ROUND_ROBIN',
+            assignedSalesId: nextSales.id,
+            assignedSalesName: nextSales.name,
+          },
+        });
+        return {
+          salesId: nextSales.id,
+          salesName: nextSales.name,
+          strategy: 'ROUND_ROBIN' as DistributionStrategy,
+        };
+      }
     }
 
     return { salesId: null, salesName: null, strategy: config.strategy };

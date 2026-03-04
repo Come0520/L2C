@@ -67,6 +67,7 @@ vi.mock('@/shared/api/schema/catalogs', () => ({
 
 vi.mock('@/shared/lib/auth', () => ({
   auth: vi.fn(),
+  checkPermission: vi.fn(),
 }));
 
 vi.mock('next/cache', () => ({

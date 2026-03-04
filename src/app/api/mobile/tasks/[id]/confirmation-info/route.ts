@@ -8,7 +8,7 @@ import { NextRequest } from 'next/server';
 import { db } from '@/shared/api/db';
 import { installTasks, installPhotos } from '@/shared/api/schema';
 import { eq } from 'drizzle-orm';
-import { apiSuccess, apiError, apiNotFound } from '@/shared/lib/api-response';
+import { apiSuccess, apiNotFound, apiServerError } from '@/shared/lib/api-response';
 import { createLogger } from '@/shared/lib/logger';
 import { authenticateMobile } from '@/shared/middleware/mobile-auth';
 
@@ -93,6 +93,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       { error: error instanceof Error ? error.message : String(error) },
       error
     );
-    return apiError('加载失败', 500);
+    return apiServerError('加载失败');
   }
 }

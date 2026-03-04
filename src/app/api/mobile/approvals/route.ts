@@ -7,7 +7,7 @@ import { NextRequest } from 'next/server';
 import { db } from '@/shared/api/db';
 import { approvalTasks } from '@/shared/api/schema';
 import { eq, and, desc, or, count } from 'drizzle-orm';
-import { apiError, apiPaginated } from '@/shared/lib/api-response';
+import { apiPaginated, apiServerError } from '@/shared/lib/api-response';
 import { authenticateMobile, requireBoss } from '@/shared/middleware/mobile-auth';
 import { createLogger } from '@/shared/lib/logger';
 
@@ -105,7 +105,7 @@ export async function GET(request: NextRequest) {
     return apiPaginated(items, page, pageSize, total);
   } catch (error) {
     log.error('审批列表查询错误', {}, error);
-    return apiError('查询审批列表失败', 500);
+    return apiServerError('查询审批列表失败');
   }
 }
 

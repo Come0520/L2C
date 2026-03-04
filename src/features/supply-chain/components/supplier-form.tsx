@@ -8,10 +8,12 @@ import { createSupplierSchema } from '../schemas';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/shared/ui/form';
 import { Input } from '@/shared/ui/input';
 import { PhoneInput } from '@/components/ui/phone-input';
+import { AddressInput } from '@/components/ui/address-input';
 import { Button } from '@/shared/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { Textarea } from '@/shared/ui/textarea';
 import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
+import { useTenant } from '@/shared/providers/tenant-provider';
 
 const formSchema = createSupplierSchema.extend({
   id: z.string().optional(),
@@ -28,6 +30,7 @@ interface SupplierFormProps {
 }
 
 export function SupplierForm({ initialData, onSubmit, isLoading }: SupplierFormProps) {
+  const { tenant } = useTenant();
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: initialData
@@ -151,7 +154,12 @@ export function SupplierForm({ initialData, onSubmit, isLoading }: SupplierFormP
             <FormItem>
               <FormLabel>联系地址</FormLabel>
               <FormControl>
-                <Textarea placeholder="输入详细地址" {...field} />
+                <AddressInput
+                  value={field.value || ''}
+                  onChange={field.onChange}
+                  defaultRegion={tenant?.region}
+                  placeholder="详细地址"
+                />
               </FormControl>
               <FormMessage />
             </FormItem>

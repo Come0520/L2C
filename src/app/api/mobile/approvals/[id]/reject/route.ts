@@ -7,7 +7,7 @@ import { NextRequest } from 'next/server';
 import { db } from '@/shared/api/db';
 import { approvalTasks } from '@/shared/api/schema';
 import { eq, and } from 'drizzle-orm';
-import { apiSuccess, apiError, apiNotFound } from '@/shared/lib/api-response';
+import { apiSuccess, apiNotFound, apiBadRequest, apiServerError } from '@/shared/lib/api-response';
 import { authenticateMobile, requireBoss } from '@/shared/middleware/mobile-auth';
 import { createLogger } from '@/shared/lib/logger';
 
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest, { params }: RejectParams) {
 
   // 驳回必须填写原因
   if (!reason) {
-    return apiError('请填写驳回原因', 400);
+    return apiBadRequest('请填写驳回原因');
   }
 
   try {
@@ -90,6 +90,6 @@ export async function POST(request: NextRequest, { params }: RejectParams) {
     );
   } catch (error) {
     log.error('审批驳回错误', {}, error);
-    return apiError('审批驳回失败', 500);
+    return apiServerError('审批驳回失败');
   }
 }

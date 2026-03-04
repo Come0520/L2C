@@ -1,1 +1,213 @@
-.install-upload-page{background-color:#f2f2f7;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;height:100vh}.install-upload-page .checkin-bar{background-color:#fff;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-justify-content:space-between;padding:24rpx 32rpx;-ms-flex-pack:justify;-webkit-align-items:center;justify-content:space-between;-ms-flex-align:center;align-items:center;border-bottom:1rpx solid rgba(60,60,67,.1);-webkit-transition:background-color .3s;transition:background-color .3s;z-index:10}.install-upload-page .checkin-bar .info{display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column}.install-upload-page .checkin-bar .info .title{color:#1d1d1f;font-size:32rpx;font-weight:700;margin-bottom:4rpx}.install-upload-page .checkin-bar .info .time{color:#ff9500;font-size:24rpx}.install-upload-page .checkin-bar .btn{-webkit-align-items:center;background-color:#0071e3;border-radius:100rpx;color:#fff;display:-webkit-flex;display:-ms-flexbox;display:flex;height:64rpx;margin:0;-ms-flex-align:center;align-items:center;-webkit-justify-content:center;-ms-flex-pack:center;font-size:24rpx;font-weight:600;justify-content:center}.install-upload-page .checkin-bar .btn::after{border:none}.install-upload-page .checkin-bar.checked{background-color:rgba(52,199,89,.05)}.install-upload-page .checkin-bar.checked .info .time{color:#34c759}.install-upload-page .checkin-bar.checked .btn{background-color:#34c759}.install-upload-page .content-scroll{-webkit-flex:1;-ms-flex:1;flex:1;padding:24rpx}.install-upload-page .card{background-color:#fff;border-radius:28rpx;-webkit-box-shadow:0 1rpx 4rpx rgba(0,0,0,.05);box-shadow:0 1rpx 4rpx rgba(0,0,0,.05);margin-bottom:24rpx;padding:32rpx}.install-upload-page .upload-card .card-header{margin-bottom:24rpx}.install-upload-page .upload-card .card-header .title{color:#1d1d1f;display:block;font-size:32rpx;font-weight:600;margin-bottom:4rpx}.install-upload-page .upload-card .card-header .title .required{color:#ff3b30}.install-upload-page .upload-card .card-header .subtitle{color:#6e6e73;font-size:22rpx}.install-upload-page .upload-card .images-grid{display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-wrap:wrap;-ms-flex-wrap:wrap;flex-wrap:wrap;gap:16rpx}.install-upload-page .upload-card .images-grid .photo-thumb{aspect-ratio:1;border-radius:20rpx;width:calc(33.33% - 12rpx)}.install-upload-page .upload-card .images-grid .photo-add{-webkit-align-items:center;aspect-ratio:1;background-color:#f8f8f8;border:2rpx dashed rgba(60,60,67,.1);border-radius:20rpx;display:-webkit-flex;display:-ms-flexbox;display:flex;width:calc(33.33% - 12rpx);-ms-flex-align:center;align-items:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center}.install-upload-page .upload-card .images-grid .photo-add .icon{color:#aeaeb2;font-size:40rpx}.install-upload-page .upload-card .images-grid .photo-add:active{background-color:#f0f0f0}.install-upload-page .remark-card .title{color:#1d1d1f;display:block;font-size:30rpx;font-weight:600;margin-bottom:24rpx}.install-upload-page .remark-card .remark-input{background-color:#f8f8f8;border-radius:20rpx;-webkit-box-sizing:border-box;box-sizing:border-box;font-size:30rpx;height:160rpx;padding:24rpx;width:100%}.install-upload-page .safe-bottom-space{height:env(safe-area-inset-bottom);margin-bottom:120rpx}.install-upload-page .bottom-bar{background-color:#fff;bottom:0;-webkit-box-shadow:0 -4rpx 16rpx rgba(0,0,0,.05);box-shadow:0 -4rpx 16rpx rgba(0,0,0,.05);left:0;padding:24rpx 24rpx calc(24rpx + env(safe-area-inset-bottom));position:fixed;right:0;z-index:100}.install-upload-page .bottom-bar .btn-submit{-webkit-align-items:center;background-color:#0071e3;border-radius:100rpx;color:#fff;display:-webkit-flex;display:-ms-flexbox;display:flex;height:88rpx;-ms-flex-align:center;align-items:center;-webkit-justify-content:center;-ms-flex-pack:center;font-size:32rpx;font-weight:600;justify-content:center}.install-upload-page .bottom-bar .btn-submit::after{border:none}.install-upload-page .bottom-bar .btn-submit:active{opacity:.8}
+@charset "UTF-8";/*!******************************************************************************************************************************************************************************************************************************************************************************************************************************************!*\
+  !*** css ./node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[1].oneOf[2].use[1]!./node_modules/postcss-loader/dist/cjs.js??ruleSet[1].rules[1].oneOf[2].use[2]!./node_modules/resolve-url-loader/index.js!./node_modules/sass-loader/dist/cjs.js??ruleSet[1].rules[1].oneOf[2].use[4]!./src/packageWorker/install-upload/index.scss ***!
+  \******************************************************************************************************************************************************************************************************************************************************************************************************************************************/
+
+/* ====================================================
+ * Apple Design System - 变量与常量定义
+ *
+ * @description 提取最核心的 iOS 18 和 Apple 官网设计规范。
+ * 所有 px 值在 Taro 构建时自动 1:1 转为 rpx (designWidth=750)。
+ * 因此这里的 px 值 = rpx 值，需按真实小程序比例书写。
+ *
+ * 参考：750rpx = iPhone 6/7/8 屏幕宽度 (375pt × 2)
+ *        1rpx ≈ 0.5pt
+ *
+ * ==================================================== */
+.install-upload-page {
+  background-color: #F2F2F7;
+  height: 100vh;
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-flex-direction: column;
+      -ms-flex-direction: column;
+          flex-direction: column;
+}
+.install-upload-page .checkin-bar {
+  background-color: #fff;
+  padding: 24rpx 32rpx;
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-justify-content: space-between;
+      -ms-flex-pack: justify;
+          justify-content: space-between;
+  -webkit-align-items: center;
+      -ms-flex-align: center;
+          align-items: center;
+  border-bottom: 1rpx solid rgba(60, 60, 67, 0.1);
+  -webkit-transition: background-color 0.3s;
+  transition: background-color 0.3s;
+  z-index: 10;
+}
+.install-upload-page .checkin-bar .info {
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-flex-direction: column;
+      -ms-flex-direction: column;
+          flex-direction: column;
+}
+.install-upload-page .checkin-bar .info .title {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #1D1D1F;
+  margin-bottom: 4rpx;
+}
+.install-upload-page .checkin-bar .info .time {
+  font-size: 24rpx;
+  color: #FF9500;
+}
+.install-upload-page .checkin-bar .btn {
+  background-color: #0071E3;
+  color: #fff;
+  margin: 0;
+  border-radius: 100rpx;
+  height: 64rpx;
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-align-items: center;
+      -ms-flex-align: center;
+          align-items: center;
+  -webkit-justify-content: center;
+      -ms-flex-pack: center;
+          justify-content: center;
+  font-size: 24rpx;
+  font-weight: 600;
+}
+.install-upload-page .checkin-bar .btn::after {
+  border: none;
+}
+.install-upload-page .checkin-bar.checked {
+  background-color: rgba(52, 199, 89, 0.05);
+}
+.install-upload-page .checkin-bar.checked .info .time {
+  color: #34C759;
+}
+.install-upload-page .checkin-bar.checked .btn {
+  background-color: #34C759;
+}
+.install-upload-page .content-scroll {
+  -webkit-flex: 1;
+      -ms-flex: 1;
+          flex: 1;
+  padding: 24rpx;
+}
+.install-upload-page .card {
+  background-color: #fff;
+  border-radius: 28rpx;
+  padding: 32rpx;
+  margin-bottom: 24rpx;
+  -webkit-box-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.05);
+          box-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.05);
+}
+.install-upload-page .upload-card .card-header {
+  margin-bottom: 24rpx;
+}
+.install-upload-page .upload-card .card-header .title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #1D1D1F;
+  display: block;
+  margin-bottom: 4rpx;
+}
+.install-upload-page .upload-card .card-header .title .required {
+  color: #FF3B30;
+}
+.install-upload-page .upload-card .card-header .subtitle {
+  font-size: 22rpx;
+  color: #6E6E73;
+}
+.install-upload-page .upload-card .images-grid {
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-flex-wrap: wrap;
+      -ms-flex-wrap: wrap;
+          flex-wrap: wrap;
+  gap: 16rpx;
+}
+.install-upload-page .upload-card .images-grid .photo-thumb {
+  width: calc(33.33% - 12rpx);
+  aspect-ratio: 1;
+  border-radius: 20rpx;
+}
+.install-upload-page .upload-card .images-grid .photo-add {
+  width: calc(33.33% - 12rpx);
+  aspect-ratio: 1;
+  background-color: #F8F8F8;
+  border: 2rpx dashed rgba(60, 60, 67, 0.1);
+  border-radius: 20rpx;
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-align-items: center;
+      -ms-flex-align: center;
+          align-items: center;
+  -webkit-justify-content: center;
+      -ms-flex-pack: center;
+          justify-content: center;
+}
+.install-upload-page .upload-card .images-grid .photo-add .icon {
+  font-size: 40rpx;
+  color: #AEAEB2;
+}
+.install-upload-page .upload-card .images-grid .photo-add:active {
+  background-color: #F0F0F0;
+}
+.install-upload-page .remark-card .title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1D1D1F;
+  display: block;
+  margin-bottom: 24rpx;
+}
+.install-upload-page .remark-card .remark-input {
+  width: 100%;
+  height: 160rpx;
+  background-color: #F8F8F8;
+  border-radius: 20rpx;
+  padding: 24rpx;
+  font-size: 30rpx;
+  -webkit-box-sizing: border-box;
+          box-sizing: border-box;
+}
+.install-upload-page .safe-bottom-space {
+  height: env(safe-area-inset-bottom);
+  margin-bottom: 120rpx;
+}
+.install-upload-page .bottom-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: #fff;
+  padding: 24rpx 24rpx calc(24rpx + env(safe-area-inset-bottom));
+  -webkit-box-shadow: 0 -4rpx 16rpx rgba(0, 0, 0, 0.05);
+          box-shadow: 0 -4rpx 16rpx rgba(0, 0, 0, 0.05);
+  z-index: 100;
+}
+.install-upload-page .bottom-bar .btn-submit {
+  background-color: #0071E3;
+  color: #fff;
+  height: 88rpx;
+  border-radius: 100rpx;
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-align-items: center;
+      -ms-flex-align: center;
+          align-items: center;
+  -webkit-justify-content: center;
+      -ms-flex-pack: center;
+          justify-content: center;
+  font-size: 32rpx;
+  font-weight: 600;
+}
+.install-upload-page .bottom-bar .btn-submit::after {
+  border: none;
+}
+.install-upload-page .bottom-bar .btn-submit:active {
+  opacity: 0.8;
+}

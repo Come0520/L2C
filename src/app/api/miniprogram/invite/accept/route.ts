@@ -7,7 +7,14 @@ import { NextRequest } from 'next/server';
 import { db } from '@/shared/api/db';
 import { invitations, users, tenants } from '@/shared/api/schema';
 import { eq, and, gt } from 'drizzle-orm';
-import { apiSuccess, apiError } from '@/shared/lib/api-response';
+import {
+  apiSuccess,
+  apiError,
+  apiBadRequest,
+  apiServerError,
+  apiNotFound,
+  apiForbidden,
+} from '@/shared/lib/api-response';
 import { logger } from '@/shared/lib/logger';
 import { generateMiniprogramToken, verifyRegisterToken } from '../../auth-utils';
 import { InviteAcceptSchema } from '../../miniprogram-schemas';
@@ -31,7 +38,7 @@ export async function POST(request: NextRequest) {
     // Zod 输入验证
     const parsed = InviteAcceptSchema.safeParse(body);
     if (!parsed.success) {
-      return apiError(parsed.error.issues[0].message, 400);
+      return apiBadRequest(parsed.error.issues[0].message);
     }
 
     const { code, registerToken } = parsed.data;
@@ -40,7 +47,7 @@ export async function POST(request: NextRequest) {
     const registerPayload = await verifyRegisterToken(registerToken);
     if (!registerPayload) {
       logger.error('[InviteAccept] 注册临时 Token 无效或过期', { route: 'invite/accept' });
-      return apiError('授权凭证已过期或无效，请重新登录微信', 403);
+      return apiForbidden('授权凭证已过期或无效，请重新登录微信');
     }
     const { openId } = registerPayload;
 
@@ -54,7 +61,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!invite) {
-      return apiError('邀请码无效或已过期', 404);
+      return apiNotFound('邀请码无效或已过期');
     }
 
     // 2. 查找或创建用户
@@ -136,6 +143,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     logger.error('[InviteAccept] 接受邀请异常', { route: 'invite/accept', error });
-    return apiError('接受邀请失败', 500);
+    return apiServerError('接受邀请失败');
   }
 }

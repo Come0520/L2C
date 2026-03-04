@@ -11,7 +11,7 @@ import { NextRequest } from 'next/server';
 import { db } from '@/shared/api/db';
 import { leads, quotes, orders } from '@/shared/api/schema';
 import { and, eq, gte, inArray, ne, sql } from 'drizzle-orm';
-import { apiSuccess, apiError } from '@/shared/lib/api-response';
+import { apiSuccess, apiServerError } from '@/shared/lib/api-response';
 import { authenticateMobile, requireSales } from '@/shared/middleware/mobile-auth';
 import { createLogger } from '@/shared/lib/logger';
 import { dashboardCache } from '@/shared/lib/cache-utils';
@@ -105,6 +105,6 @@ export const GET = withTiming(async (request: NextRequest) => {
     return apiSuccess(funnelData);
   } catch (error) {
     log.error('[Mobile API][dashboard] 漏斗查询错误', {}, error);
-    return apiError('获取销售漏斗数据失败', 500);
+    return apiServerError('获取销售漏斗数据失败');
   }
 });

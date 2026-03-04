@@ -13,16 +13,55 @@ description: Use when you need to evaluate the development completeness and matu
 
 ## When to Use
 
-*   **项目进度评估**：需要了解某个模块"做到了什么程度"
-*   **资源规划**：需要决定接下来把开发资源投入到哪个方向
-*   **风险识别**：需要快速识别模块的最薄弱环节
-*   **演示/汇报**：需要向管理层/产品展示模块建设进度
-*   **对比分析**：需要横向对比不同模块的成熟度差异
+- **项目进度评估**：需要了解某个模块"做到了什么程度"
+- **资源规划**：需要决定接下来把开发资源投入到哪个方向
+- **风险识别**：需要快速识别模块的最薄弱环节
+- **演示/汇报**：需要向管理层/产品展示模块建设进度
+- **对比分析**：需要横向对比不同模块的成熟度差异
 
 ## When NOT to Use
 
-*   需要逐行审查代码、修复具体 Bug → 使用 `module-audit`
-*   需要实施具体的安全加固 → 使用 `module-audit`
+- 需要逐行审查代码、修复具体 Bug → 使用 `module-audit`
+- 需要实施具体的安全加固 → 使用 `module-audit`
+
+### Release Gate Threshold（发布门禁阈值）
+
+当被 `version-release-protocol` Step 0 Gate 0.5 调用时，切换为 **发布门禁模式**：
+
+**核心规则**：**本次变更涉及的所有模块，成熟度必须 ≥ L3（完善期）方可发布。**
+
+|     评估结果      |  门禁判定   | 说明                   |
+| :---------------: | :---------: | :--------------------- |
+| 所有变更模块 ≥ L3 | ✅ **PASS** | 允许继续发布           |
+| 任何变更模块 < L3 | ❌ **FAIL** | 阻断发布，列出短板维度 |
+
+**Batch Release Scan（批量发布扫描）执行步骤**：
+
+1. 通过 `git diff` 识别本次变更涉及的模块（对照 `module-audit` 中的模块映射表）
+2. 对每个变更模块执行 **快速评分**（八维度，无需输出完整路线图）
+3. 输出 **门禁评分卡**：
+
+```markdown
+# Release Gate - Module Maturity Scan
+
+> 扫描时间：YYYY-MM-DD HH:mm
+> 变更模块数：N
+
+| 模块   | 成熟度 | 综合分 | 最低维度       |  门禁   |
+| :----- | :----: | :----: | :------------- | :-----: |
+| orders | L3 🟡  |  5.8   | D3 测试 (3/10) | ✅ PASS |
+| leads  | L2 🟠  |  3.5   | D6 安全 (2/10) | ❌ FAIL |
+
+## 门禁判定：FAIL ❌
+
+### 阻断原因：leads 模块低于 L3 门禁阈值
+
+### 建议：优先提升 D6 安全维度（添加输入校验和租户隔离）
+```
+
+4. 返回 PASS/FAIL 给 `version-release-protocol`
+
+> **注意**：门禁模式下不输出升级路线图（那是独立评估时的工作），仅输出评分卡和 Pass/Fail 判定。
 
 ---
 
@@ -30,19 +69,20 @@ description: Use when you need to evaluate the development completeness and matu
 
 ### 五级成熟度定义
 
-| 等级 | 名称 | 综合得分 | 核心特征 |
-|:---:|:---|:---:|:---|
-| **L1** | 🔴 骨架期 (Skeleton) | 0-2 | 只有基础路由和页面框架，核心业务逻辑未实现 |
-| **L2** | 🟠 可用期 (Functional) | 2-4 | 核心 CRUD 功能可用，但缺少边界处理、安全机制、测试 |
-| **L3** | 🟡 完善期 (Robust) | 4-6 | 功能完整，有输入校验、错误处理、基本安全措施，但测试和文档不完整 |
-| **L4** | 🟢 生产就绪 (Production-Ready) | 6-8 | 全面的安全、测试、文档、日志、监控，可直接上线 |
-| **L5** | 🔵 持续优化 (Optimized) | **每项 ≥ 9** | 所有 8 个维度得分均 ≥ 9，代表全方位卓越：性能调优、高级分析、自动化运维、持续改进闭环 |
+|  等级  | 名称                           |   综合得分   | 核心特征                                                                              |
+| :----: | :----------------------------- | :----------: | :------------------------------------------------------------------------------------ |
+| **L1** | 🔴 骨架期 (Skeleton)           |     0-2      | 只有基础路由和页面框架，核心业务逻辑未实现                                            |
+| **L2** | 🟠 可用期 (Functional)         |     2-4      | 核心 CRUD 功能可用，但缺少边界处理、安全机制、测试                                    |
+| **L3** | 🟡 完善期 (Robust)             |     4-6      | 功能完整，有输入校验、错误处理、基本安全措施，但测试和文档不完整                      |
+| **L4** | 🟢 生产就绪 (Production-Ready) |     6-8      | 全面的安全、测试、文档、日志、监控，可直接上线                                        |
+| **L5** | 🔵 持续优化 (Optimized)        | **每项 ≥ 9** | 所有 8 个维度得分均 ≥ 9，代表全方位卓越：性能调优、高级分析、自动化运维、持续改进闭环 |
 
 ### 等级判定规则
 
 综合得分 = 8 个维度得分的加权平均（默认等权重 12.5%）。
 
 **降级规则**（任一条触发则降低一级）：
+
 - 任何维度得分 ≤ 2 → 最高判定为 L2
 - 安全维度 (D6) 得分 ≤ 4 → 最高判定为 L3
 - 测试维度 (D3) 得分 ≤ 3 → 最高判定为 L3
@@ -55,6 +95,7 @@ description: Use when you need to evaluate the development completeness and matu
 ### D1: 功能完整性 (Feature Completeness) — 权重 15%
 
 **评估方法**：
+
 1. 扫描需求文档，列出所有预期功能点
 2. 逐条对照代码实现，标记：✅ 已实现 / ⚠️ 部分实现 / ❌ 未实现
 3. 搜索 `TODO`、`FIXME`、`HACK`、`placeholder`、`mock` 等标记
@@ -74,6 +115,7 @@ description: Use when you need to evaluate the development completeness and matu
 ### D2: 代码质量 (Code Quality) — 权重 12.5%
 
 **评估方法**：
+
 1. 扫描 `any` 类型使用量、`@ts-ignore` 数量
 2. 检查重复代码模式（复制粘贴痕迹）
 3. 评估函数嵌套深度、单文件行数、单函数行数
@@ -94,6 +136,7 @@ description: Use when you need to evaluate the development completeness and matu
 ### D3: 测试覆盖 (Test Coverage) — 权重 12.5%
 
 **评估方法**：
+
 1. 检查 `__tests__/` 目录是否存在
 2. 统计测试文件数量和测试用例数量
 3. 评估核心业务路径是否有测试
@@ -113,6 +156,7 @@ description: Use when you need to evaluate the development completeness and matu
 ### D4: 文档完整性 (Documentation) — 权重 10%
 
 **评估方法**：
+
 1. 检查 `docs/02-requirements/modules/` 下对应文档是否存在
 2. 验证文档内容与代码行为是否一致
 3. 检查关键函数/Actions 是否有 JSDoc/TSDoc
@@ -132,6 +176,7 @@ description: Use when you need to evaluate the development completeness and matu
 ### D5: UI/UX 成熟度 (UI/UX Maturity) — 权重 12.5%
 
 **评估方法**：
+
 1. 检查 Loading / Empty / Error 三态处理是否完整
 2. 检查表单校验和用户反馈 (Toast/Alert)
 3. 评估信息架构和交互一致性
@@ -151,6 +196,7 @@ description: Use when you need to evaluate the development completeness and matu
 ### D6: 安全规范 (Security) — 权重 15%
 
 **评估方法**：
+
 1. 检查所有 API 路由的认证/授权机制
 2. 验证输入校验 (Zod Schema Validation)
 3. 检查多租户隔离 (`tenantId` 过滤)
@@ -170,6 +216,7 @@ description: Use when you need to evaluate the development completeness and matu
 ### D7: 可运维性 (Observability & Operations) — 权重 10%
 
 **评估方法**：
+
 1. 检查关键操作是否有日志记录
 2. 验证审计追踪 (AuditService) 的使用
 3. 检查错误处理和用户友好的错误信息
@@ -189,6 +236,7 @@ description: Use when you need to evaluate the development completeness and matu
 ### D8: 性能优化 (Performance) — 权重 12.5%
 
 **评估方法**：
+
 1. 检查数据库查询是否有索引、分页、合理 LIMIT
 2. 检查 N+1 查询问题
 3. 评估前端渲染性能（懒加载、代码分割）
@@ -212,7 +260,7 @@ graph TD
     Start[开始评估] --> Identify[识别目标模块]
     Identify --> Map[映射模块资源<br/>代码/文档/Schema/测试/UI]
     Map --> Scan[逐维度扫描与评分]
-    
+
     subgraph "八维评分"
         Scan --> D1[D1 功能完整性]
         Scan --> D2[D2 代码质量]
@@ -223,7 +271,7 @@ graph TD
         Scan --> D7[D7 可运维性]
         Scan --> D8[D8 性能优化]
     end
-    
+
     D1 --> Aggregate[汇总加权得分]
     D2 --> Aggregate
     D3 --> Aggregate
@@ -232,7 +280,7 @@ graph TD
     D6 --> Aggregate
     D7 --> Aggregate
     D8 --> Aggregate
-    
+
     Aggregate --> Level[判定成熟度等级 L1-L5]
     Level --> Degrade{触发降级规则?}
     Degrade -- Yes --> AdjustLevel[降低等级]
@@ -257,27 +305,27 @@ graph TD
 
 ## 📊 管理摘要 (Executive Summary)
 
-| 指标 | 结果 |
-|:---|:---|
-| **成熟度等级** | 🟡 L3 完善期 (Robust) |
-| **综合得分** | 6.2 / 10 |
-| **最强维度** | D1 功能完整性 (9/10) |
-| **最薄弱维度** | D3 测试覆盖 (3/10) |
-| **降级触发** | D3 ≤ 3 → 最高 L3 |
-| **升级至 L4 预计工作量** | 约 5 人天 |
+| 指标                     | 结果                  |
+| :----------------------- | :-------------------- |
+| **成熟度等级**           | 🟡 L3 完善期 (Robust) |
+| **综合得分**             | 6.2 / 10              |
+| **最强维度**             | D1 功能完整性 (9/10)  |
+| **最薄弱维度**           | D3 测试覆盖 (3/10)    |
+| **降级触发**             | D3 ≤ 3 → 最高 L3      |
+| **升级至 L4 预计工作量** | 约 5 人天             |
 
 ## 📈 维度打分卡 (Scorecard)
 
-| 维度 | 得分 | 等级 | 核心发现 |
-|:---:|:---:|:---:|:---|
-| D1 功能完整性 | 9/10 | 🔵 | 需求覆盖率 95%，仅 2 个非关键 TODO |
-| D2 代码质量 | 7/10 | 🟢 | 少量 `any`（3 处），架构分层清晰 |
-| D3 测试覆盖 | 3/10 | 🔴 | 仅 2 个测试文件，无集成/E2E 测试 |
-| D4 文档完整性 | 5/10 | 🟡 | 需求文档存在但部分过时 |
-| D5 UI/UX 成熟度 | 7/10 | 🟢 | 三态基本处理，交互较一致 |
-| D6 安全规范 | 6/10 | 🟡 | 认证完整，部分路由缺少输入校验 |
-| D7 可运维性 | 5/10 | 🟡 | 部分日志，基本审计追踪 |
-| D8 性能优化 | 6/10 | 🟡 | 主要查询有分页，缺少缓存策略 |
+|      维度       | 得分 | 等级 | 核心发现                           |
+| :-------------: | :--: | :--: | :--------------------------------- |
+|  D1 功能完整性  | 9/10 |  🔵  | 需求覆盖率 95%，仅 2 个非关键 TODO |
+|   D2 代码质量   | 7/10 |  🟢  | 少量 `any`（3 处），架构分层清晰   |
+|   D3 测试覆盖   | 3/10 |  🔴  | 仅 2 个测试文件，无集成/E2E 测试   |
+|  D4 文档完整性  | 5/10 |  🟡  | 需求文档存在但部分过时             |
+| D5 UI/UX 成熟度 | 7/10 |  🟢  | 三态基本处理，交互较一致           |
+|   D6 安全规范   | 6/10 |  🟡  | 认证完整，部分路由缺少输入校验     |
+|   D7 可运维性   | 5/10 |  🟡  | 部分日志，基本审计追踪             |
+|   D8 性能优化   | 6/10 |  🟡  | 主要查询有分页，缺少缓存策略       |
 
 ## 🔍 维度详细分析
 
@@ -286,6 +334,7 @@ graph TD
 **现状**：需求覆盖率 95%，仅 2 个非关键 TODO
 **差距**：距 L5 需清理所有 TODO 并补充高级分析功能
 **改进行动**：
+
 1. 🟡 P2: 清理剩余 2 个 TODO
 2. 🟡 P2: 评估是否需要高级数据分析功能
 
@@ -296,20 +345,24 @@ graph TD
 > 预计总工作量：约 5 人天
 
 ### 阶段一：补齐安全短板（优先级最高，预计 1 天）
+
 - [ ] 所有 API 路由添加 Zod 输入校验
 - [ ] 补全多租户隔离检查
 
 ### 阶段二：补齐测试覆盖（预计 2 天）
+
 - [ ] 为 Service 层核心逻辑编写单元测试（≥ 10 个用例）
 - [ ] 为 API 路由编写集成测试（覆盖核心 CRUD）
 - [ ] 确保关键业务路径测试覆盖率 ≥ 80%
 
 ### 阶段三：完善文档（预计 1 天）
+
 - [ ] 更新需求文档，与当前代码行为同步
 - [ ] 为核心 Actions/Service 方法补充 JSDoc
 - [ ] 补充 Schema 字段注释
 
 ### 阶段四：增强可运维性（预计 1 天）
+
 - [ ] 为所有写操作添加 AuditService.log() 调用
 - [ ] 统一错误处理和日志格式
 - [ ] 检查并补充错误分类
@@ -322,12 +375,12 @@ graph TD
 
 ## 5. 与 module-audit 的协作
 
-| 场景 | 使用哪个 Skill |
-|:---|:---|
-| "这个模块做到什么程度了？" | ✅ `module-maturity-assessment` |
-| "这个模块有什么 Bug / 安全漏洞？" | ✅ `module-audit` |
-| "先体检再深度审计" | 先跑 `maturity-assessment` → 识别最薄弱维度 → 再用 `module-audit` 针对性审计 |
-| "横向对比所有模块进度" | ✅ `module-maturity-assessment`（逐模块评估后汇总） |
+| 场景                              | 使用哪个 Skill                                                               |
+| :-------------------------------- | :--------------------------------------------------------------------------- |
+| "这个模块做到什么程度了？"        | ✅ `module-maturity-assessment`                                              |
+| "这个模块有什么 Bug / 安全漏洞？" | ✅ `module-audit`                                                            |
+| "先体检再深度审计"                | 先跑 `maturity-assessment` → 识别最薄弱维度 → 再用 `module-audit` 针对性审计 |
+| "横向对比所有模块进度"            | ✅ `module-maturity-assessment`（逐模块评估后汇总）                          |
 
 ## 6. Module Resource Mapping (模块资源映射)
 

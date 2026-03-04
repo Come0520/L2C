@@ -6,9 +6,14 @@
  * 返回：{ quantity, unitPrice, subtotal, breakdown }
  */
 import { NextRequest } from 'next/server';
-import { apiSuccess, apiError } from '@/shared/lib/api-response';
+import {
+  apiSuccess,
+  apiBadRequest,
+  apiServerError,
+  apiUnauthorized,
+} from '@/shared/lib/api-response';
 import { logger } from '@/shared/lib/logger';
-import { getMiniprogramUser } from '../auth-utils';
+import { withMiniprogramAuth } from '../auth-utils';
 
 interface CalcRequest {
   productId: string;
@@ -52,16 +57,12 @@ function calculateLinearQuantity(params: CalcRequest): number {
   return Math.round((width + 0.2) * 100) / 100;
 }
 
-/**
- * 报价计算 API
- * POST /api/miniprogram/calculate
- */
-export async function POST(request: NextRequest) {
+export const POST = withMiniprogramAuth(async (request: NextRequest, user) => {
   try {
     // 1. 认证检查（防止未授权滥用计算资源）
-    const user = await getMiniprogramUser(request);
+
     if (!user || !user.tenantId) {
-      return apiError('未授权', 401);
+      return apiUnauthorized('未授权');
     }
 
     const body: CalcRequest = await request.json();
@@ -69,10 +70,10 @@ export async function POST(request: NextRequest) {
 
     // 参数验证
     if (!width || width <= 0) {
-      return apiError('请输入有效的宽度', 400);
+      return apiBadRequest('请输入有效的宽度');
     }
     if (calcType === 'CURTAIN' && (!height || height <= 0)) {
-      return apiError('请输入有效的高度', 400);
+      return apiBadRequest('请输入有效的高度');
     }
 
     let quantity = 0;
@@ -115,6 +116,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     logger.error('Calculate Error:', error);
-    return apiError('计算失败', 500);
+    return apiServerError('计算失败');
   }
-}
+});

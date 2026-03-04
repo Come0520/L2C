@@ -143,6 +143,12 @@ vi.mock('../../services/accessory-linkage.service', () => ({
   },
 }));
 
+vi.mock('@/shared/services/audit-service', () => ({
+  AuditService: {
+    recordFromSession: vi.fn().mockResolvedValue(undefined),
+  },
+}));
+
 vi.mock('../calc-strategies/strategy-factory', () => ({
   StrategyFactory: {
     getStrategy: vi.fn(() => ({
@@ -272,6 +278,12 @@ describe('报价单 Actions 集成测试', () => {
 
   describe('approveQuote - 审批报价单', () => {
     it('应传入租户 ID 调用 QuoteLifecycleService.approve', async () => {
+      // 模拟报价单创建人与当前审批人不同
+      mockDbQuery.quotes.findFirst.mockResolvedValue({
+        id: 'a0a0a0a0-b1b1-4c1c-8d1d-e0e0e0e00001',
+        createdBy: 'other-user-id', // 不同用户
+      });
+
       await approveQuote({
         id: 'a0a0a0a0-b1b1-4c1c-8d1d-e0e0e0e00001',
       });
@@ -282,12 +294,42 @@ describe('报价单 Actions 集成测试', () => {
         'test-tenant-id'
       );
     });
+
+    // F3: 自我审批防护
+    it('F3: 创建人审批自己的报价单应抛出错误', async () => {
+      // 模拟报价单创建人 === 当前审批人
+      mockDbQuery.quotes.findFirst.mockResolvedValue({
+        id: 'a0a0a0a0-b1b1-4c1c-8d1d-e0e0e0e00001',
+        createdBy: 'test-user-id', // 与 context.session.user.id 相同
+      });
+
+      await expect(
+        approveQuote({
+          id: 'a0a0a0a0-b1b1-4c1c-8d1d-e0e0e0e00001',
+        })
+      ).rejects.toThrow('不允许审批自己创建的报价单');
+
+      // 确认 QuoteLifecycleService.approve 未被调用
+      expect(QuoteLifecycleService.approve).not.toHaveBeenCalled();
+    });
+
+    // F3: 报价单不存在时的防护
+    it('F3: 报价单不存在时应抛出错误', async () => {
+      mockDbQuery.quotes.findFirst.mockResolvedValue(null);
+
+      await expect(
+        approveQuote({
+          id: 'a0a0a0a0-b1b1-4c1c-8d1d-e0e0e0e00001',
+        })
+      ).rejects.toThrow('报价单不存在或无权操作');
+    });
   });
 
   describe('rejectQuote - 拒绝报价单', () => {
     it('应传入租户 ID 调用 QuoteLifecycleService.reject', async () => {
       await rejectQuote({
         id: 'a0a0a0a0-b1b1-4c1c-8d1d-e0e0e0e00001',
+        // 字段名 rejectReason 与 quote-lifecycle-actions.ts 内联 Schema 一致
         rejectReason: '价格不合理',
       });
 
@@ -296,6 +338,96 @@ describe('报价单 Actions 集成测试', () => {
         '价格不合理',
         'test-tenant-id'
       );
+    });
+  });
+
+  describe('createQuoteItem - F2 costPrice 快照', () => {
+    // 测试用合法 UUID
+    const QUOTE_UUID = 'a1a1a1a1-b2b2-4c3c-8d4d-e5e5e5e5e5e5';
+    const PRODUCT_UUID = 'b2b2b2b2-c3c3-4d4d-8e5e-f6f6f6f6f6f6';
+
+    it('F2: 关联产品有内部成本时应写入 costPrice 快照', async () => {
+      const quoteStub = {
+        id: QUOTE_UUID,
+        tenantId: 'test-tenant-id',
+        createdBy: 'test-user-id',
+        totalAmount: '0',
+        discountRate: '1',
+        discountAmount: '0',
+      };
+      mockDbQuery.quotes.findFirst.mockResolvedValue(quoteStub);
+      mockDbQuery.products.findFirst.mockResolvedValue({
+        id: PRODUCT_UUID,
+        name: '测试面料',
+        retailPrice: '80',
+        purchasePrice: '45', // 采购价 45 元
+        logisticsCost: '0', // 无物流成本
+        processingCost: '0', // 无加工费
+        lossRate: '0.05', // 5% 损耗率
+        floorPrice: '60',
+        specs: {},
+        tenantId: 'test-tenant-id',
+      });
+      // 两次 findMany：排序查询 + updateQuoteTotal 汇总
+      mockDbQuery.quoteItems.findMany.mockResolvedValue([]);
+
+      // 利用标准 mock 配置，捕获 values 调用参数
+      const valuesSpy = vi.fn().mockReturnValue({
+        returning: vi
+          .fn()
+          .mockResolvedValue([{ id: 'a0a0a0a0-b1b1-4c1c-8d1d-e0e0e0e00001', quoteId: QUOTE_UUID }]),
+      });
+      mockDbInsert.mockImplementation(() => ({ values: valuesSpy }));
+
+      const { createQuoteItem } = await import('../actions/quote-item-crud');
+      await createQuoteItem({
+        quoteId: QUOTE_UUID,
+        category: 'OTHER',
+        productId: PRODUCT_UUID,
+        productName: '测试面料',
+        unitPrice: 80,
+        quantity: 2,
+      });
+
+      // 验证 values 被调用，且第一次调用的参数中包含 costPrice
+      // 公式：(45 + 0) / (1 - 0.05) + 0 = 45 / 0.95 ≈ 47.37
+      expect(valuesSpy).toHaveBeenCalled();
+      const insertedValues = valuesSpy.mock.calls[0][0] as Record<string, unknown>;
+      expect(insertedValues.costPrice).toBe('47.37');
+    });
+
+    it('F2: 无关联产品时 costPrice 应为 undefined', async () => {
+      const quoteStub = {
+        id: QUOTE_UUID,
+        tenantId: 'test-tenant-id',
+        createdBy: 'test-user-id',
+        totalAmount: '0',
+        discountRate: '1',
+        discountAmount: '0',
+      };
+      mockDbQuery.quotes.findFirst.mockResolvedValue(quoteStub);
+      mockDbQuery.quoteItems.findMany.mockResolvedValue([]);
+
+      const valuesSpy = vi.fn().mockReturnValue({
+        returning: vi
+          .fn()
+          .mockResolvedValue([{ id: 'a0a0a0a0-b1b1-4c1c-8d1d-e0e0e0e00001', quoteId: QUOTE_UUID }]),
+      });
+      mockDbInsert.mockImplementation(() => ({ values: valuesSpy }));
+
+      const { createQuoteItem } = await import('../actions/quote-item-crud');
+      await createQuoteItem({
+        quoteId: QUOTE_UUID,
+        category: 'OTHER',
+        productName: '自定义商品',
+        unitPrice: 100,
+        quantity: 1,
+      });
+
+      expect(valuesSpy).toHaveBeenCalled();
+      const insertedValues = valuesSpy.mock.calls[0][0] as Record<string, unknown>;
+      // 无产品关联时 costPrice 应为 undefined
+      expect(insertedValues.costPrice).toBeUndefined();
     });
   });
 

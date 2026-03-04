@@ -7,7 +7,7 @@ import { NextRequest } from 'next/server';
 import { db } from '@/shared/api/db';
 import { purchaseOrders } from '@/shared/api/schema';
 import { eq, desc, and, count } from 'drizzle-orm';
-import { apiError, apiPaginated } from '@/shared/lib/api-response';
+import { apiPaginated, apiBadRequest, apiServerError } from '@/shared/lib/api-response';
 import { authenticateMobile, requirePurchaser } from '@/shared/middleware/mobile-auth';
 import { createLogger } from '@/shared/lib/logger';
 
@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
     ] as const;
 
     if (status && !VALID_STATUSES.includes(status as (typeof VALID_STATUSES)[number])) {
-      return apiError('无效的状态参数', 400);
+      return apiBadRequest('无效的状态参数');
     }
 
     const baseCondition = eq(purchaseOrders.tenantId, session.tenantId);
@@ -98,7 +98,7 @@ export async function GET(request: NextRequest) {
     return apiPaginated(items, page, pageSize, total);
   } catch (error) {
     log.error('采购单列表查询错误', {}, error);
-    return apiError('查询采购单列表失败', 500);
+    return apiServerError('查询采购单列表失败');
   }
 }
 

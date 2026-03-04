@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { apiError } from '@/shared/lib/api-response';
+import { apiBadRequest, apiServerError } from '@/shared/lib/api-response';
 import { logger } from '@/shared/lib/logger';
 
 /**
@@ -12,7 +12,9 @@ export async function GET(request: NextRequest) {
     const code = searchParams.get('code');
 
     if (!code) {
-      return apiError('缺少租户码', 400);
+      return apiBadRequest('缺少 scene 或 envVersion 参数', {
+        cause: 'invalid_params',
+      });
     }
 
     const appId = process.env.WX_APPID || process.env.WECHAT_MINI_APPID;
@@ -20,7 +22,7 @@ export async function GET(request: NextRequest) {
 
     if (!appId || !appSecret) {
       logger.error('未配置小程序 AppID 或 AppSecret');
-      return apiError('服务端未配置小程序信息', 500);
+      return apiServerError('服务端未配置小程序信息');
     }
 
     // 1. 获取 Access Token
@@ -31,7 +33,7 @@ export async function GET(request: NextRequest) {
 
     if (tokenData.errcode || !tokenData.access_token) {
       logger.error('获取 Access Token 失败:', tokenData);
-      return apiError('获取微信 Access Token 失败', 500, tokenData);
+      return apiServerError('获取微信 Access Token 失败', tokenData);
     }
 
     const accessToken = tokenData.access_token;
@@ -60,7 +62,9 @@ export async function GET(request: NextRequest) {
     if (contentType?.includes('application/json')) {
       const errorData = await qrRes.json();
       logger.error('生成小程序码失败:', errorData);
-      return apiError('生成小程序码失败', 500, errorData);
+      return apiServerError('获取着陆页分享码异常', {
+        cause: errorData,
+      });
     }
 
     const imageBuffer = await qrRes.arrayBuffer();
@@ -74,6 +78,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     logger.error('处理小程序码请求错误:', error);
-    return apiError('内部服务器错误', 500);
+    return apiServerError('内部服务器错误');
   }
 }

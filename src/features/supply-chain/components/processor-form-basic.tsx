@@ -10,12 +10,15 @@ import {
 } from '@/shared/ui/form';
 import { Input } from '@/shared/ui/input';
 import { PhoneInput } from '@/components/ui/phone-input';
+import { AddressInput } from '@/components/ui/address-input';
 import { Textarea } from '@/shared/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { useFormContext } from 'react-hook-form';
+import { useTenant } from '@/shared/providers/tenant-provider';
 
 export function ProcessorFormBasic() {
   const form = useFormContext();
+  const { tenant } = useTenant();
 
   return (
     <div className="grid gap-4 py-4">
@@ -116,9 +119,14 @@ export function ProcessorFormBasic() {
         name="address"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>地址</FormLabel>
+            <FormLabel>联系地址</FormLabel>
             <FormControl>
-              <Input placeholder="详细地址" {...field} />
+              <AddressInput
+                value={field.value || ''}
+                onChange={field.onChange}
+                defaultRegion={tenant?.region}
+                placeholder="详细地址"
+              />
             </FormControl>
             <FormMessage />
           </FormItem>

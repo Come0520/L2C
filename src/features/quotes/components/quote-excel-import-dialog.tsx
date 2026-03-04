@@ -7,7 +7,8 @@ import FileDown from 'lucide-react/dist/esm/icons/file-down';
 import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle';
 import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
 import Loader2 from 'lucide-react/dist/esm/icons/loader';
-import * as XLSX from 'xlsx';
+import { Workbook } from 'exceljs';
+import { saveAs } from 'file-saver';
 import { toast } from 'sonner';
 import { batchImportQuoteItems } from '@/features/quotes/actions/import-actions';
 import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert';
@@ -52,16 +53,44 @@ export function QuoteExcelImportDialog({
     errors: string[];
   } | null>(null);
 
-  const downloadTemplate = () => {
-    const ws = XLSX.utils.aoa_to_sheet([
-      TEMPLATE_HEADER,
+  const downloadTemplate = async () => {
+    const workbook = new Workbook();
+    const worksheet = workbook.addWorksheet('报价单导入模版');
+
+    worksheet.addRow(TEMPLATE_HEADER);
+    worksheet.addRows([
       ['主卧', '米兰绒窗帘', '300', '260', '1', '280', '包含轨道'],
       ['主卧', '窗纱', '300', '260', '1', '120', ''],
       ['客厅', '电动梦幻帘', '400', '260', '1', '580', ''],
     ]);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, '报价单导入模版');
-    XLSX.writeFile(wb, '报价导入模版.xlsx');
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    saveAs(new Blob([buffer], { type: 'application/octet-stream' }), '报价导入模版.xlsx');
+  };
+
+  const parseWorkbookToData = (workbook: Workbook) => {
+    const worksheet = workbook.worksheets[0];
+    const jsonData: Record<string, unknown>[] = [];
+    if (!worksheet) return jsonData;
+
+    const headers: string[] = [];
+    worksheet.getRow(1).eachCell((cell, colNumber) => {
+      headers[colNumber] = cell.value ? String(cell.value) : `Col${colNumber}`;
+    });
+
+    worksheet.eachRow((row, rowNumber) => {
+      if (rowNumber === 1) return;
+      const rowData: Record<string, unknown> = {};
+      row.eachCell((cell, colNumber) => {
+        const header = headers[colNumber];
+        if (header) {
+          rowData[header] = cell.value;
+        }
+      });
+      jsonData.push(rowData);
+    });
+
+    return jsonData;
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -72,12 +101,11 @@ export function QuoteExcelImportDialog({
     setImportResult(null);
 
     const reader = new FileReader();
-    reader.onload = (e) => {
-      const data = new Uint8Array(e.target?.result as ArrayBuffer);
-      const workbook = XLSX.read(data, { type: 'array' });
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      const jsonData = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet);
+    reader.onload = async (e) => {
+      const data = e.target?.result as ArrayBuffer;
+      const workbook = new Workbook();
+      await workbook.xlsx.load(data);
+      const jsonData = parseWorkbookToData(workbook);
 
       // Map and Validate
       const mappedData: ExcelImportRow[] = [];
@@ -89,8 +117,6 @@ export function QuoteExcelImportDialog({
           // Simple fuzzy match for headers if needed, but exact match for now
           const targetKey = FIELD_MAPPING[key] || FIELD_MAPPING[key.trim()];
           if (targetKey) {
-            // Safe assignment with type assertion based on mapping knowledge
-            // In a real strict environment, we might want runtime validation (zod)
             (newRow as Record<string, unknown>)[targetKey] = row[key];
           }
         });
@@ -116,11 +142,10 @@ export function QuoteExcelImportDialog({
     const reader = new FileReader();
     reader.onload = async (e) => {
       try {
-        const data = new Uint8Array(e.target?.result as ArrayBuffer);
-        const workbook = XLSX.read(data, { type: 'array' });
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
-        const jsonData = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet);
+        const data = e.target?.result as ArrayBuffer;
+        const workbook = new Workbook();
+        await workbook.xlsx.load(data);
+        const jsonData = parseWorkbookToData(workbook);
 
         // Mapped
         const items = jsonData

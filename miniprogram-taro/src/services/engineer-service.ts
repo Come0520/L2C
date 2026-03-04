@@ -24,7 +24,18 @@ export const engineerService = {
      */
     async getSchedule(startDate: string, endDate: string) {
         return api.get<{ tasks: any[] }>('/engineer/schedule', {
-            params: { startDate, endDate }
+            data: { startDate, endDate }
         })
+    },
+
+    /**
+     * 工程师提交完工（包括上传安装后图片等）
+     * POST /api/miniprogram/engineer/tasks/:id/complete
+     */
+    async completeTask(taskId: string, data: {
+        photos?: string[]
+        notes?: string
+    }) {
+        return api.post(`/engineer/tasks/${taskId}/complete`, { data }).then(res => res.data)
     }
 } 

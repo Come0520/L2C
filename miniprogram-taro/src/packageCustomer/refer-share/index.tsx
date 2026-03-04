@@ -16,27 +16,26 @@ export default function ReferSharePage() {
         list: [] as { name: string; time: string; status: string }[]
     })
 
-    const fetchStats = async () => {
-        try {
-            const res = await customerService.getReferralStats()
-            if (res) {
-                setStats({
-                    invited: res.totalReferrals || 0,
-                    rewards: res.points || 0, // 可以根据设计显示金额或积分
-                    // mock 列表留存，后续有了记录列表API再替换
-                    list: [
-                        { name: '王先生', time: '2026-03-01', status: '已签约' },
-                        { name: '李女士', time: '2026-02-28', status: '已量尺' },
-                        { name: '赵先生', time: '2026-02-15', status: '已签约' }
-                    ]
-                })
-            }
-        } catch (error) {
-            console.error('Failed to fetch referral stats', error)
-        }
-    }
-
     useEffect(() => {
+        const fetchStats = async () => {
+            try {
+                const res = await customerService.getReferralStats()
+                if (res) {
+                    setStats({
+                        invited: res.totalReferrals || 0,
+                        rewards: res.points || 0,
+                        list: [
+                            { name: '王先生', time: '2026-03-01', status: '已签约' },
+                            { name: '李女士', time: '2026-02-28', status: '已量尺' },
+                            { name: '赵先生', time: '2026-02-15', status: '已签约' }
+                        ]
+                    })
+                }
+            } catch (error) {
+                console.error('Failed to fetch referral stats', error)
+            }
+        }
+
         fetchStats()
     }, [])
 

@@ -1,1 +1,302 @@
-"use strict";(wx["webpackJsonp"]=wx["webpackJsonp"]||[]).push([[1362],{5581:function(s,e,a){var c=a(8870),n=a(1212),t=a(467),i=a(5544),o=a(118),l=a(758),r=a.n(l),u=a(6540),d=a(2635),h=a(3544),m=a(4848);function p(){var s=(0,h.nc)(),e=s.userInfo,a=(0,u.useState)(""),c=(0,i.A)(a,2),p=c[0],x=c[1],N=(0,u.useState)(""),j=(0,i.A)(N,2),v=j[0],f=j[1],w=(0,u.useState)(""),S=(0,i.A)(w,2),g=S[0],b=S[1],A=(0,u.useState)(""),E=(0,i.A)(A,2),Y=E[0],k=E[1],T=(0,u.useState)(!1),q=(0,i.A)(T,2),y=q[0],C=q[1],F=(null===e||void 0===e?void 0:e.tenantName)||"L2C \u88c5\u4fee\u65d7\u8230\u5e97",L=(null===e||void 0===e?void 0:e.avatarUrl)||"https://images.unsplash.com/photo-1542382257-80da354bf52c?w=100&q=80";(0,l.useLoad)(function(){var s=(0,t.A)((0,n.A)().m(function s(e){var a,c,t,i;return(0,n.A)().w(function(s){while(1)switch(s.p=s.n){case 0:return x(e.id||""),a=e.type||"product",s.p=1,s.n=2,d.F.get("/showroom/".concat(a,"/").concat(e.id)).catch(function(){return{success:!0,data:{}}});case 2:c=s.v,c.success&&(f(c.data.title||"\u6625\u6653\u96c5\u7b51\u73b0\u4ee3\u6781\u7b80\u5168\u5c4b\u6574\u88c5"),b((null===(t=c.data.description)||void 0===t?void 0:t.substring(0,50))||"\u4e3a\u4f60\u63d0\u4f9b\u6700\u4e13\u4e1a\u7684\u5168\u5c4b\u5b9a\u5236\u4e0e\u88c5\u4fee\u670d\u52a1"),k((null===(i=c.data.images)||void 0===i?void 0:i[0])||c.data.coverUrl||"https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&q=80")),s.n=4;break;case 3:s.p=3,s.v;case 4:return s.a(2)}},s,null,[[1,3]])}));return function(e){return s.apply(this,arguments)}}());var U=function(){var s=(0,t.A)((0,n.A)().m(function s(){return(0,n.A)().w(function(s){while(1)switch(s.n){case 0:C(!0),r().showLoading({title:"\u751f\u6210\u4e2d..."}),setTimeout(function(){r().hideLoading(),C(!1),r().showToast({title:"\u6d77\u62a5\u5df2\u4fdd\u5b58\u5230\u76f8\u518c",icon:"success"})},1500);case 1:return s.a(2)}},s)}));return function(){return s.apply(this,arguments)}}(),V=function(){r().showToast({title:"\u8bf7\u70b9\u51fb\u53f3\u4e0a\u89d2\u8f6c\u53d1",icon:"none"})},_=function(){var s=(0,t.A)((0,n.A)().m(function s(){return(0,n.A)().w(function(s){while(1)switch(s.n){case 0:return s.n=1,r().setClipboardData({data:"https://l2c.asia/share/".concat(p)});case 1:r().showToast({title:"\u94fe\u63a5\u5df2\u590d\u5236",icon:"success"});case 2:return s.a(2)}},s)}));return function(){return s.apply(this,arguments)}}();return(0,m.jsxs)(o.Ss,{className:"capsule-page",children:[(0,m.jsx)(o.Ss,{className:"poster-container",children:(0,m.jsxs)(o.Ss,{className:"poster-card",id:"poster-node",children:[(0,m.jsxs)(o.Ss,{className:"poster-header",children:[(0,m.jsx)(o._V,{className:"tenant-logo",src:L,mode:"aspectFill"}),(0,m.jsx)(o.EY,{className:"tenant-name",children:F})]}),(0,m.jsxs)(o.Ss,{className:"poster-body",children:[(0,m.jsx)(o._V,{className:"content-image",src:Y,mode:"aspectFill"}),(0,m.jsx)(o.EY,{className:"content-title",children:v}),(0,m.jsx)(o.EY,{className:"content-desc",children:g})]}),(0,m.jsxs)(o.Ss,{className:"poster-footer",children:[(0,m.jsxs)(o.Ss,{className:"footer-text",children:[(0,m.jsx)(o.EY,{className:"slogan",children:"\u957f\u6309\u8bc6\u522b\u5c0f\u7a0b\u5e8f\u7801"}),(0,m.jsx)(o.EY,{className:"slogan-sub",children:"\u67e5\u770b\u66f4\u591a\u7cbe\u9009\u597d\u7269\u4e0e\u6848\u4f8b"})]}),(0,m.jsx)(o.Ss,{className:"qr-code",children:(0,m.jsx)(o._V,{className:"qr-img",src:"https://images.unsplash.com/photo-1607519961633-1cebc784b069?w=150&q=80",mode:"aspectFill"})})]})]})}),(0,m.jsxs)(o.Ss,{className:"action-panel",children:[(0,m.jsx)(o.EY,{className:"panel-title",children:"\u5206\u4eab\u7ed9\u5ba2\u6237"}),(0,m.jsxs)(o.Ss,{className:"action-grid",children:[(0,m.jsxs)(o.Ss,{className:"action-item",onClick:V,children:[(0,m.jsx)(o.Ss,{className:"icon-circle wx-icon",children:(0,m.jsx)(o.EY,{className:"icon-text",children:"W"})}),(0,m.jsx)(o.EY,{className:"action-label",children:"\u53d1\u7ed9\u5fae\u4fe1\u597d\u53cb"})]}),(0,m.jsxs)(o.Ss,{className:"action-item",onClick:U,children:[(0,m.jsx)(o.Ss,{className:"icon-circle save-icon",children:(0,m.jsx)(o.EY,{className:"icon-text",children:"\u2193"})}),(0,m.jsx)(o.EY,{className:"action-label",children:y?"\u751f\u6210\u4e2d...":"\u4fdd\u5b58\u5206\u4eab\u6d77\u62a5"})]}),(0,m.jsxs)(o.Ss,{className:"action-item",onClick:_,children:[(0,m.jsx)(o.Ss,{className:"icon-circle link-icon",children:(0,m.jsx)(o.EY,{className:"icon-text",children:"\ud83d\udd17"})}),(0,m.jsx)(o.EY,{className:"action-label",children:"\u590d\u5236\u4e13\u5c5e\u94fe\u63a5"})]})]})]})]})}var x={navigationBarTitleText:"capsule"},N=(0,c.eU)(p,"packageShowroom/capsule/index",{root:{cn:[]}},x||{});p&&p.behaviors&&(N.behaviors=(N.behaviors||[]).concat(p.behaviors));Page(N)}},function(s){var e=function(e){return s(s.s=e)};s.O(0,[6907,8096,2076],function(){return e(5581)});s.O()}]);
+"use strict";
+(wx["webpackJsonp"] = wx["webpackJsonp"] || []).push([["packageShowroom/capsule/index"],{
+
+/***/ "./node_modules/@tarojs/taro-loader/lib/entry-cache.js?name=packageShowroom/capsule/index!./src/packageShowroom/capsule/index.tsx":
+/*!****************************************************************************************************************************************!*\
+  !*** ./node_modules/@tarojs/taro-loader/lib/entry-cache.js?name=packageShowroom/capsule/index!./src/packageShowroom/capsule/index.tsx ***!
+  \****************************************************************************************************************************************/
+/***/ (function(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": function() { return /* binding */ CapsulePage; }
+/* harmony export */ });
+/* harmony import */ var C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/regenerator.js */ "./node_modules/@babel/runtime/helpers/esm/regenerator.js");
+/* harmony import */ var C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js */ "./node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js");
+/* harmony import */ var C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/slicedToArray.js */ "./node_modules/@babel/runtime/helpers/esm/slicedToArray.js");
+/* harmony import */ var _tarojs_components__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! @tarojs/components */ "./node_modules/@tarojs/plugin-platform-weapp/dist/components-react.js");
+/* harmony import */ var _tarojs_taro__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! @tarojs/taro */ "webpack/container/remote/@tarojs/taro");
+/* harmony import */ var _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default = /*#__PURE__*/__webpack_require__.n(_tarojs_taro__WEBPACK_IMPORTED_MODULE_4__);
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! react */ "webpack/container/remote/react");
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_5___default = /*#__PURE__*/__webpack_require__.n(react__WEBPACK_IMPORTED_MODULE_5__);
+/* harmony import */ var _services_api__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! @/services/api */ "./src/services/api.ts");
+/* harmony import */ var _stores_auth__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! @/stores/auth */ "./src/stores/auth.ts");
+/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! react/jsx-runtime */ "webpack/container/remote/react/jsx-runtime");
+/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8___default = /*#__PURE__*/__webpack_require__.n(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__);
+
+
+
+/**
+ * 展厅分享设置页（Sales 专属）/ 生成品牌分享图
+ */
+
+
+
+
+
+
+
+function CapsulePage() {
+  var _useAuthStore = (0,_stores_auth__WEBPACK_IMPORTED_MODULE_7__.useAuthStore)(),
+    userInfo = _useAuthStore.userInfo;
+  var _useState = (0,react__WEBPACK_IMPORTED_MODULE_5__.useState)(''),
+    _useState2 = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_2__["default"])(_useState, 2),
+    itemId = _useState2[0],
+    setItemId = _useState2[1];
+  var _useState3 = (0,react__WEBPACK_IMPORTED_MODULE_5__.useState)(''),
+    _useState4 = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_2__["default"])(_useState3, 2),
+    shareTitle = _useState4[0],
+    setShareTitle = _useState4[1];
+  var _useState5 = (0,react__WEBPACK_IMPORTED_MODULE_5__.useState)(''),
+    _useState6 = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_2__["default"])(_useState5, 2),
+    shareDesc = _useState6[0],
+    setShareDesc = _useState6[1];
+  var _useState7 = (0,react__WEBPACK_IMPORTED_MODULE_5__.useState)(''),
+    _useState8 = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_2__["default"])(_useState7, 2),
+    shareImage = _useState8[0],
+    setShareImage = _useState8[1];
+  var _useState9 = (0,react__WEBPACK_IMPORTED_MODULE_5__.useState)(false),
+    _useState0 = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_2__["default"])(_useState9, 2),
+    loading = _useState0[0],
+    setLoading = _useState0[1];
+
+  // 模拟租户信息
+  var tenantName = (userInfo === null || userInfo === void 0 ? void 0 : userInfo.tenantName) || 'L2C 装修旗舰店';
+  var tenantLogo = (userInfo === null || userInfo === void 0 ? void 0 : userInfo.avatarUrl) || 'https://images.unsplash.com/photo-1542382257-80da354bf52c?w=100&q=80';
+  (0,_tarojs_taro__WEBPACK_IMPORTED_MODULE_4__.useLoad)(/*#__PURE__*/function () {
+    var _ref = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])(/*#__PURE__*/(0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__["default"])().m(function _callee(params) {
+      var type, res, _res$data$description, _res$data$images, _t;
+      return (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__["default"])().w(function (_context) {
+        while (1) switch (_context.p = _context.n) {
+          case 0:
+            setItemId(params.id || '');
+            type = params.type || 'product'; // product | case | article
+            _context.p = 1;
+            _context.n = 2;
+            return _services_api__WEBPACK_IMPORTED_MODULE_6__.api.get("/showroom/".concat(type, "/").concat(params.id)).catch(function () {
+              return {
+                success: true,
+                data: {}
+              };
+            });
+          case 2:
+            res = _context.v;
+            if (res.success) {
+              // Mock 兜底数据
+              setShareTitle(res.data.title || '春晓雅筑现代极简全屋整装');
+              setShareDesc(((_res$data$description = res.data.description) === null || _res$data$description === void 0 ? void 0 : _res$data$description.substring(0, 50)) || '为你提供最专业的全屋定制与装修服务');
+              setShareImage(((_res$data$images = res.data.images) === null || _res$data$images === void 0 ? void 0 : _res$data$images[0]) || res.data.coverUrl || 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&q=80');
+            }
+            _context.n = 4;
+            break;
+          case 3:
+            _context.p = 3;
+            _t = _context.v;
+          case 4:
+            return _context.a(2);
+        }
+      }, _callee, null, [[1, 3]]);
+    }));
+    return function (_x) {
+      return _ref.apply(this, arguments);
+    };
+  }());
+
+  // 模拟保存海报到相册
+  var handleSavePoster = /*#__PURE__*/function () {
+    var _ref2 = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])(/*#__PURE__*/(0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__["default"])().m(function _callee2() {
+      return (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__["default"])().w(function (_context2) {
+        while (1) switch (_context2.n) {
+          case 0:
+            setLoading(true);
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().showLoading({
+              title: '生成中...'
+            });
+            setTimeout(function () {
+              _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().hideLoading();
+              setLoading(false);
+              _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().showToast({
+                title: '海报已保存到相册',
+                icon: 'success'
+              });
+            }, 1500);
+          case 1:
+            return _context2.a(2);
+        }
+      }, _callee2);
+    }));
+    return function handleSavePoster() {
+      return _ref2.apply(this, arguments);
+    };
+  }();
+
+  // 微信转发（模拟）
+  var handleShareWx = function handleShareWx() {
+    _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().showToast({
+      title: '请点击右上角转发',
+      icon: 'none'
+    });
+  };
+  var handleCopyLink = /*#__PURE__*/function () {
+    var _ref3 = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])(/*#__PURE__*/(0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__["default"])().m(function _callee3() {
+      return (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__["default"])().w(function (_context3) {
+        while (1) switch (_context3.n) {
+          case 0:
+            _context3.n = 1;
+            return _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().setClipboardData({
+              data: "https://l2c.asia/share/".concat(itemId)
+            });
+          case 1:
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().showToast({
+              title: '链接已复制',
+              icon: 'success'
+            });
+          case 2:
+            return _context3.a(2);
+        }
+      }, _callee3);
+    }));
+    return function handleCopyLink() {
+      return _ref3.apply(this, arguments);
+    };
+  }();
+  return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+    className: "capsule-page",
+    children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+      className: "poster-container",
+      children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+        className: "poster-card",
+        id: "poster-node",
+        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+          className: "poster-header",
+          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Image, {
+            className: "tenant-logo",
+            src: tenantLogo,
+            mode: "aspectFill"
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+            className: "tenant-name",
+            children: tenantName
+          })]
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+          className: "poster-body",
+          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Image, {
+            className: "content-image",
+            src: shareImage,
+            mode: "aspectFill"
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+            className: "content-title",
+            children: shareTitle
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+            className: "content-desc",
+            children: shareDesc
+          })]
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+          className: "poster-footer",
+          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+            className: "footer-text",
+            children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+              className: "slogan",
+              children: "\u957F\u6309\u8BC6\u522B\u5C0F\u7A0B\u5E8F\u7801"
+            }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+              className: "slogan-sub",
+              children: "\u67E5\u770B\u66F4\u591A\u7CBE\u9009\u597D\u7269\u4E0E\u6848\u4F8B"
+            })]
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+            className: "qr-code",
+            children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Image, {
+              className: "qr-img",
+              src: "https://images.unsplash.com/photo-1607519961633-1cebc784b069?w=150&q=80",
+              mode: "aspectFill"
+            })
+          })]
+        })]
+      })
+    }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+      className: "action-panel",
+      children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+        className: "panel-title",
+        children: "\u5206\u4EAB\u7ED9\u5BA2\u6237"
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+        className: "action-grid",
+        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+          className: "action-item",
+          onClick: handleShareWx,
+          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+            className: "icon-circle wx-icon",
+            children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+              className: "icon-text",
+              children: "W"
+            })
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+            className: "action-label",
+            children: "\u53D1\u7ED9\u5FAE\u4FE1\u597D\u53CB"
+          })]
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+          className: "action-item",
+          onClick: handleSavePoster,
+          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+            className: "icon-circle save-icon",
+            children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+              className: "icon-text",
+              children: "\u2193"
+            })
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+            className: "action-label",
+            children: loading ? '生成中...' : '保存分享海报'
+          })]
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+          className: "action-item",
+          onClick: handleCopyLink,
+          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+            className: "icon-circle link-icon",
+            children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+              className: "icon-text",
+              children: "\uD83D\uDD17"
+            })
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+            className: "action-label",
+            children: "\u590D\u5236\u4E13\u5C5E\u94FE\u63A5"
+          })]
+        })]
+      })]
+    })]
+  });
+}
+
+/***/ }),
+
+/***/ "./src/packageShowroom/capsule/index.tsx":
+/*!***********************************************!*\
+  !*** ./src/packageShowroom/capsule/index.tsx ***!
+  \***********************************************/
+/***/ (function(__unused_webpack_module, __unused_webpack___webpack_exports__, __webpack_require__) {
+
+/* harmony import */ var _tarojs_runtime__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @tarojs/runtime */ "webpack/container/remote/@tarojs/runtime");
+/* harmony import */ var _tarojs_runtime__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_tarojs_runtime__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _node_modules_tarojs_taro_loader_lib_entry_cache_js_name_packageShowroom_capsule_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! !!../../../node_modules/@tarojs/taro-loader/lib/entry-cache.js?name=packageShowroom/capsule/index!./index.tsx */ "./node_modules/@tarojs/taro-loader/lib/entry-cache.js?name=packageShowroom/capsule/index!./src/packageShowroom/capsule/index.tsx");
+
+
+var config = {"navigationBarTitleText":"capsule"};
+
+
+
+var taroOption = (0,_tarojs_runtime__WEBPACK_IMPORTED_MODULE_0__.createPageConfig)(_node_modules_tarojs_taro_loader_lib_entry_cache_js_name_packageShowroom_capsule_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"], 'packageShowroom/capsule/index', {root:{cn:[]}}, config || {})
+if (_node_modules_tarojs_taro_loader_lib_entry_cache_js_name_packageShowroom_capsule_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"] && _node_modules_tarojs_taro_loader_lib_entry_cache_js_name_packageShowroom_capsule_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"].behaviors) {
+  taroOption.behaviors = (taroOption.behaviors || []).concat(_node_modules_tarojs_taro_loader_lib_entry_cache_js_name_packageShowroom_capsule_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"].behaviors)
+}
+var inst = Page(taroOption)
+
+
+
+/* unused harmony default export */ var __WEBPACK_DEFAULT_EXPORT__ = (_node_modules_tarojs_taro_loader_lib_entry_cache_js_name_packageShowroom_capsule_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"]);
+
+
+/***/ })
+
+},
+/******/ function(__webpack_require__) { // webpackRuntimeModules
+/******/ var __webpack_exec__ = function(moduleId) { return __webpack_require__(__webpack_require__.s = moduleId); }
+/******/ __webpack_require__.O(0, ["taro","vendors","common"], function() { return __webpack_exec__("./src/packageShowroom/capsule/index.tsx"); });
+/******/ var __webpack_exports__ = __webpack_require__.O();
+/******/ }
+]);
+//# sourceMappingURL=index.js.map

@@ -171,7 +171,7 @@
 ## 📎 相关文档
 
 - [移动端需求规范](./移动端.md)
-- [API 规范](../../04-api/api_specification.md)
+- [API 规范](../../05-api/api-specification.md)
 
 ---
 

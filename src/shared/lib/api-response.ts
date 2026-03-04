@@ -1,6 +1,6 @@
 /**
  * 移动端 API 统一响应格式
- * 
+ *
  * 标准响应结构：
  * { success: boolean, data?: T, message?: string, code: number }
  */
@@ -15,33 +15,33 @@ import { NextResponse } from 'next/server';
  * API 成功响应结构
  */
 export interface ApiSuccessResponse<T = unknown> {
-    success: true;
-    data: T;
-    message?: string;
-    code: number;
+  success: true;
+  data: T;
+  message?: string;
+  code: number;
 }
 
 /**
  * API 错误响应结构
  */
 export interface ApiErrorResponse {
-    success: false;
-    error: string;
-    code: number;
-    details?: unknown;
+  success: false;
+  error: string;
+  code: number;
+  details?: unknown;
 }
 
 /**
  * API 分页数据结构
  */
 export interface PaginatedData<T> {
-    items: T[];
-    pagination: {
-        page: number;
-        pageSize: number;
-        total: number;
-        totalPages: number;
-    };
+  items: T[];
+  pagination: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+  };
 }
 
 // ============================================================
@@ -55,19 +55,19 @@ export interface PaginatedData<T> {
  * @param code - HTTP 状态码（默认 200）
  */
 export function apiSuccess<T>(
-    data: T,
-    message?: string,
-    code = 200
+  data: T,
+  message?: string,
+  code = 200
 ): NextResponse<ApiSuccessResponse<T>> {
-    return NextResponse.json(
-        {
-            success: true as const,
-            data,
-            message,
-            code,
-        },
-        { status: code }
-    );
+  return NextResponse.json(
+    {
+      success: true as const,
+      data,
+      message,
+      code,
+    },
+    { status: code }
+  );
 }
 
 /**
@@ -77,19 +77,19 @@ export function apiSuccess<T>(
  * @param details - 可选错误详情
  */
 export function apiError(
-    error: string,
-    code = 400,
-    details?: unknown
+  error: string,
+  code = 400,
+  details?: unknown
 ): NextResponse<ApiErrorResponse> {
-    return NextResponse.json(
-        {
-            success: false as const,
-            error,
-            code,
-            details,
-        },
-        { status: code }
-    );
+  return NextResponse.json(
+    {
+      success: false as const,
+      error,
+      code,
+      details,
+    },
+    { status: code }
+  );
 }
 
 /**
@@ -100,20 +100,20 @@ export function apiError(
  * @param total - 总条数
  */
 export function apiPaginated<T>(
-    items: T[],
-    page: number,
-    pageSize: number,
-    total: number
+  items: T[],
+  page: number,
+  pageSize: number,
+  total: number
 ): NextResponse<ApiSuccessResponse<PaginatedData<T>>> {
-    return apiSuccess({
-        items,
-        pagination: {
-            page,
-            pageSize,
-            total,
-            totalPages: Math.ceil(total / pageSize),
-        },
-    });
+  return apiSuccess({
+    items,
+    pagination: {
+      page,
+      pageSize,
+      total,
+      totalPages: Math.ceil(total / pageSize),
+    },
+  });
 }
 
 // ============================================================
@@ -124,33 +124,45 @@ export function apiPaginated<T>(
  * 未授权（401）
  */
 export function apiUnauthorized(message = '未登录或登录已过期'): NextResponse<ApiErrorResponse> {
-    return apiError(message, 401);
+  return apiError(message, 401);
 }
 
 /**
  * 无权限（403）
  */
-export function apiForbidden(message = '无权限访问'): NextResponse<ApiErrorResponse> {
-    return apiError(message, 403);
+export function apiForbidden(
+  message = '无权限访问',
+  details?: unknown
+): NextResponse<ApiErrorResponse> {
+  return apiError(message, 403, details);
 }
 
 /**
  * 未找到（404）
  */
-export function apiNotFound(message = '资源不存在'): NextResponse<ApiErrorResponse> {
-    return apiError(message, 404);
+export function apiNotFound(
+  message = '资源不存在',
+  details?: unknown
+): NextResponse<ApiErrorResponse> {
+  return apiError(message, 404, details);
 }
 
 /**
  * 服务器错误（500）
  */
-export function apiServerError(message = '服务器内部错误'): NextResponse<ApiErrorResponse> {
-    return apiError(message, 500);
+export function apiServerError(
+  message = '服务器内部错误',
+  details?: unknown
+): NextResponse<ApiErrorResponse> {
+  return apiError(message, 500, details);
 }
 
 /**
  * 参数错误（400）
  */
-export function apiBadRequest(message = '请求参数错误'): NextResponse<ApiErrorResponse> {
-    return apiError(message, 400);
+export function apiBadRequest(
+  message = '请求参数错误',
+  details?: unknown
+): NextResponse<ApiErrorResponse> {
+  return apiError(message, 400, details);
 }

@@ -2,18 +2,13 @@ import { NextRequest } from 'next/server';
 import { db } from '@/shared/api/db';
 import { invitations, users } from '@/shared/api/schema';
 import { eq, and, gt, desc } from 'drizzle-orm';
-import { getMiniprogramUser } from '../../auth-utils';
-import { apiSuccess, apiError } from '@/shared/lib/api-response';
+import { withMiniprogramAuth } from '../../auth-utils';
+import { apiSuccess, apiServerError, apiUnauthorized } from '@/shared/lib/api-response';
 import { logger } from '@/shared/lib/logger';
 
-export async function GET(request: NextRequest) {
+export const GET = withMiniprogramAuth(async (request: NextRequest, user) => {
   try {
-    const tokenData = await getMiniprogramUser(request);
-    if (!tokenData) {
-      return apiError('未授权', 401);
-    }
-
-    const { tenantId } = tokenData;
+    const { tenantId } = user;
 
     // 1. 获取已加入的用户
     const joinedUsers = await db.query.users.findMany({
@@ -74,9 +69,9 @@ export async function GET(request: NextRequest) {
     return apiSuccess(list);
   } catch (error) {
     logger.error('获取邀请列表失败:', error);
-    return apiError('获取失败', 500);
+    return apiServerError('获取失败');
   }
-}
+});
 
 function getRoleName(role: string | null) {
   const roles: Record<string, string> = {

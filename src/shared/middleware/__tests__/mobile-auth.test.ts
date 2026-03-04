@@ -171,7 +171,7 @@ describe('Mobile Auth 中间件 & JWT 集成', () => {
       expect(requireInternal(mockSession('WORKER')).allowed).toBe(true);
       expect(requireInternal(mockSession('SALES')).allowed).toBe(true);
       expect(requireInternal(mockSession('ADMIN')).allowed).toBe(true);
-      expect(requireInternal(mockSession('PURCHASER')).allowed).toBe(true);
+      expect(requireInternal(mockSession('SUPPLY')).allowed).toBe(true);
       expect(requireInternal(mockSession('CUSTOMER')).allowed).toBe(false);
       expect(requireInternal(mockSession('GUEST' as any)).allowed).toBe(false);
     });

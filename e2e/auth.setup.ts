@@ -5,35 +5,35 @@ const authFile = path.join(__dirname, '../.auth/user.json');
 
 setup('authenticate', async ({ page }) => {
     console.log('Navigating to login page...');
-    // 访问登录页，可能面临初次编译所以增加容忍时间
-    page.on('console', msg => console.log('PAGE LOG:', msg.text()));
-    await page.goto('http://localhost:3000/login', { timeout: 120000, waitUntil: 'domcontentloaded' });
-    console.log('Login page loaded');
+    page.on('console', msg => {
+        if (msg.type() === 'error' || msg.text().includes('Error') || msg.text().includes('error')) {
+            console.log('PAGE LOG:', msg.text());
+        }
+    });
+
+    await page.goto('/login', { timeout: 120000, waitUntil: 'domcontentloaded' });
+    console.log('Login page loaded, URL:', page.url());
 
     // 填写登录表单
-    // 注意：已通过 seed-e2e.ts 预设管理员账号
     await page.getByPlaceholder('请输入手机号或邮箱').fill('13800000001');
     await page.getByPlaceholder('请输入密码').fill('123456');
     console.log('Form filled, clicking submit...');
+
     await page.getByRole('button', { name: '登录' }).click();
+    console.log('Submit button clicked, waiting for redirect...');
 
-    // 等待登录响应
-    console.log('Waiting for login response...');
-    await page.waitForTimeout(2000);
-
-    // 等待跳转
     try {
-        console.log('Waiting for redirect...');
-        await page.waitForTimeout(5000); // 给一点稳定时间
+        // 等待 URL 变化到非 /login 页面
+        await page.waitForURL(url => !url.pathname.includes('/login'), { timeout: 60000 });
         console.log('Final URL after redirect:', page.url());
-        // 只要不是登录页且包含基本路径即可
-        await expect(page).not.toHaveURL(/.*login/, { timeout: 15000 });
         console.log('Authentication successful');
     } catch (e) {
-        console.error('Authentication failed, taking screenshot...');
-        await page.screenshot({ path: 'auth-failure.png' });
-        console.log('Current URL at failure:', page.url());
-        throw e;
+        // 尝试抓取页面上的错误提示
+        const errorMsg = await page.locator('.text-destructive, [role="alert"], .text-red-500').first().textContent().catch(() => 'No error message found on page');
+        console.error('Login failed. Error on page:', errorMsg);
+        console.error('Current URL:', page.url());
+        await page.screenshot({ path: 'auth-failure.png', fullPage: true });
+        throw new Error(`Authentication failed. Page error: ${errorMsg}`);
     }
 
     // 保存认证状态

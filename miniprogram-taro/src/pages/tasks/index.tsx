@@ -58,7 +58,7 @@ export default function TasksPage() {
       // 此处统一弃用只返回安装任务的 `/engineer/tasks`，改用全量 `/tasks`
       const data = await taskService.getTaskList({ status: statusMap[tab] })
 
-      let measureTasks = (data.measureTasks || []).map((t: any) => ({
+      const measureTasks = (data.measureTasks || []).map((t: any) => ({
         id: t.id,
         type: 'measure' as const,
         customerName: t.customerName || t.customer?.name || '未知客户',
@@ -68,7 +68,7 @@ export default function TasksPage() {
         status: t.status
       }))
 
-      let installTasks = (data.installTasks || []).map((t: any) => ({
+      const installTasks = (data.installTasks || []).map((t: any) => ({
         id: t.id,
         type: 'install' as const,
         customerName: t.customerName || '未知客户',

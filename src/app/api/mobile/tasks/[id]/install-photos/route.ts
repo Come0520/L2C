@@ -5,7 +5,13 @@ const log = createLogger('mobile:tasks:install-photos');
 import { db } from '@/shared/api/db';
 import { installTasks, installPhotos } from '@/shared/api/schema';
 import { eq, and, desc } from 'drizzle-orm';
-import { apiSuccess, apiError, apiNotFound, apiForbidden } from '@/shared/lib/api-response';
+import {
+  apiSuccess,
+  apiNotFound,
+  apiForbidden,
+  apiBadRequest,
+  apiServerError,
+} from '@/shared/lib/api-response';
 import { authenticateMobile, requireWorker } from '@/shared/middleware/mobile-auth';
 
 interface RouteParams {
@@ -51,7 +57,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       { taskId, error: error instanceof Error ? error.message : String(error) },
       error
     );
-    return apiError('获取照片失败', 500);
+    return apiServerError('获取照片失败');
   }
 }
 
@@ -74,16 +80,16 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const { photoUrl, photoType, remark, roomName } = body;
 
     if (!photoUrl || !photoType) {
-      return apiError('缺少照片URL或类型', 400);
+      return apiBadRequest('缺少照片URL或类型');
     }
 
     if (!photoUrl.startsWith('http')) {
-      return apiError('无效的照片 URL 格式', 400);
+      return apiBadRequest('无效的照片 URL 格式');
     }
 
     const VALID_PHOTO_TYPES = ['BEFORE', 'AFTER', 'DETAIL'];
     if (!VALID_PHOTO_TYPES.includes(photoType)) {
-      return apiError('无效的照片类型', 400);
+      return apiBadRequest('无效的照片类型');
     }
 
     // Verify Task
@@ -97,7 +103,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     // 状态允许：IN_PROGRESS 或 PENDING_CONFIRM (允许完工前补传)
     if (!['IN_PROGRESS', 'PENDING_CONFIRM'].includes(task.status)) {
-      return apiError(`当前状态(${task.status})不允许上传照片`, 400);
+      return apiBadRequest(`当前状态(${task.status})不允许上传照片`);
     }
 
     const [newPhoto] = await db
@@ -119,6 +125,6 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       { taskId, error: error instanceof Error ? error.message : String(error) },
       error
     );
-    return apiError('上传照片记录失败', 500);
+    return apiServerError('上传照片记录失败');
   }
 }

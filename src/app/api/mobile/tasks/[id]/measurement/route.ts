@@ -12,7 +12,7 @@ const log = createLogger('mobile:tasks:measurement');
 import { db } from '@/shared/api/db';
 import { measureTasks, measureSheets, measureItems } from '@/shared/api/schema';
 import { eq, and } from 'drizzle-orm';
-import { apiSuccess, apiError, apiNotFound } from '@/shared/lib/api-response';
+import { apiSuccess, apiNotFound, apiBadRequest } from '@/shared/lib/api-response';
 import { authenticateMobile, requireWorker } from '@/shared/middleware/mobile-auth';
 
 interface MeasurementParams {
@@ -75,24 +75,24 @@ export async function POST(request: NextRequest, { params }: MeasurementParams) 
   try {
     body = await request.json();
   } catch {
-    return apiError('请求体格式错误', 400);
+    return apiBadRequest('请求体格式错误');
   }
 
   const { plans } = body as MeasurementBody;
 
   // 4. 参数校验
   if (!plans || !Array.isArray(plans) || plans.length === 0) {
-    return apiError('至少需要提交一个测量方案', 400);
+    return apiBadRequest('至少需要提交一个测量方案');
   }
 
   // 校验每个方案
   for (const plan of plans) {
     if (!plan.items || plan.items.length === 0) {
-      return apiError(`方案 "${plan.planName}" 缺少测量数据`, 400);
+      return apiBadRequest(`方案 "${plan.planName}" 缺少测量数据`);
     }
     for (const item of plan.items) {
       if (!item.roomName || !item.width || !item.height) {
-        return apiError('测量项缺少必要字段: roomName, width, height', 400);
+        return apiBadRequest('测量项缺少必要字段: roomName, width, height');
       }
     }
   }
@@ -114,7 +114,7 @@ export async function POST(request: NextRequest, { params }: MeasurementParams) 
   const validStatus: string[] = ['PENDING_VISIT', 'IN_PROGRESS'];
   const currentStatus = task.status as string | null;
   if (!currentStatus || !validStatus.includes(currentStatus)) {
-    return apiError(`当前状态 ${currentStatus ?? '未知'} 不允许提交测量数据`, 400);
+    return apiBadRequest(`当前状态 ${currentStatus ?? '未知'} 不允许提交测量数据`);
   }
 
   const now = new Date();

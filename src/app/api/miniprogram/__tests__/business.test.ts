@@ -60,14 +60,12 @@ vi.mock('@/shared/api/db', () => {
       update: vi.fn(() => ({ set: vi.fn(() => ({ where: vi.fn().mockResolvedValue({}) })) })),
       query: {
         quotes: {
-          findFirst: vi
-            .fn()
-            .mockResolvedValue({
-              id: 'q1',
-              status: 'PAID',
-              totalAmount: '100',
-              createdAt: new Date().toISOString(),
-            }),
+          findFirst: vi.fn().mockResolvedValue({
+            id: 'q1',
+            status: 'PAID',
+            totalAmount: '100',
+            createdAt: new Date().toISOString(),
+          }),
           findMany: vi
             .fn()
             .mockResolvedValue([
@@ -116,7 +114,17 @@ vi.mock('@/shared/services/miniprogram/customer.service', () => ({
 vi.mock('@/shared/services/miniprogram/order.service', () => ({
   OrderService: { createOrderFromQuote: vi.fn(), getOrders: vi.fn() },
 }));
-vi.mock('../auth-utils', () => ({ getMiniprogramUser: vi.fn() }));
+vi.mock('../auth-utils', async () => {
+  const actual = await vi.importActual('../auth-utils');
+  return {
+    ...actual,
+    getMiniprogramUser: vi.fn(),
+    withMiniprogramAuth: vi.fn((handler) => async (req: NextRequest) => {
+      const user = await authUtils.getMiniprogramUser(req);
+      return handler(req, user);
+    }),
+  };
+});
 vi.mock('@/shared/services/audit-service', () => ({
   AuditService: { log: vi.fn().mockResolvedValue(undefined) },
 }));

@@ -33,6 +33,7 @@ export const customerAddresses = pgTable(
       .$onUpdateFn(() => new Date()),
   },
   (table) => ({
+    custAddrTenantIdx: index('idx_cust_addresses_tenant').on(table.tenantId),
     custAddrCustomerIdx: index('idx_cust_addresses_customer').on(table.customerId),
   })
 );

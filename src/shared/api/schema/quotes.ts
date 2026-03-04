@@ -25,7 +25,7 @@ export const quotes = pgTable(
     tenantId: uuid('tenant_id')
       .references(() => tenants.id)
       .notNull(),
-    quoteNo: varchar('quote_no', { length: 50 }).unique().notNull(),
+    quoteNo: varchar('quote_no', { length: 50 }).notNull(),
     customerId: uuid('customer_id')
       .references(() => customers.id)
       .notNull(),
@@ -77,7 +77,9 @@ export const quotes = pgTable(
   (table) => ({
     quoteTenantIdx: index('idx_quotes_tenant').on(table.tenantId),
     quoteCustomerIdx: index('idx_quotes_customer').on(table.customerId),
-    // Ensure only ONE active version per Quote Family (RootQuote)
+    // F1: 租户级报价单号唯一约束（修复跨租户 quoteNo 泄露漏洞）
+    quoteNoTenantUnique: uniqueIndex('idx_quotes_quoteno_tenant').on(table.quoteNo, table.tenantId),
+    // 确保每个报价单族中只有一个活跃版本（局部唯一索引）
     // Using partial index: WHERE is_active = true
     quoteActiveVersionIdx: uniqueIndex('idx_quotes_active_version')
       .on(table.rootQuoteId)
@@ -170,6 +172,8 @@ export const quoteItems = pgTable(
   },
   (table) => ({
     quoteItemsQuoteIdx: index('idx_quote_items_quote').on(table.quoteId),
+    // F4: 嵌套附件查询索引（主商品行 → 附件子行的 parentId 关联查询）
+    quoteItemsParentIdx: index('idx_quote_items_parent').on(table.parentId),
   })
 );
 

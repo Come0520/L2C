@@ -22,6 +22,7 @@ import { format } from 'date-fns';
 import { AuditService } from '../shared/services/audit-service';
 import { AppError, ERROR_CODES } from '../shared/lib/errors';
 import { logger } from '../shared/lib/logger';
+const LEVEL_ORDER: Record<string, number> = { A: 4, B: 3, C: 2, D: 1 };
 
 export class CustomerService {
   /**
@@ -473,9 +474,6 @@ export class CustomerService {
       let mergedFirstOrderAt = primary.firstOrderAt;
       let mergedLastOrderAt = primary.lastOrderAt;
 
-      // 等级优先级映射（A 最高, D 最低）
-      const LEVEL_ORDER: Record<string, number> = { A: 4, B: 3, C: 2, D: 1 };
-
       for (const mc of mergedCustomers) {
         // ── 统计字段累加 ──
         totalOrders += mc.totalOrders || 0;
@@ -654,10 +652,21 @@ export class CustomerService {
       throw new AppError('客户不存在或无权操作', ERROR_CODES.CUSTOMER_NOT_FOUND, 404);
     }
 
-    // [Fix 1.2] 等级降级校验
-    if (data.level && existing.level && data.level < existing.level) {
-      logger.warn(`Customer level downgrade attempt: ${existing.level} -> ${data.level}`);
-      // 如果 strict mode: throw new AppError('不允许降低客户等级', ERROR_CODES.INVALID_OPERATION, 400);
+    // [Fix 1.2] 等级降级校验 (只升不降)
+    if (data.level && existing.level) {
+      const currentWeight = LEVEL_ORDER[existing.level] || 0;
+      const targetWeight = LEVEL_ORDER[data.level] || 0;
+
+      if (targetWeight < currentWeight) {
+        logger.warn(
+          `Customer level downgrade denied: ${existing.level} -> ${data.level} (ID: ${id})`
+        );
+        throw new AppError(
+          `不允许降低客户等级 (当前: ${existing.level}, 目标: ${data.level})`,
+          ERROR_CODES.INVALID_OPERATION,
+          400
+        );
+      }
     }
 
     // [Fix 3.2] 乐观锁并发控制

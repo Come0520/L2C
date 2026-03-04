@@ -9,20 +9,15 @@
  * - status: 任务状态过滤
  */
 import { NextRequest } from 'next/server';
-import { apiSuccess, apiError } from '@/shared/lib/api-response';
+import { apiSuccess, apiServerError, apiUnauthorized } from '@/shared/lib/api-response';
 import { logger } from '@/shared/lib/logger';
 import { db } from '@/shared/api/db';
 import { measureTasks, installTasks, customers } from '@/shared/api/schema';
 import { eq, and, or, desc } from 'drizzle-orm';
-import { getMiniprogramUser } from '../auth-utils';
+import { withMiniprogramAuth } from '../auth-utils';
 
-export async function GET(request: NextRequest) {
+export const GET = withMiniprogramAuth(async (request: NextRequest, user) => {
   try {
-    const user = await getMiniprogramUser(request);
-    if (!user) {
-      return apiError('未授权', 401);
-    }
-
     const { searchParams } = new URL(request.url);
     const type = searchParams.get('type') || 'all';
     const statusFilter = searchParams.get('status');
@@ -87,7 +82,7 @@ export async function GET(request: NextRequest) {
           remark: installTasks.remark,
           notes: installTasks.notes,
           createdAt: installTasks.createdAt,
-          // 客户信息（直接存储在任务表中）
+          // 客户信息
           customerName: installTasks.customerName,
           customerPhone: installTasks.customerPhone,
           address: installTasks.address,
@@ -119,6 +114,6 @@ export async function GET(request: NextRequest) {
     return response;
   } catch (error) {
     logger.error('获取任务列表失败:', error);
-    return apiError('获取任务列表失败', 500);
+    return apiServerError('获取任务列表失败');
   }
-}
+});

@@ -8,32 +8,25 @@
  */
 import { NextRequest } from 'next/server';
 import { db } from '@/shared/api/db';
-import { afterSalesTickets, orders } from '@/shared/api/schema';
+import { afterSalesTickets, orders, customers } from '@/shared/api/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { generateNo } from '@/shared/lib/generators';
-import { apiSuccess, apiError } from '@/shared/lib/api-response';
+import {
+  apiSuccess,
+  apiError,
+  apiBadRequest,
+  apiServerError,
+  apiNotFound,
+  apiUnauthorized,
+} from '@/shared/lib/api-response';
 import { logger } from '@/shared/lib/logger';
-import { getMiniprogramUser } from '../../auth-utils';
+import { withMiniprogramAuth } from '../../auth-utils';
 import { RateLimiter } from '@/shared/services/miniprogram/security.service';
 
-/**
- * 创建售后服务工单
- *
- * @route POST /api/miniprogram/service/tickets
- * @auth 需要小程序登录（Bearer Token）
- * @body orderId - 关联的原始订单 ID（必填，需属于当前租户）
- * @body type - 售后类型：REPAIR(维修)/RETURN(退货)/EXCHANGE(换货)/COMPLAINT(投诉)/CONSULTATION(咨询)
- * @body description - 问题描述（必填）
- * @body photos - 问题照片 URL 数组（可选）
- * @returns 新工单编号 { ticketNo }
- * @audit 记录 CREATE 审计日志（容灾设计，失败不阻塞主流程）
- * @rateLimit 单用户每 5 秒最多 2 次
- */
-export async function POST(request: NextRequest) {
+export const POST = withMiniprogramAuth(async (request: NextRequest, user) => {
   try {
-    const user = await getMiniprogramUser(request);
     if (!user || !user.tenantId) {
-      return apiError('未授权', 401);
+      return apiUnauthorized('未授权');
     }
 
     // 频控：单用户每 5 秒最多 2 个工单
@@ -45,7 +38,7 @@ export async function POST(request: NextRequest) {
     const { orderId, type, description, photos } = body;
 
     if (!orderId || !type || !description) {
-      return apiError('缺少必填字段（orderId, type, description）', 400);
+      return apiBadRequest('缺少必填字段（orderId, type, description）');
     }
 
     // 验证订单归属权（租户隔离）
@@ -55,7 +48,28 @@ export async function POST(request: NextRequest) {
     });
 
     if (!order) {
-      return apiError('订单不存在', 404);
+      return apiNotFound('订单不存在');
+    }
+
+    // 安全隔离：CUSTOMER 角色必须额外校验订单归属权，防止跨客户越权 (IDOR)
+    if (user.role?.toUpperCase() === 'CUSTOMER') {
+      // 安全隔离：通过 customers 表反查该用户绑定的 Customer 档案
+      const customerRecord = await db.query.customers.findFirst({
+        where: and(eq(customers.tenantId, user.tenantId), eq(customers.createdBy, user.id)),
+        columns: { id: true },
+      });
+
+      // 找不到档案，或订单不属于该客户 → 返回 404，不暴露资源存在性
+      if (!customerRecord || order.customerId !== customerRecord.id) {
+        logger.warn('[ServiceTicket] CUSTOMER 角色尝试对非归属订单发起售后，已拦截', {
+          userId: user.id,
+          tenantId: user.tenantId,
+          orderId,
+          orderCustomerId: order.customerId,
+          actualCustomerId: customerRecord?.id,
+        });
+        return apiNotFound('订单不存在');
+      }
     }
 
     const ticketNo = generateNo('TKT');
@@ -98,22 +112,14 @@ export async function POST(request: NextRequest) {
     return apiSuccess({ ticketNo });
   } catch (error) {
     logger.error('[ServiceTicket] 创建售后工单故障', { route: 'service/tickets', error });
-    return apiError('创建工单失败', 500);
+    return apiServerError('创建工单失败');
   }
-}
+});
 
-/**
- * 获取当前用户创建的售后工单列表
- *
- * @route GET /api/miniprogram/service/tickets
- * @auth 需要小程序登录（Bearer Token），仅返回当前用户创建的工单
- * @returns 按创建时间倒序排列的售后工单数组
- */
-export async function GET(request: NextRequest) {
+export const GET = withMiniprogramAuth(async (request: NextRequest, user) => {
   try {
-    const user = await getMiniprogramUser(request);
     if (!user || !user.tenantId) {
-      return apiError('未授权', 401);
+      return apiUnauthorized('未授权');
     }
 
     const list = await db.query.afterSalesTickets.findMany({
@@ -127,6 +133,6 @@ export async function GET(request: NextRequest) {
     return apiSuccess(list);
   } catch (error) {
     logger.error('[ServiceTicket] 获取工单列表异常', { route: 'service/tickets', error });
-    return apiError('获取工单列表失败', 500);
+    return apiServerError('获取工单列表失败');
   }
-}
+});

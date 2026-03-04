@@ -1,5 +1,11 @@
 import { NextRequest } from 'next/server';
-import { apiError, apiSuccess } from '@/shared/lib/api-response';
+import {
+  apiSuccess,
+  apiBadRequest,
+  apiServerError,
+  apiNotFound,
+  apiForbidden,
+} from '@/shared/lib/api-response';
 import { authenticateMobile, requireSales } from '@/shared/middleware/mobile-auth';
 import { LeadService } from '@/services/lead.service';
 import { leadSchema } from '@/features/leads/schemas';
@@ -32,13 +38,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   try {
     const { id } = await params;
     if (!z.string().uuid().safeParse(id).success) {
-      return apiError('无效的线索ID', 400);
+      return apiBadRequest('无效的线索ID');
     }
 
     const lead = await LeadService.getLead(id, session.tenantId);
 
     if (!lead) {
-      return apiError('线索不存在或无权访问', 404);
+      return apiNotFound('线索不存在或无权访问');
     }
 
     return apiSuccess({
@@ -53,7 +59,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     });
   } catch (error) {
     log.error('获取线索详情失败', {}, error);
-    return apiError('获取线索详情失败', 500);
+    return apiServerError('获取线索详情失败');
   }
 }
 
@@ -72,22 +78,22 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   try {
     const { id } = await params;
     if (!z.string().uuid().safeParse(id).success) {
-      return apiError('无效的线索ID', 400);
+      return apiBadRequest('无效的线索ID');
     }
     const json = await request.json();
 
     // 验证部分更新数据
     const parseResult = leadSchema.partial().safeParse(json);
     if (!parseResult.success) {
-      return apiError(parseResult.error.issues[0].message, 400);
+      return apiBadRequest(parseResult.error.issues[0].message);
     }
     const data = parseResult.data;
 
     // 验证线索归属（仅允许修改自己负责的线索）
     const lead = await LeadService.getLead(id, session.tenantId);
-    if (!lead) return apiError('线索不存在', 404);
+    if (!lead) return apiNotFound('线索不存在');
     if (lead.assignedSalesId && lead.assignedSalesId !== session.userId) {
-      return apiError('无权修改他人的线索', 403);
+      return apiForbidden('无权修改他人的线索');
     }
 
     const updatedLead = await LeadService.updateLead(
@@ -104,6 +110,6 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     return apiSuccess(updatedLead);
   } catch (error) {
     log.error('更新线索失败', {}, error);
-    return apiError('更新线索失败', 500);
+    return apiServerError('更新线索失败');
   }
 }

@@ -5,21 +5,20 @@
  * Query: keyword, category
  */
 import { NextRequest } from 'next/server';
-import { apiSuccess, apiError } from '@/shared/lib/api-response';
+import { apiSuccess, apiError, apiServerError, apiUnauthorized } from '@/shared/lib/api-response';
 import { logger } from '@/shared/lib/logger';
 import { db } from '@/shared/api/db';
 import { products } from '@/shared/api/schema';
 import { eq, and, or, like, desc, SQL } from 'drizzle-orm';
-import { getMiniprogramUser } from '../auth-utils';
+import { withMiniprogramAuth } from '../auth-utils';
 import { CacheService } from '@/shared/services/miniprogram/cache.service';
 import { RateLimiter } from '@/shared/services/miniprogram/security.service';
 import { productCategoryEnum } from '@/shared/api/schema/enums';
 
-export async function GET(request: NextRequest) {
+export const GET = withMiniprogramAuth(async (request: NextRequest, user) => {
   try {
-    const user = await getMiniprogramUser(request);
     if (!user || !user.tenantId) {
-      return apiError('未授权', 401);
+      return apiUnauthorized('未授权');
     }
 
     const { searchParams } = new URL(request.url);
@@ -83,6 +82,6 @@ export async function GET(request: NextRequest) {
     return response;
   } catch (error) {
     logger.error('Search Products Error:', error);
-    return apiError('搜索失败', 500);
+    return apiServerError('搜索失败');
   }
-}
+});

@@ -393,6 +393,29 @@ export interface VersionRecord {
 
 export const versionHistory: VersionRecord[] = [
   {
+    id: 'v1.3.4',
+    version: 'v1.3.4',
+    date: '2026-03-04',
+    title: '全链路质量门禁落地与安全合规升级',
+    description:
+      '顺利通过包含 7 道关卡的全链路质量门禁 (Quality Gates)。修复横向越权漏洞 (IDOR)、完善三态处理与异常兜底方案，完成 API 全量服务健康审计，标志着 L2C 进入规范化高质量交付阶段。',
+    contributors: ['长城（开发者）'],
+    updates: [
+      {
+        type: 'feature',
+        content: '上线完整 7 阶自动化质量门禁体系 (Quality Gates 0.1 ~ 0.7)',
+      },
+      {
+        type: 'fix',
+        content: '修复在订单、报价详情以及售后工单视图中的 CUSTOMER 角色横向越权漏洞 (IDOR)',
+      },
+      {
+        type: 'optimize',
+        content: '完成核心 API 全量健康审计与依赖模块成熟度审查，确保线上服务稳定性符合预期',
+      },
+    ],
+  },
+  {
     id: 'v1.3.3',
     version: 'v1.3.3',
     date: '2026-03-04',

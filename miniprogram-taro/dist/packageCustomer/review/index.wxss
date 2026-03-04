@@ -1,1 +1,217 @@
-.review-page{background-color:#f2f2f7;min-height:100vh;padding-bottom:160rpx}.review-page .page-header{padding:32rpx 24rpx 24rpx;text-align:center}.review-page .page-header .title{color:#1d1d1f;display:block;font-size:40rpx;font-weight:700;margin-bottom:8rpx}.review-page .page-header .subtitle{color:#6e6e73;display:block;font-size:24rpx}.review-page .section-card{background-color:#fff;border-radius:28rpx;-webkit-box-shadow:0 1rpx 4rpx rgba(0,0,0,.05);box-shadow:0 1rpx 4rpx rgba(0,0,0,.05);margin:0 24rpx 24rpx;padding:24rpx}.review-page .section-card .section-title{color:#1d1d1f;display:block;font-size:30rpx;font-weight:600;margin-bottom:24rpx}.review-page .rating-section{-webkit-align-items:center;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;-ms-flex-align:center;align-items:center;padding-bottom:48rpx;padding-top:48rpx}.review-page .rating-section .section-title{margin-bottom:32rpx}.review-page .rating-section .stars-container{display:-webkit-flex;display:-ms-flexbox;display:flex;gap:16rpx;margin-bottom:16rpx}.review-page .rating-section .stars-container .star{color:#e5e5ea;font-size:80rpx;line-height:1;-webkit-transition:color .3s;transition:color .3s}.review-page .rating-section .stars-container .star.active{color:#ff9f0a}.review-page .rating-section .rating-desc{color:#6e6e73;font-size:24rpx;font-weight:500;height:40rpx}.review-page .content-section .textarea-wrapper{background-color:#f8f8f8;border:1rpx solid rgba(60,60,67,.1);border-radius:20rpx;padding:16rpx;position:relative}.review-page .content-section .textarea-wrapper .review-textarea{color:#1d1d1f;font-size:30rpx;height:240rpx;line-height:1.5;width:100%}.review-page .content-section .textarea-wrapper .textarea-placeholder{color:#aeaeb2}.review-page .content-section .textarea-wrapper .word-count{bottom:16rpx;color:#aeaeb2;font-size:20rpx;position:absolute;right:16rpx}.review-page .photo-section .photo-grid{display:grid;gap:16rpx;grid-template-columns:repeat(4,1fr)}.review-page .photo-section .photo-grid .photo-item{aspect-ratio:1;border-radius:16rpx;overflow:hidden;position:relative;width:100%}.review-page .photo-section .photo-grid .photo-item .img{height:100%;width:100%}.review-page .photo-section .photo-grid .photo-item .remove-btn{-webkit-align-items:center;background:rgba(0,0,0,.5);color:#fff;display:-webkit-flex;display:-ms-flexbox;display:flex;height:36rpx;position:absolute;right:0;top:0;width:36rpx;-ms-flex-align:center;align-items:center;-webkit-justify-content:center;-ms-flex-pack:center;border-bottom-left-radius:16rpx;font-size:20rpx;justify-content:center}.review-page .photo-section .photo-grid .upload-btn{-webkit-align-items:center;aspect-ratio:1;background-color:#f8f8f8;border:1rpx dashed rgba(60,60,67,.1);border-radius:16rpx;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;width:100%;-ms-flex-align:center;align-items:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center}.review-page .photo-section .photo-grid .upload-btn .plus{color:#aeaeb2;font-size:40rpx;line-height:1;margin-bottom:4rpx}.review-page .photo-section .photo-grid .upload-btn .tip{color:#6e6e73;font-size:20rpx}.review-page .bottom-action-bar{background-color:#fff;bottom:0;-webkit-box-shadow:0 -2rpx 10rpx rgba(0,0,0,.05);box-shadow:0 -2rpx 10rpx rgba(0,0,0,.05);left:0;padding:16rpx 24rpx calc(16rpx + env(safe-area-inset-bottom));position:fixed;right:0;z-index:100}.review-page .bottom-action-bar .btn-primary{-webkit-align-items:center;background-color:#0071e3;border-radius:100rpx;color:#fff;display:-webkit-flex;display:-ms-flexbox;display:flex;height:88rpx;-ms-flex-align:center;align-items:center;-webkit-justify-content:center;-ms-flex-pack:center;font-size:32rpx;font-weight:600;justify-content:center}.review-page .bottom-action-bar .btn-primary:active{opacity:.8}.review-page .bottom-action-bar .btn-primary.disabled{background-color:rgba(0,113,227,.4);color:hsla(0,0%,100%,.8)}
+@charset "UTF-8";/*!************************************************************************************************************************************************************************************************************************************************************************************************************************************!*\
+  !*** css ./node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[1].oneOf[2].use[1]!./node_modules/postcss-loader/dist/cjs.js??ruleSet[1].rules[1].oneOf[2].use[2]!./node_modules/resolve-url-loader/index.js!./node_modules/sass-loader/dist/cjs.js??ruleSet[1].rules[1].oneOf[2].use[4]!./src/packageCustomer/review/index.scss ***!
+  \************************************************************************************************************************************************************************************************************************************************************************************************************************************/
+
+/* ====================================================
+ * Apple Design System - 变量与常量定义
+ *
+ * @description 提取最核心的 iOS 18 和 Apple 官网设计规范。
+ * 所有 px 值在 Taro 构建时自动 1:1 转为 rpx (designWidth=750)。
+ * 因此这里的 px 值 = rpx 值，需按真实小程序比例书写。
+ *
+ * 参考：750rpx = iPhone 6/7/8 屏幕宽度 (375pt × 2)
+ *        1rpx ≈ 0.5pt
+ *
+ * ==================================================== */
+.review-page {
+  background-color: #F2F2F7;
+  min-height: 100vh;
+  padding-bottom: 160rpx;
+}
+.review-page .page-header {
+  padding: 32rpx 24rpx 24rpx;
+  text-align: center;
+}
+.review-page .page-header .title {
+  font-size: 40rpx;
+  font-weight: 700;
+  color: #1D1D1F;
+  display: block;
+  margin-bottom: 8rpx;
+}
+.review-page .page-header .subtitle {
+  font-size: 24rpx;
+  color: #6E6E73;
+  display: block;
+}
+.review-page .section-card {
+  background-color: #FFFFFF;
+  margin: 0 24rpx 24rpx;
+  border-radius: 28rpx;
+  padding: 24rpx;
+  -webkit-box-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.05);
+          box-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.05);
+}
+.review-page .section-card .section-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1D1D1F;
+  display: block;
+  margin-bottom: 24rpx;
+}
+.review-page .rating-section {
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-flex-direction: column;
+      -ms-flex-direction: column;
+          flex-direction: column;
+  -webkit-align-items: center;
+      -ms-flex-align: center;
+          align-items: center;
+  padding-top: 48rpx;
+  padding-bottom: 48rpx;
+}
+.review-page .rating-section .section-title {
+  margin-bottom: 32rpx;
+}
+.review-page .rating-section .stars-container {
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  gap: 16rpx;
+  margin-bottom: 16rpx;
+}
+.review-page .rating-section .stars-container .star {
+  font-size: 80rpx;
+  color: #E5E5EA;
+  /* 默认灰色星星 */
+  line-height: 1;
+  -webkit-transition: color 0.3s;
+  transition: color 0.3s;
+}
+.review-page .rating-section .stars-container .star.active {
+  color: #FF9F0A;
+  /* 选中黄色星星 */
+}
+.review-page .rating-section .rating-desc {
+  font-size: 24rpx;
+  color: #6E6E73;
+  height: 40rpx;
+  font-weight: 500;
+}
+.review-page .content-section .textarea-wrapper {
+  position: relative;
+  background-color: #F8F8F8;
+  border-radius: 20rpx;
+  padding: 16rpx;
+  border: 1rpx solid rgba(60, 60, 67, 0.1);
+}
+.review-page .content-section .textarea-wrapper .review-textarea {
+  width: 100%;
+  height: 240rpx;
+  font-size: 30rpx;
+  color: #1D1D1F;
+  line-height: 1.5;
+}
+.review-page .content-section .textarea-wrapper .textarea-placeholder {
+  color: #AEAEB2;
+}
+.review-page .content-section .textarea-wrapper .word-count {
+  position: absolute;
+  bottom: 16rpx;
+  right: 16rpx;
+  font-size: 20rpx;
+  color: #AEAEB2;
+}
+.review-page .photo-section .photo-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16rpx;
+}
+.review-page .photo-section .photo-grid .photo-item {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 16rpx;
+  overflow: hidden;
+}
+.review-page .photo-section .photo-grid .photo-item .img {
+  width: 100%;
+  height: 100%;
+}
+.review-page .photo-section .photo-grid .photo-item .remove-btn {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  width: 36rpx;
+  height: 36rpx;
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-align-items: center;
+      -ms-flex-align: center;
+          align-items: center;
+  -webkit-justify-content: center;
+      -ms-flex-pack: center;
+          justify-content: center;
+  font-size: 20rpx;
+  border-bottom-left-radius: 16rpx;
+}
+.review-page .photo-section .photo-grid .upload-btn {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 16rpx;
+  background-color: #F8F8F8;
+  border: 1rpx dashed rgba(60, 60, 67, 0.1);
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-flex-direction: column;
+      -ms-flex-direction: column;
+          flex-direction: column;
+  -webkit-align-items: center;
+      -ms-flex-align: center;
+          align-items: center;
+  -webkit-justify-content: center;
+      -ms-flex-pack: center;
+          justify-content: center;
+}
+.review-page .photo-section .photo-grid .upload-btn .plus {
+  font-size: 40rpx;
+  color: #AEAEB2;
+  margin-bottom: 4rpx;
+  line-height: 1;
+}
+.review-page .photo-section .photo-grid .upload-btn .tip {
+  font-size: 20rpx;
+  color: #6E6E73;
+}
+.review-page .bottom-action-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: #FFFFFF;
+  padding: 16rpx 24rpx;
+  padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
+  -webkit-box-shadow: 0 -2rpx 10rpx rgba(0, 0, 0, 0.05);
+          box-shadow: 0 -2rpx 10rpx rgba(0, 0, 0, 0.05);
+  z-index: 100;
+}
+.review-page .bottom-action-bar .btn-primary {
+  background-color: #0071E3;
+  color: #fff;
+  height: 88rpx;
+  border-radius: 100rpx;
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-align-items: center;
+      -ms-flex-align: center;
+          align-items: center;
+  -webkit-justify-content: center;
+      -ms-flex-pack: center;
+          justify-content: center;
+  font-size: 32rpx;
+  font-weight: 600;
+}
+.review-page .bottom-action-bar .btn-primary:active {
+  opacity: 0.8;
+}
+.review-page .bottom-action-bar .btn-primary.disabled {
+  background-color: rgba(0, 113, 227, 0.4);
+  color: rgba(255, 255, 255, 0.8);
+}

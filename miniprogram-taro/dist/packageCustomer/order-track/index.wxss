@@ -1,1 +1,263 @@
-.order-track-page{background-color:#f2f2f7;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;min-height:100vh}.order-track-page .content-scroll{-webkit-flex:1;-ms-flex:1;flex:1;height:100vh}.order-track-page .loading{color:#6e6e73;font-size:24rpx;padding:60rpx;text-align:center}.order-track-page .header-card{background-color:#fff;border-radius:28rpx;-webkit-box-shadow:0 1rpx 4rpx rgba(0,0,0,.05);box-shadow:0 1rpx 4rpx rgba(0,0,0,.05);margin:24rpx;padding:24rpx}.order-track-page .header-card .order-no-row{display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-justify-content:space-between;-ms-flex-pack:justify;-webkit-align-items:center;justify-content:space-between;-ms-flex-align:center;align-items:center;border-bottom:1rpx solid rgba(60,60,67,.1);margin-bottom:16rpx;padding-bottom:16rpx}.order-track-page .header-card .order-no-row .label{color:#6e6e73;font-size:24rpx}.order-track-page .header-card .order-no-row .right{-webkit-align-items:center;display:-webkit-flex;display:-ms-flexbox;display:flex;-ms-flex-align:center;align-items:center;gap:12rpx}.order-track-page .header-card .order-no-row .right .value{color:#1d1d1f;font-family:SF Pro Display,sans-serif;font-size:30rpx;font-weight:500}.order-track-page .header-card .order-no-row .right .copy-btn{background-color:rgba(0,113,227,.1);border-radius:100rpx;color:#0071e3;font-size:20rpx;padding:4rpx 12rpx}.order-track-page .header-card .status-row{display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-justify-content:space-between;-ms-flex-pack:justify;-webkit-align-items:center;justify-content:space-between;-ms-flex-align:center;align-items:center}.order-track-page .header-card .status-row .label{color:#6e6e73;font-size:24rpx}.order-track-page .header-card .status-row .status-text{font-size:30rpx;font-weight:600}.order-track-page .header-card .status-row .status-text.active{color:#34c759}.order-track-page .timeline-card{background-color:#fff;border-radius:28rpx;-webkit-box-shadow:0 1rpx 4rpx rgba(0,0,0,.05);box-shadow:0 1rpx 4rpx rgba(0,0,0,.05);margin:0 24rpx 24rpx;padding:24rpx}.order-track-page .timeline-card .section-title{color:#1d1d1f;display:block;font-size:30rpx;font-weight:600;margin-bottom:24rpx;padding-left:16rpx;position:relative}.order-track-page .timeline-card .section-title::before{background-color:#0071e3;border-radius:4rpx;content:"";height:24rpx;left:0;position:absolute;top:50%;-webkit-transform:translateY(-50%);-ms-transform:translateY(-50%);transform:translateY(-50%);width:6rpx}.order-track-page .timeline-container{padding-top:16rpx}.order-track-page .timeline-container .timeline-item{-webkit-align-items:stretch;display:-webkit-flex;display:-ms-flexbox;display:flex;-ms-flex-align:stretch;align-items:stretch;min-height:140rpx}.order-track-page .timeline-container .timeline-item.is-first .time-col .date,.order-track-page .timeline-container .timeline-item.is-first .time-col .time{color:#1d1d1f;font-weight:600}.order-track-page .timeline-container .timeline-item.is-first .track-col .dot{background-color:#0071e3;border:6rpx solid rgba(0,113,227,.2);height:24rpx;margin-left:0;width:24rpx}.order-track-page .timeline-container .timeline-item.is-first .content-col .title{color:#1d1d1f;font-weight:600}.order-track-page .timeline-container .timeline-item.is-first .content-col .desc{color:#6e6e73}.order-track-page .timeline-container .time-col{-webkit-flex-shrink:0;width:120rpx;-ms-flex-negative:0;-webkit-align-items:flex-end;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;flex-shrink:0;-ms-flex-align:end;align-items:flex-end;padding-right:16rpx;padding-top:4rpx}.order-track-page .timeline-container .time-col .date{color:#6e6e73;font-family:SF Pro Display,sans-serif;font-size:24rpx;margin-bottom:4rpx}.order-track-page .timeline-container .time-col .time{color:#aeaeb2;font-family:SF Pro Display,sans-serif;font-size:20rpx}.order-track-page .timeline-container .track-col{-webkit-flex-shrink:0;position:relative;width:40rpx;-ms-flex-negative:0;-webkit-align-items:center;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;flex-shrink:0;-ms-flex-align:center;align-items:center}.order-track-page .timeline-container .track-col .dot{background-color:#d8d8d8;border-radius:50%;height:16rpx;margin-top:10rpx;width:16rpx;z-index:2}.order-track-page .timeline-container .track-col .dot.completed{background-color:#0071e3}.order-track-page .timeline-container .track-col .line{background-color:#e5e5ea;bottom:-10rpx;position:absolute;top:32rpx;width:2rpx;z-index:1}.order-track-page .timeline-container .content-col{-webkit-flex:1;-ms-flex:1;flex:1;padding-bottom:48rpx;padding-left:16rpx;padding-top:2rpx}.order-track-page .timeline-container .content-col .title{color:#1d1d1f;display:block;font-size:30rpx;font-weight:500;margin-bottom:8rpx}.order-track-page .timeline-container .content-col .desc{background-color:#f2f2f7;border-radius:16rpx;color:#6e6e73;font-size:24rpx;line-height:1.5;margin-top:8rpx;padding:16rpx}
+@charset "UTF-8";/*!*****************************************************************************************************************************************************************************************************************************************************************************************************************************************!*\
+  !*** css ./node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[1].oneOf[2].use[1]!./node_modules/postcss-loader/dist/cjs.js??ruleSet[1].rules[1].oneOf[2].use[2]!./node_modules/resolve-url-loader/index.js!./node_modules/sass-loader/dist/cjs.js??ruleSet[1].rules[1].oneOf[2].use[4]!./src/packageCustomer/order-track/index.scss ***!
+  \*****************************************************************************************************************************************************************************************************************************************************************************************************************************************/
+
+/* ====================================================
+ * Apple Design System - 变量与常量定义
+ *
+ * @description 提取最核心的 iOS 18 和 Apple 官网设计规范。
+ * 所有 px 值在 Taro 构建时自动 1:1 转为 rpx (designWidth=750)。
+ * 因此这里的 px 值 = rpx 值，需按真实小程序比例书写。
+ *
+ * 参考：750rpx = iPhone 6/7/8 屏幕宽度 (375pt × 2)
+ *        1rpx ≈ 0.5pt
+ *
+ * ==================================================== */
+.order-track-page {
+  background-color: #F2F2F7;
+  min-height: 100vh;
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-flex-direction: column;
+      -ms-flex-direction: column;
+          flex-direction: column;
+}
+.order-track-page .content-scroll {
+  -webkit-flex: 1;
+      -ms-flex: 1;
+          flex: 1;
+  height: 100vh;
+}
+.order-track-page .loading {
+  padding: 60rpx;
+  text-align: center;
+  color: #6E6E73;
+  font-size: 24rpx;
+}
+.order-track-page {
+  /* 顶部卡片 */
+}
+.order-track-page .header-card {
+  background-color: #FFFFFF;
+  margin: 24rpx;
+  border-radius: 28rpx;
+  padding: 24rpx;
+  -webkit-box-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.05);
+          box-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.05);
+}
+.order-track-page .header-card .order-no-row {
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-justify-content: space-between;
+      -ms-flex-pack: justify;
+          justify-content: space-between;
+  -webkit-align-items: center;
+      -ms-flex-align: center;
+          align-items: center;
+  margin-bottom: 16rpx;
+  padding-bottom: 16rpx;
+  border-bottom: 1rpx solid rgba(60, 60, 67, 0.1);
+}
+.order-track-page .header-card .order-no-row .label {
+  font-size: 24rpx;
+  color: #6E6E73;
+}
+.order-track-page .header-card .order-no-row .right {
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-align-items: center;
+      -ms-flex-align: center;
+          align-items: center;
+  gap: 12rpx;
+}
+.order-track-page .header-card .order-no-row .right .value {
+  font-size: 30rpx;
+  font-weight: 500;
+  color: #1D1D1F;
+  font-family: "SF Pro Display", sans-serif;
+}
+.order-track-page .header-card .order-no-row .right .copy-btn {
+  font-size: 20rpx;
+  color: #0071E3;
+  background-color: rgba(0, 113, 227, 0.1);
+  padding: 4rpx 12rpx;
+  border-radius: 100rpx;
+}
+.order-track-page .header-card .status-row {
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-justify-content: space-between;
+      -ms-flex-pack: justify;
+          justify-content: space-between;
+  -webkit-align-items: center;
+      -ms-flex-align: center;
+          align-items: center;
+}
+.order-track-page .header-card .status-row .label {
+  font-size: 24rpx;
+  color: #6E6E73;
+}
+.order-track-page .header-card .status-row .status-text {
+  font-size: 30rpx;
+  font-weight: 600;
+}
+.order-track-page .header-card .status-row .status-text.active {
+  color: #34C759;
+}
+.order-track-page {
+  /* 时间线容器 */
+}
+.order-track-page .timeline-card {
+  background-color: #FFFFFF;
+  margin: 0 24rpx 24rpx;
+  border-radius: 28rpx;
+  padding: 24rpx;
+  -webkit-box-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.05);
+          box-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.05);
+}
+.order-track-page .timeline-card .section-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1D1D1F;
+  display: block;
+  margin-bottom: 24rpx;
+  padding-left: 16rpx;
+  position: relative;
+}
+.order-track-page .timeline-card .section-title::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  -webkit-transform: translateY(-50%);
+      -ms-transform: translateY(-50%);
+          transform: translateY(-50%);
+  width: 6rpx;
+  height: 24rpx;
+  background-color: #0071E3;
+  border-radius: 4rpx;
+}
+.order-track-page .timeline-container {
+  padding-top: 16rpx;
+}
+.order-track-page .timeline-container .timeline-item {
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-align-items: stretch;
+      -ms-flex-align: stretch;
+          align-items: stretch;
+  min-height: 140rpx;
+  /* 最新的节点高亮 */
+}
+.order-track-page .timeline-container .timeline-item.is-first .time-col .date,
+.order-track-page .timeline-container .timeline-item.is-first .time-col .time {
+  color: #1D1D1F;
+  font-weight: 600;
+}
+.order-track-page .timeline-container .timeline-item.is-first .track-col .dot {
+  background-color: #0071E3;
+  border: 6rpx solid rgba(0, 113, 227, 0.2);
+  width: 24rpx;
+  height: 24rpx;
+  margin-left: 0;
+  /* Adjust center based on size */
+}
+.order-track-page .timeline-container .timeline-item.is-first .content-col .title {
+  color: #1D1D1F;
+  font-weight: 600;
+}
+.order-track-page .timeline-container .timeline-item.is-first .content-col .desc {
+  color: #6E6E73;
+}
+.order-track-page .timeline-container .time-col {
+  width: 120rpx;
+  -webkit-flex-shrink: 0;
+      -ms-flex-negative: 0;
+          flex-shrink: 0;
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-flex-direction: column;
+      -ms-flex-direction: column;
+          flex-direction: column;
+  -webkit-align-items: flex-end;
+      -ms-flex-align: end;
+          align-items: flex-end;
+  padding-right: 16rpx;
+  padding-top: 4rpx;
+}
+.order-track-page .timeline-container .time-col .date {
+  font-size: 24rpx;
+  color: #6E6E73;
+  margin-bottom: 4rpx;
+  font-family: "SF Pro Display", sans-serif;
+}
+.order-track-page .timeline-container .time-col .time {
+  font-size: 20rpx;
+  color: #AEAEB2;
+  font-family: "SF Pro Display", sans-serif;
+}
+.order-track-page .timeline-container .track-col {
+  position: relative;
+  width: 40rpx;
+  -webkit-flex-shrink: 0;
+      -ms-flex-negative: 0;
+          flex-shrink: 0;
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-flex-direction: column;
+      -ms-flex-direction: column;
+          flex-direction: column;
+  -webkit-align-items: center;
+      -ms-flex-align: center;
+          align-items: center;
+}
+.order-track-page .timeline-container .track-col .dot {
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: 50%;
+  background-color: #d8d8d8;
+  z-index: 2;
+  margin-top: 10rpx;
+}
+.order-track-page .timeline-container .track-col .dot.completed {
+  background-color: #0071E3;
+}
+.order-track-page .timeline-container .track-col .line {
+  position: absolute;
+  top: 32rpx;
+  bottom: -10rpx;
+  width: 2rpx;
+  background-color: #e5e5ea;
+  z-index: 1;
+}
+.order-track-page .timeline-container .content-col {
+  -webkit-flex: 1;
+      -ms-flex: 1;
+          flex: 1;
+  padding-left: 16rpx;
+  padding-bottom: 48rpx;
+  padding-top: 2rpx;
+}
+.order-track-page .timeline-container .content-col .title {
+  font-size: 30rpx;
+  color: #1D1D1F;
+  font-weight: 500;
+  display: block;
+  margin-bottom: 8rpx;
+}
+.order-track-page .timeline-container .content-col .desc {
+  font-size: 24rpx;
+  color: #6E6E73;
+  line-height: 1.5;
+  background-color: #F2F2F7;
+  padding: 16rpx;
+  border-radius: 16rpx;
+  margin-top: 8rpx;
+}

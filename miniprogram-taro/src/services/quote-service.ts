@@ -1,7 +1,19 @@
 import { api } from './api'
-import type { Quote } from '@/types/business'
+import type { Quote, PaginationResponse } from '@/types/business'
 
 export const quoteService = {
+    /**
+     * 获取报价单列表
+     * GET /api/miniprogram/quotes
+     */
+    getQuoteList(params: {
+        page: number
+        limit: number
+        search?: string
+        status?: string
+    }): Promise<PaginationResponse<Quote>> {
+        return api.get('/quotes', { data: params }).then(res => res.data)
+    },
     /**
      * 获取报价单详情
      * GET /api/miniprogram/quotes/:id

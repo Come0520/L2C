@@ -8,9 +8,15 @@ import { db } from '@/shared/api/db';
 import { tenants, invitations } from '@/shared/api/schema';
 import { eq } from 'drizzle-orm';
 import { SignJWT } from 'jose';
-import { getMiniprogramUser } from '../../auth-utils';
+import { withMiniprogramAuth } from '../../auth-utils';
 import { customAlphabet } from 'nanoid';
-import { apiSuccess, apiError } from '@/shared/lib/api-response';
+import {
+  apiSuccess,
+  apiBadRequest,
+  apiServerError,
+  apiForbidden,
+  apiUnauthorized,
+} from '@/shared/lib/api-response';
 import { logger } from '@/shared/lib/logger';
 import { RolePermissionService } from '@/shared/lib/role-permission-service';
 import { PERMISSIONS } from '@/shared/config/permissions';
@@ -25,30 +31,24 @@ const ALLOWED_INVITE_ROLES = [
   'MANAGER',
 ];
 
-export async function POST(request: NextRequest) {
+export const POST = withMiniprogramAuth(async (request: NextRequest, user) => {
   try {
-    const tokenData = await getMiniprogramUser(request);
-
-    if (!tokenData) {
-      return apiError('未授权', 401);
-    }
-
     // 1. 验证请求者权限（必须拥有用户管理权限）
     const hasUserManage = await RolePermissionService.hasPermission(
-      tokenData.id,
+      user.id,
       PERMISSIONS.SETTINGS.USER_MANAGE
     );
     if (!hasUserManage) {
-      return apiError('无权限生成邀请码', 403);
+      return apiForbidden('无权限生成邀请码');
     }
 
     // 检查租户是否已激活
     const tenant = await db.query.tenants.findFirst({
-      where: eq(tenants.id, tokenData.tenantId),
+      where: eq(tenants.id, user.tenantId),
     });
 
     if (!tenant || tenant.status !== 'active') {
-      return apiError('企业未激活，无法邀请员工', 403);
+      return apiForbidden('企业未激活，无法邀请员工');
     }
 
     const body = await request.json();
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
     // 2. 验证目标角色白名单 (防止角色注入)
     const invalidRoles = targetRoles.filter((r: string) => !ALLOWED_INVITE_ROLES.includes(r));
     if (invalidRoles.length > 0) {
-      return apiError(`Invalid roles: ${invalidRoles.join(', ')}`, 400);
+      return apiBadRequest(`Invalid roles: ${invalidRoles.join(', ')}`);
     }
 
     const maxUses = body.maxUses || '1'; // 默认单次有效
@@ -71,8 +71,8 @@ export async function POST(request: NextRequest) {
 
     // 保存到数据库
     await db.insert(invitations).values({
-      tenantId: tokenData.tenantId,
-      inviterId: tokenData.id,
+      tenantId: user.tenantId,
+      inviterId: user.id,
       code: inviteCode,
       role,
       expiresAt,
@@ -84,8 +84,8 @@ export async function POST(request: NextRequest) {
     const secret = new TextEncoder().encode(process.env.AUTH_SECRET);
     const inviteToken = await new SignJWT({
       type: 'employee_invite',
-      tenantId: tokenData.tenantId,
-      inviterId: tokenData.id,
+      tenantId: user.tenantId,
+      inviterId: user.id,
       defaultRole: targetRoles[0], // 保持向后兼容
       defaultRoles: targetRoles, // 新增多角色支持
       inviteCode,
@@ -109,8 +109,8 @@ export async function POST(request: NextRequest) {
       tableName: 'invitations',
       recordId: inviteCode,
       action: 'GENERATE_INVITE',
-      userId: tokenData.id,
-      tenantId: tokenData.tenantId,
+      userId: user.id,
+      tenantId: user.tenantId,
       details: { role, maxUses },
     });
 
@@ -123,6 +123,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     logger.error('[InviteGenerate] 生成邀请码失败', { route: 'invite/generate', error });
-    return apiError('生成邀请码失败', 500);
+    return apiServerError('生成邀请码失败');
   }
-}
+});

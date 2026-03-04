@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { db } from '@/shared/api/db';
 import { leads } from '@/shared/api/schema';
 import { eq, and } from 'drizzle-orm';
-import { apiError, apiSuccess, apiNotFound } from '@/shared/lib/api-response';
+import { apiSuccess, apiNotFound, apiBadRequest, apiServerError } from '@/shared/lib/api-response';
 import { authenticateMobile, requireSales } from '@/shared/middleware/mobile-auth';
 import { LeadService } from '@/services/lead.service';
 import { z } from 'zod';
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest, { params }: FollowupParams) {
   const { id: leadId } = await params;
 
   if (!z.string().uuid().safeParse(leadId).success) {
-    return apiError('无效的线索ID', 400);
+    return apiBadRequest('无效的线索ID');
   }
 
   // 使用 Zod Schema 校验请求体
@@ -64,12 +64,12 @@ export async function POST(request: NextRequest, { params }: FollowupParams) {
   try {
     rawBody = await request.json();
   } catch {
-    return apiError('请求体格式错误', 400);
+    return apiBadRequest('请求体格式错误');
   }
 
   const parseResult = mobileFollowupBodySchema.safeParse(rawBody);
   if (!parseResult.success) {
-    return apiError(parseResult.error.issues[0].message, 400);
+    return apiBadRequest(parseResult.error.issues[0].message);
   }
 
   const { type, content, nextFollowUpAt, status } = parseResult.data;
@@ -108,7 +108,7 @@ export async function POST(request: NextRequest, { params }: FollowupParams) {
 
     if (status) {
       if (!ALLOWED_STATUSES.includes(status as (typeof ALLOWED_STATUSES)[number])) {
-        return apiError('无效的状态值', 400);
+        return apiBadRequest('无效的状态值');
       }
       await LeadService.updateLead(
         leadId,
@@ -123,6 +123,6 @@ export async function POST(request: NextRequest, { params }: FollowupParams) {
     return apiSuccess({ success: true });
   } catch (error) {
     log.error('添加跟进记录失败', {}, error);
-    return apiError('添加跟进记录失败', 500);
+    return apiServerError('添加跟进记录失败');
   }
 }

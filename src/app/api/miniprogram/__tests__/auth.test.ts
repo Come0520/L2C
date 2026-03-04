@@ -12,7 +12,7 @@ import { AuditService } from '@/shared/services/audit-service';
 vi.mock('@/shared/api/db', () => ({
   db: {
     query: {
-      users: { findFirst: vi.fn() },
+      users: { findFirst: vi.fn(), findMany: vi.fn() },
       tenants: { findFirst: vi.fn() },
       tenantMembers: { findMany: vi.fn() },
     },
@@ -41,6 +41,7 @@ vi.mock('../auth-utils', async () => {
     ...(actual as Record<string, unknown>),
     generateMiniprogramToken: vi.fn().mockResolvedValue('mock-token'),
     generateRegisterToken: vi.fn().mockResolvedValue('mock-register-token'),
+    generateTempLoginToken: vi.fn().mockResolvedValue('mock-temp-token'),
   };
 });
 
@@ -74,22 +75,27 @@ describe('小程序认证模块', () => {
         password: 'password123',
       });
 
-      vi.mocked(db.query.users.findFirst).mockResolvedValue({
-        id: 'u1',
-        name: '测试用户',
-        phone: '13800138000',
-        passwordHash: 'hashed_pwd',
-        tenantId: 't1',
-        role: 'WORKER',
-      } as never);
+      vi.mocked(db.query.users.findMany).mockResolvedValue([
+        {
+          id: 'u1',
+          name: '测试用户',
+          phone: '13800138000',
+          passwordHash: 'hashed_pwd',
+          tenantId: 't1',
+          role: 'WORKER',
+          isActive: true,
+        },
+      ] as never);
 
       vi.mocked(compare).mockResolvedValue(true as never);
 
-      vi.mocked(db.query.tenants.findFirst).mockResolvedValue({
-        id: 't1',
-        name: '测试租户',
-        status: 'active',
-      } as never);
+      vi.mocked(db.query.tenantMembers.findMany).mockResolvedValue([
+        {
+          tenantId: 't1',
+          role: 'WORKER',
+          tenant: { id: 't1', name: '测试租户', status: 'active' },
+        },
+      ] as never);
 
       const res = await loginHandler(req);
       const data = await res.json();
@@ -106,10 +112,12 @@ describe('小程序认证模块', () => {
         password: 'wrong-password',
       });
 
-      vi.mocked(db.query.users.findFirst).mockResolvedValue({
-        id: 'u1',
-        passwordHash: 'hashed_pwd',
-      } as never);
+      vi.mocked(db.query.users.findMany).mockResolvedValue([
+        {
+          id: 'u1',
+          passwordHash: 'hashed_pwd',
+        },
+      ] as never);
 
       vi.mocked(compare).mockResolvedValue(false as never);
 
@@ -127,6 +135,46 @@ describe('小程序认证模块', () => {
 
       const res = await loginHandler(req);
       expect(res.status).toBe(400);
+    });
+
+    it('多租户用户登录应返回 REQUIRE_TENANT_SELECTION', async () => {
+      const req = createReq('http://localhost/api/auth/login', {
+        account: '13800138000',
+        password: 'password123',
+      });
+
+      vi.mocked(db.query.users.findMany).mockResolvedValue([
+        {
+          id: 'u1',
+          name: '测试用户',
+          phone: '13800138000',
+          passwordHash: 'hashed_pwd',
+          isActive: true,
+        },
+      ] as never);
+
+      vi.mocked(compare).mockResolvedValue(true as never);
+
+      // Two active memberships
+      vi.mocked(db.query.tenantMembers.findMany).mockResolvedValue([
+        {
+          tenantId: 't1',
+          role: 'WORKER',
+          tenant: { id: 't1', name: '测试租户1', status: 'active' },
+        },
+        {
+          tenantId: 't2',
+          role: 'WORKER',
+          tenant: { id: 't2', name: '测试租户2', status: 'active' },
+        },
+      ] as never);
+
+      const res = await loginHandler(req);
+      const data = await res.json();
+
+      expect(res.status).toBe(200);
+      expect(data.data.status).toBe('REQUIRE_TENANT_SELECTION');
+      expect(data.data.tempToken).toBeDefined();
     });
   });
 
@@ -146,11 +194,13 @@ describe('小程序认证模块', () => {
         tenantId: 't1',
       } as never);
 
-      vi.mocked(db.query.tenantMembers.findMany).mockResolvedValue([{
-        tenantId: 't1',
-        role: 'WORKER',
-        tenant: { id: 't1', name: '测试租户', status: 'active' }
-      }] as never);
+      vi.mocked(db.query.tenantMembers.findMany).mockResolvedValue([
+        {
+          tenantId: 't1',
+          role: 'WORKER',
+          tenant: { id: 't1', name: '测试租户', status: 'active' },
+        },
+      ] as never);
 
       const res = await wxLoginHandler(req);
       const data = await res.json();
@@ -205,11 +255,13 @@ describe('小程序认证模块', () => {
         tenantId: 't1',
       } as never);
 
-      vi.mocked(db.query.tenantMembers.findMany).mockResolvedValue([{
-        tenantId: 't1',
-        role: 'WORKER',
-        tenant: { id: 't1', name: '测试租户', status: 'active' }
-      }] as never);
+      vi.mocked(db.query.tenantMembers.findMany).mockResolvedValue([
+        {
+          tenantId: 't1',
+          role: 'WORKER',
+          tenant: { id: 't1', name: '测试租户', status: 'active' },
+        },
+      ] as never);
 
       const res = await decryptPhoneHandler(req);
       const data = await res.json();
@@ -248,17 +300,19 @@ describe('小程序认证模块', () => {
         password: 'any-password',
       });
 
-      vi.mocked(db.query.users.findFirst).mockResolvedValue({
-        id: 'u1',
-        phone: '13800138000',
-        passwordHash: null,
-        tenantId: 't1',
-      } as never);
+      vi.mocked(db.query.users.findMany).mockResolvedValue([
+        {
+          id: 'u1',
+          phone: '13800138000',
+          passwordHash: null,
+          tenantId: 't1',
+        },
+      ] as never);
 
       const res = await loginHandler(req);
       expect(res.status).toBe(401);
       const data = await res.json();
-      expect(data.error).toContain('未设置密码');
+      expect(data.error).toBe('账号或密码错误');
     });
 
     it('用户不存在应返回模糊错误（防枚举）', async () => {
@@ -267,7 +321,7 @@ describe('小程序认证模块', () => {
         password: 'password',
       });
 
-      vi.mocked(db.query.users.findFirst).mockResolvedValue(null as never);
+      vi.mocked(db.query.users.findMany).mockResolvedValue([] as never);
 
       const res = await loginHandler(req);
       expect(res.status).toBe(401);
@@ -294,16 +348,19 @@ describe('小程序认证模块', () => {
         password: 'password123',
       });
 
-      vi.mocked(db.query.users.findFirst).mockResolvedValue({
-        id: 'u1',
-        passwordHash: 'hashed',
-        tenantId: 't-missing',
-      } as never);
+      vi.mocked(db.query.users.findMany).mockResolvedValue([
+        {
+          id: 'u1',
+          passwordHash: 'hashed',
+          tenantId: 't-missing',
+        },
+      ] as never);
       vi.mocked(compare).mockResolvedValue(true as never);
-      vi.mocked(db.query.tenants.findFirst).mockResolvedValue(null as never);
+      vi.mocked(db.query.tenantMembers.findMany).mockResolvedValue([] as never);
 
       const res = await loginHandler(req);
-      expect(res.status).toBe(500);
+      expect(res.status).toBe(401);
+      expect(await res.json()).toMatchObject({ error: expect.stringContaining('未被分配') });
     });
 
     it('wx-login 空 code 应被 Zod 拒绝', async () => {

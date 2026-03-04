@@ -11,7 +11,13 @@
  */
 
 import { NextRequest } from 'next/server';
-import { apiError, apiPaginated, apiSuccess } from '@/shared/lib/api-response';
+import {
+  apiError,
+  apiPaginated,
+  apiSuccess,
+  apiBadRequest,
+  apiServerError,
+} from '@/shared/lib/api-response';
 import { authenticateMobile, requireSales } from '@/shared/middleware/mobile-auth';
 import { LeadStatusMap, getStatusText } from '@/shared/lib/status-maps';
 import { maskPhone } from '@/shared/lib/utils';
@@ -40,7 +46,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const type = searchParams.get('type') || 'mine'; // mine | pool
   if (type !== 'mine' && type !== 'pool') {
-    return apiError('无效的查询类型', 400);
+    return apiBadRequest('无效的查询类型');
   }
   const page = Math.max(parseInt(searchParams.get('page') || '1') || 1, 1);
   const pageSize = Math.min(Math.max(parseInt(searchParams.get('pageSize') || '20') || 20, 1), 100);
@@ -76,7 +82,7 @@ export async function GET(request: NextRequest) {
     return apiPaginated(items, page, pageSize, total);
   } catch (error) {
     log.error('客户列表查询错误', {}, error);
-    return apiError('查询客户列表失败', 500);
+    return apiServerError('查询客户列表失败');
   }
 }
 
@@ -110,7 +116,7 @@ export async function POST(request: NextRequest) {
     const parseResult = createLeadSchema.safeParse(json);
     if (!parseResult.success) {
       log.error('[API] Validation failed', { detail: JSON.stringify(parseResult.error, null, 2) });
-      return apiError(parseResult.error.issues[0].message, 400);
+      return apiBadRequest(parseResult.error.issues[0].message);
     }
     const data = parseResult.data;
 
@@ -148,7 +154,7 @@ export async function POST(request: NextRequest) {
     return apiSuccess(result.lead);
   } catch (error) {
     log.error('创建线索错误', {}, error);
-    return apiError('创建线索失败', 500);
+    return apiServerError('创建线索失败');
   }
 }
 

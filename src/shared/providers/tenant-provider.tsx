@@ -7,10 +7,7 @@
 
 import { createContext, useContext, useEffect, useState, type ReactNode, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
-import {
-  getTenantInfo,
-  getVerificationStatus,
-} from '@/features/settings/actions/tenant-info';
+import { getTenantInfo, getVerificationStatus } from '@/features/settings/actions/tenant-info';
 import type { VerificationStatus } from '@/features/settings/types/tenant';
 import { logger } from '@/shared/lib/logger';
 
@@ -20,6 +17,7 @@ export interface Tenant {
   name: string;
   code: string;
   logoUrl?: string | null;
+  region?: string | null;
   verificationStatus?: VerificationStatus;
   settings?: Record<string, unknown>;
 }
@@ -51,6 +49,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
           name: tenantResult.data.name,
           code: tenantResult.data.code,
           logoUrl: tenantResult.data.logoUrl,
+          region: tenantResult.data.region,
           verificationStatus: verificationResult.success
             ? verificationResult.data.status
             : 'unverified',

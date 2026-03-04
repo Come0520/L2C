@@ -1,1 +1,195 @@
-.refer-landing-page{background-color:#f8f8f8;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;min-height:100vh}.refer-landing-page .content-scroll{-webkit-flex:1;-ms-flex:1;flex:1;height:100vh}.refer-landing-page .hero-section{-webkit-align-items:center;background:#fff;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;padding:80rpx 40rpx 60rpx;-ms-flex-align:center;align-items:center;border-bottom-left-radius:40rpx;border-bottom-right-radius:40rpx;-webkit-box-shadow:0 4rpx 20rpx rgba(0,0,0,.03);box-shadow:0 4rpx 20rpx rgba(0,0,0,.03)}.refer-landing-page .hero-section .brand-logo{border:1rpx solid rgba(60,60,67,.1);border-radius:28rpx;height:140rpx;margin-bottom:24rpx;width:140rpx}.refer-landing-page .hero-section .brand-name{color:#1d1d1f;font-size:40rpx;font-weight:800;margin-bottom:8rpx}.refer-landing-page .hero-section .brand-slogan{color:#6e6e73;font-size:30rpx;letter-spacing:2rpx}.refer-landing-page .form-card{background-color:#fff;border-radius:28rpx;-webkit-box-shadow:0 1rpx 4rpx rgba(0,0,0,.05);box-shadow:0 1rpx 4rpx rgba(0,0,0,.05);margin:24rpx;padding:48rpx 24rpx}.refer-landing-page .form-card .card-title{color:#1d1d1f;display:block;font-size:32rpx;font-weight:700;margin-bottom:32rpx;text-align:center}.refer-landing-page .form-card .form-item{-webkit-align-items:center;background-color:#f8f8f8;border-radius:20rpx;display:-webkit-flex;display:-ms-flexbox;display:flex;margin-bottom:24rpx;padding:20rpx 24rpx;-ms-flex-align:center;align-items:center}.refer-landing-page .form-card .form-item .label{color:#1d1d1f;font-size:30rpx;width:140rpx}.refer-landing-page .form-card .form-item .input-field{color:#1d1d1f;-webkit-flex:1;-ms-flex:1;flex:1;font-size:30rpx}.refer-landing-page .form-card .submit-btn{-webkit-align-items:center;background-color:#0071e3;border-radius:100rpx;color:#fff;display:-webkit-flex;display:-ms-flexbox;display:flex;height:88rpx;-ms-flex-align:center;align-items:center;-webkit-justify-content:center;-ms-flex-pack:center;font-size:32rpx;font-weight:600;justify-content:center;margin-bottom:24rpx;margin-top:48rpx}.refer-landing-page .form-card .submit-btn::after{border:none}.refer-landing-page .form-card .submit-btn:active{opacity:.8}.refer-landing-page .form-card .privacy-text{color:#aeaeb2;display:block;font-size:20rpx;line-height:1.5;padding:0 24rpx;text-align:center}.refer-landing-page .cases-section{padding:24rpx}.refer-landing-page .cases-section .section-title{color:#1d1d1f;display:block;font-size:32rpx;font-weight:700;margin-bottom:24rpx;padding-left:8rpx}.refer-landing-page .cases-section .case-list{display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;gap:24rpx}.refer-landing-page .cases-section .case-list .case-card{background-color:#fff;border-radius:28rpx;-webkit-box-shadow:0 1rpx 4rpx rgba(0,0,0,.05);box-shadow:0 1rpx 4rpx rgba(0,0,0,.05);overflow:hidden}.refer-landing-page .cases-section .case-list .case-card .case-img{height:360rpx;width:100%}.refer-landing-page .cases-section .case-list .case-card .case-title{color:#1d1d1f;display:block;font-size:30rpx;font-weight:600;padding:24rpx}.refer-landing-page .float-home-btn{-webkit-backdrop-filter:blur(10rpx);backdrop-filter:blur(10rpx);background-color:hsla(0,0%,100%,.9);border-radius:100rpx;bottom:calc(100rpx + env(safe-area-inset-bottom));-webkit-box-shadow:0 4rpx 16rpx rgba(0,0,0,.1);box-shadow:0 4rpx 16rpx rgba(0,0,0,.1);padding:16rpx 32rpx;position:fixed;right:40rpx;z-index:100}.refer-landing-page .float-home-btn Text{color:#0071e3;font-size:24rpx;font-weight:600}
+@charset "UTF-8";/*!*******************************************************************************************************************************************************************************************************************************************************************************************************************************************!*\
+  !*** css ./node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[1].oneOf[2].use[1]!./node_modules/postcss-loader/dist/cjs.js??ruleSet[1].rules[1].oneOf[2].use[2]!./node_modules/resolve-url-loader/index.js!./node_modules/sass-loader/dist/cjs.js??ruleSet[1].rules[1].oneOf[2].use[4]!./src/packageCustomer/refer-landing/index.scss ***!
+  \*******************************************************************************************************************************************************************************************************************************************************************************************************************************************/
+
+/* ====================================================
+ * Apple Design System - 变量与常量定义
+ *
+ * @description 提取最核心的 iOS 18 和 Apple 官网设计规范。
+ * 所有 px 值在 Taro 构建时自动 1:1 转为 rpx (designWidth=750)。
+ * 因此这里的 px 值 = rpx 值，需按真实小程序比例书写。
+ *
+ * 参考：750rpx = iPhone 6/7/8 屏幕宽度 (375pt × 2)
+ *        1rpx ≈ 0.5pt
+ *
+ * ==================================================== */
+.refer-landing-page {
+  background-color: #F8F8F8;
+  min-height: 100vh;
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-flex-direction: column;
+      -ms-flex-direction: column;
+          flex-direction: column;
+}
+.refer-landing-page .content-scroll {
+  -webkit-flex: 1;
+      -ms-flex: 1;
+          flex: 1;
+  height: 100vh;
+}
+.refer-landing-page .hero-section {
+  background: #fff;
+  padding: 80rpx 40rpx 60rpx;
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-flex-direction: column;
+      -ms-flex-direction: column;
+          flex-direction: column;
+  -webkit-align-items: center;
+      -ms-flex-align: center;
+          align-items: center;
+  border-bottom-left-radius: 40rpx;
+  border-bottom-right-radius: 40rpx;
+  -webkit-box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.03);
+          box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.03);
+}
+.refer-landing-page .hero-section .brand-logo {
+  width: 140rpx;
+  height: 140rpx;
+  border-radius: 28rpx;
+  margin-bottom: 24rpx;
+  border: 1rpx solid rgba(60, 60, 67, 0.1);
+}
+.refer-landing-page .hero-section .brand-name {
+  font-size: 40rpx;
+  font-weight: 800;
+  color: #1D1D1F;
+  margin-bottom: 8rpx;
+}
+.refer-landing-page .hero-section .brand-slogan {
+  font-size: 30rpx;
+  color: #6E6E73;
+  letter-spacing: 2rpx;
+}
+.refer-landing-page .form-card {
+  background-color: #fff;
+  margin: 24rpx;
+  border-radius: 28rpx;
+  padding: 48rpx 24rpx;
+  -webkit-box-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.05);
+          box-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.05);
+}
+.refer-landing-page .form-card .card-title {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #1D1D1F;
+  display: block;
+  margin-bottom: 32rpx;
+  text-align: center;
+}
+.refer-landing-page .form-card .form-item {
+  background-color: #F8F8F8;
+  border-radius: 20rpx;
+  padding: 20rpx 24rpx;
+  margin-bottom: 24rpx;
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-align-items: center;
+      -ms-flex-align: center;
+          align-items: center;
+}
+.refer-landing-page .form-card .form-item .label {
+  width: 140rpx;
+  font-size: 30rpx;
+  color: #1D1D1F;
+}
+.refer-landing-page .form-card .form-item .input-field {
+  -webkit-flex: 1;
+      -ms-flex: 1;
+          flex: 1;
+  font-size: 30rpx;
+  color: #1D1D1F;
+}
+.refer-landing-page .form-card .submit-btn {
+  background-color: #0071E3;
+  color: #fff;
+  height: 88rpx;
+  border-radius: 100rpx;
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-align-items: center;
+      -ms-flex-align: center;
+          align-items: center;
+  -webkit-justify-content: center;
+      -ms-flex-pack: center;
+          justify-content: center;
+  font-size: 32rpx;
+  font-weight: 600;
+  margin-top: 48rpx;
+  margin-bottom: 24rpx;
+}
+.refer-landing-page .form-card .submit-btn::after {
+  border: none;
+}
+.refer-landing-page .form-card .submit-btn:active {
+  opacity: 0.8;
+}
+.refer-landing-page .form-card .privacy-text {
+  font-size: 20rpx;
+  color: #AEAEB2;
+  text-align: center;
+  display: block;
+  line-height: 1.5;
+  padding: 0 24rpx;
+}
+.refer-landing-page .cases-section {
+  padding: 24rpx;
+}
+.refer-landing-page .cases-section .section-title {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #1D1D1F;
+  display: block;
+  margin-bottom: 24rpx;
+  padding-left: 8rpx;
+}
+.refer-landing-page .cases-section .case-list {
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-flex-direction: column;
+      -ms-flex-direction: column;
+          flex-direction: column;
+  gap: 24rpx;
+}
+.refer-landing-page .cases-section .case-list .case-card {
+  background-color: #fff;
+  border-radius: 28rpx;
+  overflow: hidden;
+  -webkit-box-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.05);
+          box-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.05);
+}
+.refer-landing-page .cases-section .case-list .case-card .case-img {
+  width: 100%;
+  height: 360rpx;
+}
+.refer-landing-page .cases-section .case-list .case-card .case-title {
+  padding: 24rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1D1D1F;
+  display: block;
+}
+.refer-landing-page .float-home-btn {
+  position: fixed;
+  right: 40rpx;
+  bottom: calc(100rpx + env(safe-area-inset-bottom));
+  background-color: rgba(255, 255, 255, 0.9);
+  -webkit-backdrop-filter: blur(10rpx);
+          backdrop-filter: blur(10rpx);
+  -webkit-box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.1);
+          box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.1);
+  border-radius: 100rpx;
+  padding: 16rpx 32rpx;
+  z-index: 100;
+}
+.refer-landing-page .float-home-btn Text {
+  font-size: 24rpx;
+  color: #0071E3;
+  font-weight: 600;
+}

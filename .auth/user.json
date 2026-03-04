@@ -2,7 +2,7 @@
   "cookies": [
     {
       "name": "authjs.csrf-token",
-      "value": "e8852a7f8bd066feb5fd0b4dfd57885cf3b1737877063706a1cac5b8d838f961%7C85c19d4df9be4a89ac2d969c026bf0776076925ebc7b21197fc9da4836562f14",
+      "value": "6f4f3ee2c39345b58198493c23fa0890881a9c87fb03c77804c226809431dd63%7C0fdfef72157ba8c9327992c29ae26581da2c1898926010ce4e45c63fa87607e9",
       "domain": "localhost",
       "path": "/",
       "expires": -1,
@@ -12,7 +12,7 @@
     },
     {
       "name": "authjs.callback-url",
-      "value": "http%3A%2F%2Flocalhost%3A3000%2Flogin",
+      "value": "http%3A%2F%2Flocalhost%3A3000",
       "domain": "localhost",
       "path": "/",
       "expires": -1,
@@ -22,10 +22,10 @@
     },
     {
       "name": "authjs.session-token",
-      "value": "eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2Q0JDLUhTNTEyIiwia2lkIjoidkZTdGdIVDhFTXphNllXalJaOF9RdkI4aEZ0QUhZVkw5MW42X3VyM1NMMWhBZmhQXy1SY1F1bUFXMDNLdmpUQlpMT3A3cXpUY2x3Yy1idFB4Z0czVVEifQ..Zoqj_4-YudsxJ52O4lGjsA.dEtoVkVyHhkuISac8UF2nSFF1U8Q3-pzSJmNQQu1L7JLDCEVs7ZWUuOJRBdYBije00Vj1XOAwsJFoHvCbypnjcN1ayZcsE7u6-zbM3djj53Zd_bvNay4y-BCIaGJO7d9ElzyvkF_WfextnR4wLDlvs9MsJ1jRw4OgoN3VIWdZOoXrJ5SMqDQaoT0ffp8_astwf2EFtSU91vjS46ahMmGtJoUeJ1DT-fS33NDobIM2KzSxGraPzoK_S3svqAwnvZGY2prYX35OemmP7O0fMBEhD4TodXXI5dm2G5ufwcZlxuAxiSAvFtd5Xnd9gES-mBLfVYRDTWHtHth6BBlt8dGtBv30lxA-JW1t98uv68pOQU0m7zgTBKf-2O6JfkDauK7vVlnL8R8KmZDJT2sk-xI6qRjdZZe1fZ3mvUJC7pAbIM.O35VB46X1k-DOw2OPxj5OuBN5MitxD4GWk4il4MfbuA",
+      "value": "eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2Q0JDLUhTNTEyIiwia2lkIjoidkZTdGdIVDhFTXphNllXalJaOF9RdkI4aEZ0QUhZVkw5MW42X3VyM1NMMWhBZmhQXy1SY1F1bUFXMDNLdmpUQlpMT3A3cXpUY2x3Yy1idFB4Z0czVVEifQ..DMGIntfkYu4NBIxstoP_gQ.NYx9fqsZ7b1B4SrYxLBcEQ7jyahBKT8XNn0HZLOjc6QVmnI1KW8efhBXgM9gSmRz6qKbc1b9BwAaAx2-RzQHCv4-UXbSFO75ktYZGi83bipUovyFuFFmDD5jM6qKe0NPcareoU3jRaHJk461VxLER6YNkSHx5SQ7egEtF0_yRfBd1mfxvrALv98k4d4AYeTpPnsUXvCEa0pcSSkzku0iHeidnrng_kBWKKebIitnCdiuVHJppLnYQoCukZIh1Bxpfzj20fToZYN93-AzTX3uaP6s4_-5Dkf-Ks97bbcJ8npAaX2w8CbRrkXMTOJBqT8UY7EO1KHatX-c9buhqPU4vTLR2so28EeuAzDbIUovTblfU7KwUVKfwmizajRT1EB4._cVgdQc0_4TBCdEODCgLipKCfoxK93P-Je7cZb2hEzg",
       "domain": "localhost",
       "path": "/",
-      "expires": 1774860357.509795,
+      "expires": 1775221293.061584,
       "httpOnly": true,
       "secure": false,
       "sameSite": "Lax"
@@ -33,7 +33,7 @@
   ],
   "origins": [
     {
-      "origin": "http://localhost:3000",
+      "origin": "http://localhost:3001",
       "localStorage": [
         {
           "name": "l2c-ui-style",

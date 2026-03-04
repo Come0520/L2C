@@ -12,7 +12,7 @@ const log = createLogger('mobile:tasks:media');
 import { db } from '@/shared/api/db';
 import { measureTasks, installTasks, installPhotos, measureSheets } from '@/shared/api/schema';
 import { eq, and, desc } from 'drizzle-orm';
-import { apiSuccess, apiError, apiNotFound } from '@/shared/lib/api-response';
+import { apiSuccess, apiNotFound, apiBadRequest } from '@/shared/lib/api-response';
 import { authenticateMobile, requireWorker } from '@/shared/middleware/mobile-auth';
 
 interface MediaParams {
@@ -64,22 +64,22 @@ export async function POST(request: NextRequest, { params }: MediaParams) {
   try {
     body = await request.json();
   } catch {
-    return apiError('请求体格式错误', 400);
+    return apiBadRequest('请求体格式错误');
   }
 
   const { type, url, category, roomName, remark, duration } = body;
 
   // 4. 参数校验
   if (!type || !url) {
-    return apiError('缺少必要参数: type 和 url', 400);
+    return apiBadRequest('缺少必要参数: type 和 url');
   }
 
   if (!url.startsWith('http')) {
-    return apiError('无效的媒体 URL 格式', 400);
+    return apiBadRequest('无效的媒体 URL 格式');
   }
 
   if (!['photo', 'video', 'audio'].includes(type)) {
-    return apiError('无效的媒体类型', 400);
+    return apiBadRequest('无效的媒体类型');
   }
 
   // 5. 查找任务
@@ -158,7 +158,7 @@ export async function POST(request: NextRequest, { params }: MediaParams) {
     if (!sheet) {
       // 如果没有测量单，这通常是个异常情况，或者需要自动创建一个 Draft
       // 这里为了稳健性，如果找不到 sheet，暂时返回错误，提示先创建测量单（或开始测量）
-      return apiError('未找到关联的测量单，无法上传照片', 404);
+      return apiNotFound('未找到关联的测量单，无法上传照片');
     }
 
     // 2. 更新 site_photos

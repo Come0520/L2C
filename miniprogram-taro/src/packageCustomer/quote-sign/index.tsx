@@ -23,35 +23,35 @@ export default function QuoteSign() {
     })
 
     useEffect(() => {
+        const initCanvas = () => {
+            Taro.nextTick(() => {
+                Taro.createSelectorQuery()
+                    .select(`#${canvasId}`)
+                    .fields({ node: true, size: true })
+                    .exec((res) => {
+                        if (res && res[0] && res[0].node) {
+                            const canvas = res[0].node
+                            const ctx = canvas.getContext('2d')
+
+                            // Set true size
+                            canvas.width = res[0].width * dpr
+                            canvas.height = res[0].height * dpr
+
+                            ctx.scale(dpr, dpr)
+                            ctx.lineCap = 'round'
+                            ctx.lineJoin = 'round'
+                            ctx.lineWidth = 4
+                            ctx.strokeStyle = '#1D1D1F' // $text-title
+
+                            ctxRef.current = ctx
+                            canvasNodeRef.current = canvas
+                        }
+                    })
+            })
+        }
+
         initCanvas()
-    }, [])
-
-    const initCanvas = () => {
-        Taro.nextTick(() => {
-            Taro.createSelectorQuery()
-                .select(`#${canvasId}`)
-                .fields({ node: true, size: true })
-                .exec((res) => {
-                    if (res && res[0] && res[0].node) {
-                        const canvas = res[0].node
-                        const ctx = canvas.getContext('2d')
-
-                        // Set true size
-                        canvas.width = res[0].width * dpr
-                        canvas.height = res[0].height * dpr
-
-                        ctx.scale(dpr, dpr)
-                        ctx.lineCap = 'round'
-                        ctx.lineJoin = 'round'
-                        ctx.lineWidth = 4
-                        ctx.strokeStyle = '#1D1D1F' // $text-title
-
-                        ctxRef.current = ctx
-                        canvasNodeRef.current = canvas
-                    }
-                })
-        })
-    }
+    }, [dpr])
 
     // --- 签名绘制事件 ---
     const handleTouchStart = (e: any) => {
@@ -114,7 +114,7 @@ export default function QuoteSign() {
                     const signatureUrl = uploadRes.data.url
 
                     // 3. 提交报价确认
-                    const confirmRes = await quoteService.confirmQuote(quoteId, signatureUrl)
+                    await quoteService.confirmQuote(quoteId, signatureUrl)
 
                     Taro.hideLoading()
                     Taro.showToast({

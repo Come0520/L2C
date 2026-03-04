@@ -41,5 +41,18 @@ export const orderService = {
         photos?: string[]
     }): Promise<{ ticketNo: string }> {
         return api.post('/service/tickets', { data: reqData }).then(res => res.data)
+    },
+
+    /**
+     * 提交收款记录
+     * POST /api/miniprogram/orders/payments
+     */
+    submitPayment(data: {
+        orderId: string
+        amount: number
+        paymentMethod: string
+        notes?: string
+    }): Promise<any> {
+        return api.post('/orders/payments', { data }).then(res => res.data)
     }
 }

@@ -36,10 +36,10 @@ export async function createLead(
     await dialog.locator('input[placeholder*="客户姓名"], input[placeholder*="姓名"]').first().fill(name);
 
     // 填写手机号
-    // lead-form.tsx 使用普通 Input + onChange 自动拼接 +86 前缀
-    // 只需填入国内号码部分（如 13800000001）
-    const rawPhone = phone.replace(/^\+86/, '');
-    await dialog.locator('input[placeholder*="手机号"]').first().fill(rawPhone);
+    // PhoneInput 外层具有 data-testid，内部是 input[type="tel"]
+    const phoneInput = dialog.getByTestId('phone-input').locator('input[type="tel"]');
+    await phoneInput.waitFor({ state: 'visible', timeout: 5000 });
+    await phoneInput.fill(phone);
     await page.waitForTimeout(300);
 
     // 意向等级映射
@@ -183,9 +183,15 @@ export async function fillLeadForm(
     }
 
     if (data.phone) {
-        const phoneInput = page.locator('input[placeholder*="手机号"]');
+        const phoneInput = page.getByTestId('phone-input').locator('input[type="tel"]');
         if (await phoneInput.isVisible({ timeout: 2000 })) {
             await phoneInput.fill(data.phone);
+        } else {
+            // 降级兼容旧版
+            const oldPhoneInput = page.locator('input[placeholder*="手机号"]');
+            if (await oldPhoneInput.isVisible({ timeout: 1000 })) {
+                await oldPhoneInput.fill(data.phone);
+            }
         }
     }
 

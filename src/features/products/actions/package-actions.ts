@@ -12,6 +12,8 @@ import { productPackages, packageProducts } from '@/shared/api/schema/supply-cha
 import { products } from '@/shared/api/schema/catalogs';
 import { eq, and, desc } from 'drizzle-orm';
 import { auth } from '@/shared/lib/auth';
+import { checkPermission } from '@/shared/lib/auth';
+import { PERMISSIONS } from '@/shared/config/permissions';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { AuditService } from '@/shared/services/audit-service';
@@ -44,13 +46,18 @@ const packageProductSchema = z.object({
   maxQuantity: z.string().or(z.number()).optional(),
 });
 
-// 辅助函数：获取 tenantId
-async function getTenantIdFromSession() {
+/**
+ * 辅助函数：获取经过权限校验的会话信息
+ *
+ * 所有套餐操作统一经过此网关，确保调用者拥有 PRODUCTS.MANAGE 权限
+ */
+async function requireSession() {
   const session = await auth();
   if (!session?.user?.tenantId) {
     throw new Error('未授权');
   }
-  return session.user.tenantId;
+  await checkPermission(session, PERMISSIONS.PRODUCTS.MANAGE);
+  return session;
 }
 
 // =============================================
@@ -67,7 +74,8 @@ async function getTenantIdFromSession() {
  */
 export async function getPackages() {
   try {
-    const tenantId = await getTenantIdFromSession();
+    const session = await requireSession();
+    const tenantId = session.user!.tenantId;
 
     const data = await db
       .select()
@@ -93,8 +101,8 @@ export async function getPackages() {
  */
 export async function getPackageById(id: string) {
   try {
-    const tenantId = await getTenantIdFromSession();
-    if (!tenantId) return { success: false, error: '未授权' };
+    const session = await requireSession();
+    const tenantId = session.user!.tenantId;
 
     const [data] = await db
       .select()
@@ -140,9 +148,8 @@ export async function getPackageById(id: string) {
  */
 export async function createPackage(input: z.infer<typeof createPackageSchema>) {
   try {
-    const session = await auth();
-    if (!session?.user?.tenantId || !session?.user?.id) return { success: false, error: '未授权' };
-    const tenantId = session.user.tenantId;
+    const session = await requireSession();
+    const tenantId = session.user!.tenantId;
 
     const validated = createPackageSchema.parse(input);
 
@@ -196,9 +203,8 @@ export async function createPackage(input: z.infer<typeof createPackageSchema>) 
  */
 export async function updatePackage(id: string, input: z.infer<typeof updatePackageSchema>) {
   try {
-    const session = await auth();
-    if (!session?.user?.tenantId || !session?.user?.id) return { success: false, error: '未授权' };
-    const tenantId = session.user.tenantId;
+    const session = await requireSession();
+    const tenantId = session.user!.tenantId;
 
     const validated = updatePackageSchema.parse(input);
 
@@ -251,9 +257,8 @@ export async function updatePackage(id: string, input: z.infer<typeof updatePack
  */
 export async function deletePackage(id: string) {
   try {
-    const session = await auth();
-    if (!session?.user?.tenantId || !session?.user?.id) return { success: false, error: '未授权' };
-    const tenantId = session.user.tenantId;
+    const session = await requireSession();
+    const tenantId = session.user!.tenantId;
 
     // 先删除关联的商品
     await db.delete(packageProducts).where(eq(packageProducts.packageId, id));
@@ -291,9 +296,8 @@ export async function deletePackage(id: string) {
  */
 export async function togglePackageStatus(id: string, isActive: boolean) {
   try {
-    const session = await auth();
-    if (!session?.user?.tenantId || !session?.user?.id) return { success: false, error: '未授权' };
-    const tenantId = session.user.tenantId;
+    const session = await requireSession();
+    const tenantId = session.user!.tenantId;
 
     const [updated] = await db
       .update(productPackages)
@@ -332,6 +336,7 @@ export async function togglePackageStatus(id: string, isActive: boolean) {
  */
 export async function getPackageProducts(packageId: string) {
   try {
+    await requireSession();
     const data = await db
       .select({
         id: packageProducts.id,
@@ -373,9 +378,8 @@ export async function addPackageProduct(
   input: z.infer<typeof packageProductSchema>
 ) {
   try {
-    const session = await auth();
-    if (!session?.user?.tenantId || !session?.user?.id) return { success: false, error: '未授权' };
-    const tenantId = session.user.tenantId;
+    const session = await requireSession();
+    const tenantId = session.user!.tenantId;
 
     const validated = packageProductSchema.parse(input);
 
@@ -419,9 +423,8 @@ export async function addPackageProduct(
  */
 export async function removePackageProduct(packageId: string, productId: string) {
   try {
-    const session = await auth();
-    if (!session?.user?.tenantId || !session?.user?.id) return { success: false, error: '未授权' };
-    const tenantId = session.user.tenantId;
+    const session = await requireSession();
+    const tenantId = session.user!.tenantId;
 
     await db
       .delete(packageProducts)
@@ -466,8 +469,8 @@ interface PackageItem {
  */
 export async function calculatePackagePrice(packageId: string, items: PackageItem[]) {
   try {
-    const tenantId = await getTenantIdFromSession();
-    if (!tenantId) return { success: false, error: '未授权' };
+    const session = await requireSession();
+    const tenantId = session.user!.tenantId;
 
     // 获取套餐信息
     const [pkg] = await db

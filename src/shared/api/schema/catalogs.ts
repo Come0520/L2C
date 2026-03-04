@@ -9,6 +9,7 @@ import {
   boolean,
   index,
   integer,
+  unique,
 } from 'drizzle-orm/pg-core';
 import { tenants, users } from './infrastructure';
 import { productCategoryEnum, productTypeEnum } from './enums';
@@ -21,7 +22,7 @@ export const products = pgTable(
     tenantId: uuid('tenant_id')
       .references(() => tenants.id)
       .notNull(),
-    sku: varchar('sku', { length: 50 }).unique().notNull(),
+    sku: varchar('sku', { length: 50 }).notNull(),
     name: varchar('name', { length: 200 }).notNull(),
     category: productCategoryEnum('category').notNull(),
     productType: productTypeEnum('product_type').notNull().default('FINISHED'), // 商品类型：成品/定制
@@ -70,6 +71,9 @@ export const products = pgTable(
     prodTenantIdx: index('idx_products_tenant').on(table.tenantId),
     prodSkuIdx: index('idx_products_sku').on(table.sku),
     prodSupplierIdx: index('idx_products_supplier').on(table.defaultSupplierId),
+    prodCategoryIdx: index('idx_products_category').on(table.category),
+    // 租户级 SKU 唯一性：不同租户可拥有相同 SKU，同租户内不允许重复
+    prodTenantSkuUnique: unique('uq_products_tenant_sku').on(table.tenantId, table.sku),
   })
 );
 

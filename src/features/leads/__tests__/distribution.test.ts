@@ -22,7 +22,8 @@ const { mockDb } = vi.hoisted(() => {
         leadStatusHistory: createMockQuery(),
         approvalFlows: createMockQuery(),
         tenants: createMockQuery(),
-        // Add other tables as needed
+        // mock count for LOAD_BALANCE
+        count: vi.fn(),
       },
       update: vi.fn().mockReturnValue({
         set: vi.fn().mockReturnValue({
@@ -143,12 +144,7 @@ describe('Distribution Engine', () => {
     });
 
     it('should distribute using ROUND_ROBIN', async () => {
-      // Mock transaction select result (tenant)
-      // select 被调用两次：
-      // 1) tenant 配置查询（带 .for('update')）
-      // 2) sales users 查询（返回数组）
       const selectMock = vi.fn();
-      // 第一次 select: tenant 查询
       selectMock.mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockReturnValue({
@@ -160,7 +156,6 @@ describe('Distribution Engine', () => {
           }),
         }),
       });
-      // 第二次 select: sales users 查询
       selectMock.mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockResolvedValue([
@@ -171,17 +166,13 @@ describe('Distribution Engine', () => {
       });
       const mockTx = {
         select: selectMock,
-        query: {
-          tenants: { findFirst: vi.fn() },
-        },
-        update: vi.fn().mockReturnValue({
-          set: vi.fn().mockReturnValue({
-            where: vi.fn().mockResolvedValue({}),
+        query: { tenants: { findFirst: vi.fn() } },
+        update: vi
+          .fn()
+          .mockReturnValue({
+            set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue({}) }),
           }),
-        }),
-        insert: vi.fn().mockReturnValue({
-          values: vi.fn().mockResolvedValue({}),
-        }),
+        insert: vi.fn().mockReturnValue({ values: vi.fn().mockResolvedValue({}) }),
       };
       mockDb.transaction.mockImplementation(async (cb) => cb(mockTx));
       vi.mocked(getSettingInternal).mockResolvedValue('ROUND_ROBIN');
@@ -189,6 +180,156 @@ describe('Distribution Engine', () => {
       const result = await distributeToNextSales(tenantId);
 
       expect(result.strategy).toBe('ROUND_ROBIN');
+      expect(result.salesId).toBe('sales1');
+    });
+
+    it('should distribute using LOAD_BALANCE to the sales with minimum active leads', async () => {
+      const selectMock = vi.fn();
+      // Tenant config
+      selectMock.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            for: vi
+              .fn()
+              .mockResolvedValue([{ settings: { distribution: { strategy: 'LOAD_BALANCE' } } }]),
+          }),
+        }),
+      });
+      // Available sales users
+      selectMock.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([
+            { id: 'sales1', name: 'Sales One' },
+            { id: 'sales2', name: 'Sales Two' },
+          ]),
+        }),
+      });
+      // Mock db.select().from(leads).where(...) group by / count behavior
+      selectMock.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            groupBy: vi.fn().mockResolvedValue([
+              { assignedSalesId: 'sales1', count: 5 },
+              { assignedSalesId: 'sales2', count: 2 }, // sales2 has fewer leads
+            ]),
+          }),
+        }),
+      });
+
+      const mockTx = {
+        select: selectMock,
+        update: vi
+          .fn()
+          .mockReturnValue({
+            set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue({}) }),
+          }),
+        insert: vi.fn().mockReturnValue({ values: vi.fn().mockResolvedValue({}) }),
+      };
+      mockDb.transaction.mockImplementation(async (cb) => cb(mockTx));
+      vi.mocked(getSettingInternal).mockResolvedValue('LOAD_BALANCE');
+
+      const result = await distributeToNextSales(tenantId);
+
+      expect(result.strategy).toBe('LOAD_BALANCE');
+      expect(result.salesId).toBe('sales2');
+    });
+
+    it('should distribute using CHANNEL_SPECIFIC to mapped sales user', async () => {
+      const selectMock = vi.fn();
+      // Tenant config with channelMapping
+      selectMock.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            for: vi.fn().mockResolvedValue([
+              {
+                settings: {
+                  distribution: {
+                    strategy: 'CHANNEL_SPECIFIC',
+                    channelMapping: { 'channel-A': ['sales3', 'sales4'] },
+                    channelPointers: { 'channel-A': 1 },
+                  },
+                },
+              },
+            ]),
+          }),
+        }),
+      });
+      // Global Available sales users
+      selectMock.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([
+            { id: 'sales1', name: 'Sales One' },
+            { id: 'sales2', name: 'Sales Two' },
+            { id: 'sales3', name: 'Sales Three' },
+            { id: 'sales4', name: 'Sales Four' },
+          ]),
+        }),
+      });
+
+      const mockTx = {
+        select: selectMock,
+        update: vi
+          .fn()
+          .mockReturnValue({
+            set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue({}) }),
+          }),
+        insert: vi.fn().mockReturnValue({ values: vi.fn().mockResolvedValue({}) }),
+      };
+      mockDb.transaction.mockImplementation(async (cb) => cb(mockTx));
+      vi.mocked(getSettingInternal).mockResolvedValue('CHANNEL_SPECIFIC');
+
+      // Now pass channelId as 3rd parameter to distributeToNextSales
+      const result = await distributeToNextSales(tenantId, undefined, 'channel-A');
+
+      expect(result.strategy).toBe('CHANNEL_SPECIFIC');
+      // Pointer is 1, so it should pick 'sales4' from ['sales3', 'sales4']
+      expect(result.salesId).toBe('sales4');
+    });
+
+    it('should fallback to ROUND_ROBIN if CHANNEL_SPECIFIC misses the mapping', async () => {
+      const selectMock = vi.fn();
+      selectMock.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            for: vi.fn().mockResolvedValue([
+              {
+                settings: {
+                  distribution: {
+                    strategy: 'CHANNEL_SPECIFIC',
+                    channelMapping: { 'channel-A': ['sales3'] },
+                    nextSalesIndex: 0,
+                  },
+                },
+              },
+            ]),
+          }),
+        }),
+      });
+      selectMock.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([
+            { id: 'sales1', name: 'Sales One' },
+            { id: 'sales2', name: 'Sales Two' },
+          ]),
+        }),
+      });
+
+      const mockTx = {
+        select: selectMock,
+        update: vi
+          .fn()
+          .mockReturnValue({
+            set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue({}) }),
+          }),
+        insert: vi.fn().mockReturnValue({ values: vi.fn().mockResolvedValue({}) }),
+      };
+      mockDb.transaction.mockImplementation(async (cb) => cb(mockTx));
+      vi.mocked(getSettingInternal).mockResolvedValue('CHANNEL_SPECIFIC');
+
+      // Note: Passing 'channel-B' which is not in the mapping
+      const result = await distributeToNextSales(tenantId, undefined, 'channel-B');
+
+      expect(result.strategy).toBe('ROUND_ROBIN'); // Reduced to round robin
       expect(result.salesId).toBe('sales1');
     });
   });

@@ -254,6 +254,20 @@ export const ROLES: Record<string, RoleDefinition> = {
     ],
   },
 
+  // ==================== 客户 ====================
+  CUSTOMER: {
+    code: 'CUSTOMER',
+    name: '客户',
+    description: '终端消费者或企业客户，主要通过小程序查看本人的报价、订单及售后进度',
+    isSystem: true,
+    permissions: [
+      PERMISSIONS.CUSTOMER.OWN_VIEW,
+      PERMISSIONS.ORDER.OWN_VIEW,
+      PERMISSIONS.QUOTE.OWN_VIEW,
+      PERMISSIONS.AFTER_SALES.OWN_VIEW,
+    ],
+  },
+
   // ==================== 工人 ====================
   WORKER: {
     code: 'WORKER',

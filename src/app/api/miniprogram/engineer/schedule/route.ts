@@ -10,17 +10,16 @@
  */
 import { NextRequest } from 'next/server';
 import { db } from '@/shared/api/db';
-import { measureTasks, installTasks, customers } from '@/shared/api/schema';
-import { eq, and, desc, gte, lte } from 'drizzle-orm';
-import { apiSuccess, apiError } from '@/shared/lib/api-response';
+import { measureTasks, installTasks } from '@/shared/api/schema';
+import { eq, and, desc } from 'drizzle-orm';
+import { apiSuccess, apiServerError, apiUnauthorized } from '@/shared/lib/api-response';
 import { logger } from '@/shared/lib/logger';
-import { getMiniprogramUser } from '../../../auth-utils';
+import { withMiniprogramAuth } from '../../auth-utils';
 
-export async function GET(request: NextRequest) {
+export const GET = withMiniprogramAuth(async (request: NextRequest, user) => {
   try {
-    const user = await getMiniprogramUser(request);
     if (!user || (!user.tenantId && user.role !== 'SUPER_ADMIN')) {
-      return apiError('未授权', 401);
+      return apiUnauthorized('未授权');
     }
 
     // 获取时间区间
@@ -28,15 +27,11 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get('startDate'); // ex: 2026-03-01
     const endDate = searchParams.get('endDate'); // ex: 2026-03-31
 
-    // 默认查询最近一个月或从当天起的一个月
-    // 此处简化，不带时间过滤时返回本月数据，由于是演示性质，暂时全查或按传入参数查
-
     // 1. 查询属于该工程师的量尺任务
     const measures = await db.query.measureTasks.findMany({
       where: and(
         eq(measureTasks.tenantId, user.tenantId as string),
         eq(measureTasks.assignedWorkerId, user.id)
-        // 此处可追加状态过滤（如不能是 CANCELLED）
       ),
       orderBy: [desc(measureTasks.scheduledAt)],
     });
@@ -56,7 +51,9 @@ export async function GET(request: NextRequest) {
     for (const m of measures) {
       if (!m.scheduledAt) continue;
       // 简单截取成 YYYY-MM-DD 的 key
-      const dateKey = m.scheduledAt.split('T')[0];
+      const dateStr =
+        typeof m.scheduledAt === 'string' ? m.scheduledAt : (m.scheduledAt as Date).toISOString();
+      const dateKey = dateStr.split('T')[0];
 
       // 时间区间过滤
       if (startDate && dateKey < startDate) continue;
@@ -66,7 +63,10 @@ export async function GET(request: NextRequest) {
         id: m.id,
         date: dateKey,
         title: `量尺 - ${m.measureNo}`,
-        time: m.scheduledAt.split('T')[1]?.substring(0, 5) || '全天',
+        time:
+          m.scheduledAt instanceof Date
+            ? m.scheduledAt.toISOString().split('T')[1]?.substring(0, 5) || '全天'
+            : String(m.scheduledAt).split('T')[1]?.substring(0, 5) || '全天',
         address: '客户地址(接口可带出)',
         customerName: '待关联客户',
         status: m.status,
@@ -76,7 +76,11 @@ export async function GET(request: NextRequest) {
 
     for (const i of installs) {
       if (!i.scheduledDate) continue;
-      const dateKey = i.scheduledDate; // 本身就是 YYYY-MM-DD 或 ISO Date string
+      const dateStr =
+        typeof i.scheduledDate === 'string'
+          ? i.scheduledDate
+          : (i.scheduledDate as Date).toISOString();
+      const dateKey = dateStr.split('T')[0];
 
       // 时间区间过滤
       if (startDate && dateKey < startDate) continue;
@@ -99,6 +103,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     logger.error('[Schedule] 获取工程师排期异常', { route: 'engineer/schedule', error });
-    return apiError('获取日程失败', 500);
+    return apiServerError('获取日程失败');
   }
-}
+});

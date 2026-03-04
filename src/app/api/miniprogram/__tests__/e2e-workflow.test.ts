@@ -75,7 +75,12 @@ vi.mock('../auth-utils', async () => {
   const actual = await vi.importActual('../auth-utils');
   return {
     ...(actual as Record<string, unknown>),
-    getMiniprogramUser: vi.fn().mockResolvedValue({ id: 'u1', tenantId: 't1', role: 'sales' }),
+    getMiniprogramUser: vi.fn().mockResolvedValue({ id: 'u1', tenantId: 't1', role: 'SALES' }),
+    withMiniprogramAuth: vi.fn().mockImplementation((handler: any) => {
+      return async (request: any, context?: any) => {
+        return handler(request, { id: 'u1', tenantId: 't1', role: 'SALES' }, context);
+      };
+    }),
     generateMiniprogramToken: vi.fn().mockResolvedValue('mock-token'),
     generateRegisterToken: vi.fn().mockResolvedValue('mock-register-token'),
     verifyRegisterToken: vi.fn().mockResolvedValue({ openId: 'test-openid' }),
@@ -162,13 +167,11 @@ describe('军工级联调与破坏性用例 (E2E & Chaos)', () => {
             })),
             query: {
               orders: {
-                findFirst: vi
-                  .fn()
-                  .mockResolvedValue({
-                    id: 'mock-order-uuid',
-                    paidAmount: '0',
-                    totalAmount: '1000',
-                  }),
+                findFirst: vi.fn().mockResolvedValue({
+                  id: 'mock-order-uuid',
+                  paidAmount: '0',
+                  totalAmount: '1000',
+                }),
               },
             },
           };

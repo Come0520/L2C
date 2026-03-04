@@ -36,15 +36,23 @@ vi.mock('@/shared/api/db', () => ({
 }));
 
 // Mock Auth Utils
-vi.mock('../auth-utils', () => ({
-  getMiniprogramUser: vi.fn(),
-  generateMiniprogramToken: vi.fn().mockResolvedValue('mock-token'),
-  verifyRegisterToken: vi.fn((token: string) => {
-    if (token === 'mock.jwt.token') return Promise.resolve({ openId: 'test-open-id' });
-    if (token === 'mock.jwt.token2') return Promise.resolve({ openId: 'new-open-id' });
-    return Promise.resolve(null);
-  }),
-}));
+vi.mock('../auth-utils', async () => {
+  const actual = await vi.importActual('../auth-utils');
+  return {
+    ...actual,
+    getMiniprogramUser: vi.fn(),
+    generateMiniprogramToken: vi.fn().mockResolvedValue('mock-token'),
+    verifyRegisterToken: vi.fn((token: string) => {
+      if (token === 'mock.jwt.token') return Promise.resolve({ openId: 'test-open-id' });
+      if (token === 'mock.jwt.token2') return Promise.resolve({ openId: 'new-open-id' });
+      return Promise.resolve(null);
+    }),
+    withMiniprogramAuth: vi.fn((handler) => async (req: NextRequest) => {
+      const user = await authUtils.getMiniprogramUser(req);
+      return handler(req, user);
+    }),
+  };
+});
 
 // Mock Audit Service
 vi.mock('@/shared/services/audit-service', () => ({

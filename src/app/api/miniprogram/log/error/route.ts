@@ -11,7 +11,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createLogger } from '@/shared/lib/logger';
-import { getMiniprogramUser } from '../../auth-utils';
+import { withMiniprogramAuth, AuthUser } from '../../auth-utils';
 import { withRateLimit, getRateLimitKey } from '@/shared/middleware/rate-limiter';
 
 const log = createLogger('miniprogram:log:error');
@@ -42,16 +42,10 @@ const batchErrorSchema = z.object({
 });
 
 /**
- * 错误上报处理函数
+ * 错误上报处理函数（已通过 withMiniprogramAuth 注入 user）
  */
-async function errorLogHandler(request: NextRequest) {
-  // 1. 认证 — 需要合法的小程序 Token
-  const user = await getMiniprogramUser(request);
-  if (!user) {
-    return NextResponse.json({ success: false, error: '未授权' }, { status: 401 });
-  }
-
-  // 2. 解析请求体
+async function errorLogHandler(request: NextRequest, user: AuthUser) {
+  // 解析请求体
   let body: unknown;
   try {
     body = await request.json();
@@ -59,7 +53,7 @@ async function errorLogHandler(request: NextRequest) {
     return NextResponse.json({ success: false, error: '请求体格式错误' }, { status: 400 });
   }
 
-  // 3. 校验数据
+  // 校验数据
   const parseResult = batchErrorSchema.safeParse(body);
   if (!parseResult.success) {
     return NextResponse.json(
@@ -70,7 +64,7 @@ async function errorLogHandler(request: NextRequest) {
 
   const { errors } = parseResult.data;
 
-  // 4. 结构化日志记录 — 按错误类型分组输出
+  // 结构化日志记录 — 按错误类型分组输出
   const grouped = errors.reduce<Record<string, number>>((acc, err) => {
     acc[err.type] = (acc[err.type] || 0) + 1;
     return acc;
@@ -97,7 +91,7 @@ async function errorLogHandler(request: NextRequest) {
     });
   }
 
-  // 5. 返回成功
+  // 返回成功
   return NextResponse.json({
     success: true,
     data: {
@@ -107,9 +101,10 @@ async function errorLogHandler(request: NextRequest) {
   });
 }
 
-// 应用速率限制：1 分钟内最多 30 次批量上报
+// 应用认证 + 速率限制：1 分钟内最多 30 次批量上报
+// withMiniprogramAuth 确保 Token 合法，withRateLimit 防止高频滥用
 export const POST = withRateLimit(
-  errorLogHandler,
+  withMiniprogramAuth(errorLogHandler),
   { windowMs: 60 * 1000, maxAttempts: 30, message: '上报频率过高，请稍后重试' },
   getRateLimitKey('miniprogram:log:error')
 );

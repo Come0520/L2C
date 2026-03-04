@@ -5,7 +5,13 @@ const log = createLogger('mobile:tasks:install-complete');
 import { db } from '@/shared/api/db';
 import { installTasks, installPhotos } from '@/shared/api/schema';
 import { eq, and, count } from 'drizzle-orm';
-import { apiSuccess, apiError, apiNotFound, apiForbidden } from '@/shared/lib/api-response';
+import {
+  apiSuccess,
+  apiNotFound,
+  apiForbidden,
+  apiBadRequest,
+  apiServerError,
+} from '@/shared/lib/api-response';
 import { authenticateMobile, requireWorker } from '@/shared/middleware/mobile-auth';
 import { AuditService } from '@/shared/services/audit-service';
 
@@ -33,7 +39,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     // 1. Verify GPS (Check-out location)
     if (!latitude || !longitude) {
-      return apiError('缺少完工位置信息(GPS)', 400);
+      return apiBadRequest('缺少完工位置信息(GPS)');
     }
 
     // 2. Verify Task
@@ -47,7 +53,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     // 状态校验：必须是 IN_PROGRESS
     if (task.status !== 'IN_PROGRESS') {
-      return apiError(`当前状态(${task.status})不可提交完工`, 400);
+      return apiBadRequest(`当前状态(${task.status})不可提交完工`);
     }
 
     // 3. Verify Photos (At least one)
@@ -57,7 +63,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       .where(eq(installPhotos.installTaskId, taskId));
 
     if (photoCount.count === 0) {
-      return apiError('请至少上传一张安装照片', 400);
+      return apiBadRequest('请至少上传一张安装照片');
     }
 
     // 4. Update Task -> PENDING_CONFIRM
@@ -100,6 +106,6 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       { taskId, error: error instanceof Error ? error.message : String(error) },
       error
     );
-    return apiError('提交完工失败', 500);
+    return apiServerError('提交完工失败');
   }
 }

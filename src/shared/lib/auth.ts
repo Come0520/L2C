@@ -9,7 +9,6 @@ import { z } from 'zod';
 import { logger } from './logger';
 import { checkLoginRateLimit, resetLoginRateLimit } from './auth-rate-limit';
 import { AuditService } from '@/shared/services/audit-service';
-import { maskEmail } from '@/shared/utils/mask-utils';
 
 /**
  * NextAuth 核心配置与导出
@@ -33,190 +32,160 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
        * @returns 验证成功返回用户信息，失败返回 null
        */
       authorize: async (credentials) => {
-        const schema = z.object({
-          username: z.string().min(1),
-          password: z.string().min(1),
-        });
-
-        const parsed = schema.safeParse(credentials);
-        if (!parsed.success) {
-          return null;
-        }
-        const { username, password } = parsed.data;
-
-        logger.info('[Auth] 收到登录请求', {
-          username: maskEmail(username),
-          method: 'credentials',
-        });
-
-        // PC端登录速率限制
-        const rateCheck = checkLoginRateLimit(username);
-        if (!rateCheck.allowed) {
-          logger.warn('[Auth] PC 端登录速率限制触发', { username: maskEmail(username) });
-          return null;
-        }
-
-        // 安全修复（BUG-1）：使用 findMany 获取所有匹配的活跃用户，
-        // 避免跨租户同名账号碰撞：findFirst 会随机命中其他租户的用户，
-        // 导致密码匹配失败（同一手机号在不同租户有不同密码哈希）。
-        const candidates = await db.query.users.findMany({
-          where: and(
-            or(eq(users.email, username), eq(users.phone, username)),
-            eq(users.isActive, true)
-          ),
-        });
-
-        if (candidates.length === 0) {
-          logger.warn('[Auth] 登录失败：用户不存在或未激活', { username: maskEmail(username) });
-          return null;
-        }
-
-        // 逐一验证候选用户的密码，返回第一个匹配成功的用户
-        let user: (typeof candidates)[0] | null = null;
-        for (const candidate of candidates) {
-          if (!candidate.passwordHash) continue;
-          const match = await compare(password, candidate.passwordHash);
-          if (match) {
-            user = candidate;
-            break;
-          }
-        }
-
-        if (!user) {
-          // 记录失败审计（使用第一个候选用户的信息，因为不知道具体意图登录哪个）
-          const firstCandidate = candidates[0];
-          logger.warn('[Auth] PC 端登录密码错误', { username: maskEmail(username) });
-          await AuditService.log(db, {
-            tableName: 'auth_login',
-            recordId: firstCandidate.id || 'unknown',
-            action: 'LOGIN_FAILED',
-            userId: firstCandidate.id || 'unknown',
-            tenantId: firstCandidate.tenantId || 'unknown',
-            details: { method: 'credentials', platform: 'pc', reason: 'invalid_password' },
+        try {
+          const schema = z.object({
+            username: z.string().min(1),
+            password: z.string().min(1),
           });
-          return null;
-        }
 
-        // ===== 多租户改造：查 tenant_members 获取用户的租户成员资格 =====
+          const parsed = schema.safeParse(credentials);
+          if (!parsed.success) {
+            return null;
+          }
+          const { username, password } = parsed.data;
 
-        // 超管直接进入平台管理上下文，不参与任何租户业务
-        if (user.isPlatformAdmin) {
-          logger.info('[Auth] 平台超管登录', { userId: user.id });
-          resetLoginRateLimit(username);
+          // PC端登录速率限制
+          const rateCheck = checkLoginRateLimit(username);
+          if (!rateCheck.allowed) {
+            return null;
+          }
+
+          const candidates = await db.query.users.findMany({
+            where: and(
+              or(eq(users.email, username), eq(users.phone, username)),
+              eq(users.isActive, true)
+            ),
+          });
+
+          if (candidates.length === 0) {
+            return null;
+          }
+
+          let user: (typeof candidates)[0] | null = null;
+          for (const candidate of candidates) {
+            if (!candidate.passwordHash) continue;
+            const match = await compare(password, candidate.passwordHash);
+
+            if (match) {
+              user = candidate;
+              break;
+            }
+          }
+
+          if (!user) {
+            return null;
+          }
+
+          // 超管直接进入平台管理上下文，不参与任何租户业务
+          if (user.isPlatformAdmin) {
+            const ret = {
+              id: user.id,
+              name: user.name ?? '',
+              email: user.email ?? '',
+              image: user.avatarUrl ?? '',
+              tenantId: '__PLATFORM__',
+              role: 'PLATFORM_ADMIN',
+              roles: ['PLATFORM_ADMIN'],
+              isPlatformAdmin: true,
+            };
+
+            return ret;
+          }
+
+          const memberships = await db.query.tenantMembers.findMany({
+            where: and(eq(tenantMembers.userId, user.id), eq(tenantMembers.isActive, true)),
+            with: { tenant: true },
+          });
+
+          if (memberships.length === 0) {
+            if (user.tenantId) {
+              const userRoles =
+                (user.roles as string[])?.length > 0
+                  ? (user.roles as string[])
+                  : [user.role || 'USER'];
+              resetLoginRateLimit(username);
+              await AuditService.log(db, {
+                tableName: 'auth_login',
+                recordId: user.id,
+                action: 'LOGIN_SUCCESS',
+                userId: user.id,
+                tenantId: user.tenantId,
+                details: { method: 'credentials', platform: 'pc', fallback: 'legacy_tenantId' },
+              });
+              return {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                image: user.avatarUrl,
+                role: user.role || 'USER',
+                roles: userRoles,
+                tenantId: user.tenantId,
+                isPlatformAdmin: false,
+              };
+            }
+            logger.warn('[Auth] 用户无任何租户成员资格', { userId: user.id });
+            return null;
+          }
+
+          // 确定要进入的租户：优先使用上次活跃的租户
+          let activeMembership = memberships[0];
+          if (user.lastActiveTenantId) {
+            const lastActive = memberships.find((m) => m.tenantId === user.lastActiveTenantId);
+            if (lastActive) {
+              activeMembership = lastActive;
+            }
+          }
+
+          const memberRoles =
+            (activeMembership.roles as string[])?.length > 0
+              ? (activeMembership.roles as string[])
+              : [activeMembership.role || 'USER'];
+
+          logger.info('[Auth] PC 端登录成功', {
+            userId: user.id,
+            tenantId: activeMembership.tenantId,
+            membershipCount: memberships.length,
+          });
+
           await AuditService.log(db, {
             tableName: 'auth_login',
             recordId: user.id,
             action: 'LOGIN_SUCCESS',
             userId: user.id,
-            tenantId: '__PLATFORM__',
-            details: { method: 'credentials', platform: 'pc', type: 'platform_admin' },
+            tenantId: activeMembership.tenantId,
+            details: { method: 'credentials', platform: 'pc' },
           });
+
+          // 登录成功重置速率限制
+          resetLoginRateLimit(username);
+
           return {
             id: user.id,
             name: user.name,
             email: user.email,
             image: user.avatarUrl,
-            tenantId: '__PLATFORM__',
-            role: 'PLATFORM_ADMIN',
-            roles: ['PLATFORM_ADMIN'],
-            isPlatformAdmin: true,
+            role: activeMembership.role || 'USER',
+            roles: memberRoles,
+            tenantId: activeMembership.tenantId,
+            isPlatformAdmin: false,
           };
-        }
-
-        // 查询该用户在 tenant_members 中的所有有效成员资格
-        const memberships = await db.query.tenantMembers.findMany({
-          where: and(eq(tenantMembers.userId, user.id), eq(tenantMembers.isActive, true)),
-          with: { tenant: true },
-        });
-
-        if (memberships.length === 0) {
-          // 无成员资格：回退到旧的 users.tenantId（过渡期兼容）
-          if (user.tenantId) {
-            logger.warn('[Auth] 用户无 tenant_members 记录，使用旧 users.tenantId 兼容', {
-              userId: user.id,
-              tenantId: user.tenantId,
-            });
-            const userRoles =
-              (user.roles as string[])?.length > 0
-                ? (user.roles as string[])
-                : [user.role || 'USER'];
-            resetLoginRateLimit(username);
-            await AuditService.log(db, {
-              tableName: 'auth_login',
-              recordId: user.id,
-              action: 'LOGIN_SUCCESS',
-              userId: user.id,
-              tenantId: user.tenantId,
-              details: { method: 'credentials', platform: 'pc', fallback: 'legacy_tenantId' },
-            });
-            return {
-              id: user.id,
-              name: user.name,
-              email: user.email,
-              image: user.avatarUrl,
-              role: user.role || 'USER',
-              roles: userRoles,
-              tenantId: user.tenantId,
-              isPlatformAdmin: false,
-            };
-          }
-          logger.warn('[Auth] 用户无任何租户成员资格', { userId: user.id });
+        } catch (error) {
+          logger.error('[Auth] 认证验证过程发生异常', {
+            error: error instanceof Error ? error.message : String(error),
+          });
           return null;
         }
-
-        // 确定要进入的租户：优先使用上次活跃的租户
-        let activeMembership = memberships[0];
-        if (user.lastActiveTenantId) {
-          const lastActive = memberships.find((m) => m.tenantId === user.lastActiveTenantId);
-          if (lastActive) {
-            activeMembership = lastActive;
-          }
-        }
-
-        const memberRoles =
-          (activeMembership.roles as string[])?.length > 0
-            ? (activeMembership.roles as string[])
-            : [activeMembership.role || 'USER'];
-
-        logger.info('[Auth] PC 端登录成功', {
-          userId: user.id,
-          tenantId: activeMembership.tenantId,
-          membershipCount: memberships.length,
-        });
-
-        await AuditService.log(db, {
-          tableName: 'auth_login',
-          recordId: user.id,
-          action: 'LOGIN_SUCCESS',
-          userId: user.id,
-          tenantId: activeMembership.tenantId,
-          details: { method: 'credentials', platform: 'pc' },
-        });
-
-        // 登录成功重置速率限制
-        resetLoginRateLimit(username);
-
-        return {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          image: user.avatarUrl,
-          role: activeMembership.role || 'USER',
-          roles: memberRoles,
-          tenantId: activeMembership.tenantId,
-          isPlatformAdmin: false,
-        };
       },
     }),
     {
       id: 'wechat',
       name: 'WeChat',
       type: 'oauth',
-      clientId: process.env.WECHAT_CLIENT_ID,
-      clientSecret: process.env.WECHAT_CLIENT_SECRET,
+      clientId: process.env.WX_APPID,
+      clientSecret: process.env.WX_APPSECRET,
       authorization:
         'https://open.weixin.qq.com/connect/qrconnect?appid=' +
-        process.env.WECHAT_CLIENT_ID +
+        process.env.WX_APPID +
         '&redirect_uri=' +
         process.env.NEXTAUTH_URL +
         '/api/auth/callback/wechat&response_type=code&scope=snsapi_login#wechat_redirect',

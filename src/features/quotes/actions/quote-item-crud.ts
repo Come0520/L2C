@@ -27,6 +27,7 @@ import { AuditService } from '@/shared/services/audit-service';
 import { SizeValidator } from '@/shared/lib/validators';
 import { logger } from '@/shared/lib/logger';
 import Decimal from 'decimal.js';
+import { calculateInternalCost } from '@/shared/lib/product-cost';
 
 // --- 内部辅助函数 ---
 const calculateSubtotal = (price: number, quantity: number, processFee: number = 0) => {
@@ -93,7 +94,8 @@ const createQuoteItemActionInternal = createSafeAction(
     // 产品自动填充逻辑
     if (data.productId) {
       const product = await db.query.products.findFirst({
-        where: eq(products.id, data.productId),
+        // F5: 产品查询加租户隔离，防止跨租户商品信息探测
+        where: and(eq(products.id, data.productId), eq(products.tenantId, tenantId)),
       });
 
       if (product) {
@@ -106,6 +108,18 @@ const createQuoteItemActionInternal = createSafeAction(
           }
         }
         if (!data.productName) currentProductName = product.name;
+
+        // F2: 成本快照——使用中心化公式计算真实成本，由 product-cost.ts 统一管理
+        // 公式：(purchasePrice + logisticsCost) / (1 - lossRate) + processingCost
+        const internalCostVal = calculateInternalCost({
+          purchasePrice: Number(product.purchasePrice || 0),
+          logisticsCost: Number(product.logisticsCost || 0),
+          processingCost: Number(product.processingCost || 0),
+          lossRate: Number(product.lossRate || 0),
+        });
+        if (internalCostVal > 0) {
+          (attributes as Record<string, unknown>)._costPrice = internalCostVal;
+        }
 
         // 存储产品基准价快照，供前端低价警告使用
         // 优先使用底价 (floorPrice)，其次零售价，再次批发价
@@ -214,6 +228,10 @@ const createQuoteItemActionInternal = createSafeAction(
         ...data,
         productName: currentProductName,
         unitPrice: currentUnitPrice.toString(),
+        // F2: 写入成本快照，用于转订单后毛利率追溯分析
+        costPrice: ((attributes as Record<string, unknown>)._costPrice as number | undefined)
+          ? String((attributes as Record<string, unknown>)._costPrice)
+          : undefined,
         quantity: quantity.toString(),
         subtotal: calculateSubtotal(currentUnitPrice, quantity, data.processFee || 0).toString(),
         width: data.width?.toString(),
@@ -355,7 +373,8 @@ export const updateQuoteItem = createSafeAction(updateQuoteItemSchema, async (da
   const currentProductId = productId ?? existing.productId;
   if (currentProductId) {
     const product = await db.query.products.findFirst({
-      where: eq(products.id, currentProductId),
+      // F5: 产品查询加租户隔离
+      where: and(eq(products.id, currentProductId), eq(products.tenantId, userTenantId)),
     });
 
     if (product) {

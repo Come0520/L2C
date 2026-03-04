@@ -6,6 +6,7 @@ import { customerSchema } from '../schemas';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/shared/ui/form';
 import { Input } from '@/shared/ui/input';
 import { PhoneInput } from '@/components/ui/phone-input';
+import { AddressInput } from '@/components/ui/address-input';
 
 import { Button } from '@/shared/ui/button';
 import { Textarea } from '@/shared/ui/textarea';
@@ -16,6 +17,7 @@ import { toast } from 'sonner';
 import { useTransition } from 'react';
 import { z } from 'zod';
 import { CustomerDetail } from '@/features/customers/types';
+import { useTenant } from '@/shared/providers/tenant-provider';
 
 interface CustomerFormProps {
   onSuccess?: (customer?: { id: string }) => void;
@@ -35,6 +37,7 @@ type FormValues = z.input<typeof customerSchema>;
  * - 地址和备注
  */
 export function CustomerForm({ onSuccess, tenantId, initialData }: CustomerFormProps) {
+  const { tenant } = useTenant();
   const [isPending, startTransition] = useTransition();
   const isEdit = !!initialData;
 
@@ -214,7 +217,12 @@ export function CustomerForm({ onSuccess, tenantId, initialData }: CustomerFormP
               <FormItem>
                 <FormLabel>默认地址</FormLabel>
                 <FormControl>
-                  <Input placeholder="详细地址..." {...field} value={field.value || ''} />
+                  <AddressInput
+                    value={field.value || ''}
+                    onChange={field.onChange}
+                    defaultRegion={tenant?.region}
+                    placeholder="详细地址..."
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>

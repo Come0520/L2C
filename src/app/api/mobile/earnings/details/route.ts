@@ -10,7 +10,7 @@ import { db } from '@/shared/api/db';
 import { installTasks } from '@/shared/api/schema';
 import { eq, and, desc, gte, lte, sql } from 'drizzle-orm';
 import { authenticateMobile, requireWorker } from '@/shared/middleware/mobile-auth';
-import { apiError, apiPaginated } from '@/shared/lib/api-response';
+import { apiPaginated, apiServerError } from '@/shared/lib/api-response';
 import { createLogger } from '@/shared/lib/logger';
 
 const log = createLogger('mobile/earnings/details');
@@ -87,6 +87,6 @@ export async function GET(request: NextRequest) {
     return apiPaginated(details, page, pageSize, total);
   } catch (error) {
     log.error('收入明细查询错误', {}, error);
-    return apiError('查询收入明细失败', 500);
+    return apiServerError('查询收入明细失败');
   }
 }

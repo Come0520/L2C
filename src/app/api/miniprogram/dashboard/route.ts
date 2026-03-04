@@ -4,20 +4,19 @@
  * GET /api/miniprogram/dashboard
  */
 import { NextRequest } from 'next/server';
-import { apiSuccess, apiError } from '@/shared/lib/api-response';
+import { apiSuccess, apiServerError, apiUnauthorized } from '@/shared/lib/api-response';
 import { logger } from '@/shared/lib/logger';
 import { db } from '@/shared/api/db';
 import { quotes, customers, salesTargets } from '@/shared/api/schema';
 import { eq, and, count, sql } from 'drizzle-orm';
-import { getMiniprogramUser } from '../auth-utils';
+import { withMiniprogramAuth } from '../auth-utils';
 import { CacheService } from '@/shared/services/miniprogram/cache.service';
 import { isDevMockUser, MOCK_DASHBOARD } from '../__mocks__';
 
-export async function GET(request: NextRequest) {
+export const GET = withMiniprogramAuth(async (request: NextRequest, user) => {
   try {
-    const user = await getMiniprogramUser(request);
     if (!user || !user.tenantId) {
-      return apiError('未授权', 401);
+      return apiUnauthorized('未授权');
     }
 
     // 开发环境 mock 用户：直接返回模拟数据，不查数据库
@@ -271,6 +270,8 @@ export async function GET(request: NextRequest) {
       logger.error('Dashboard Error Message:', error.message);
       logger.error('Dashboard Error Name:', error.name);
     }
-    return apiError('获取数据失败: ' + (error instanceof Error ? error.stack : String(error)), 500);
+    return apiServerError(
+      '获取数据失败: ' + (error instanceof Error ? error.stack : String(error))
+    );
   }
-}
+});

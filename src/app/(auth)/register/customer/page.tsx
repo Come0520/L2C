@@ -10,6 +10,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
+import { PhoneInput } from '@/components/ui/phone-input';
 import { Label } from '@/shared/ui/label';
 import { Alert, AlertDescription } from '@/shared/ui/alert';
 import { Loader2, UserCheck, CheckCircle2, AlertTriangle } from 'lucide-react';
@@ -181,13 +182,11 @@ function CustomerRegisterContent() {
               <Label htmlFor="phone" className="text-white">
                 手机号
               </Label>
-              <Input
+              <PhoneInput
                 id="phone"
-                type="tel"
                 placeholder="请输入手机号"
                 value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                required
+                onChange={(val) => setFormData({ ...formData, phone: val || '' })}
                 className="border-white/20 bg-white/5 text-white"
               />
             </div>

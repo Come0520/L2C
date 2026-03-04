@@ -8,7 +8,7 @@ import { NextRequest } from 'next/server';
 import { db } from '@/shared/api/db';
 import { approvalTasks } from '@/shared/api/schema';
 import { eq, and } from 'drizzle-orm';
-import { apiSuccess, apiError, apiNotFound } from '@/shared/lib/api-response';
+import { apiSuccess, apiNotFound, apiServerError } from '@/shared/lib/api-response';
 import { authenticateMobile, requireBoss } from '@/shared/middleware/mobile-auth';
 import { createLogger } from '@/shared/lib/logger';
 
@@ -87,6 +87,6 @@ export async function POST(request: NextRequest, { params }: ApproveParams) {
     );
   } catch (error) {
     log.error('审批操作错误', {}, error);
-    return apiError('审批操作失败', 500);
+    return apiServerError('审批操作失败');
   }
 }

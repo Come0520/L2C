@@ -27,11 +27,9 @@ export const leadService = {
 
     /**
      * 获取指定线索的跟进记录
-     * GET /api/miniprogram/leads/:id/follow-ups
+     * GET /api/miniprogram/leads/:id/followup
      */
     getLeadFollowUps(id: string): Promise<any[]> {
-        // 后端可能对应的路由是 /leads/:id/follow-ups 或 /leads/:id/followup
-        // 根据实施方案和实际接口调用，我们使用实际的 followup 路径
         return api.get(`/leads/${id}/followup`).then(res => res.data)
     },
 
@@ -44,7 +42,7 @@ export const leadService = {
         type: string
         nextFollowUpDate?: string
     }): Promise<any> {
-        return api.post(`/leads/${id}/follow-ups`, { data: params }).then(res => res.data)
+        return api.post(`/leads/${id}/followup`, { data: params }).then(res => res.data)
     },
 
     /**
@@ -69,5 +67,13 @@ export const leadService = {
      */
     voidLead(id: string, reason: string): Promise<any> {
         return api.post(`/leads/${id}/void`, { data: { reason } }).then(res => res.data)
+    },
+
+    /**
+     * 线索转客户 (后端对应的 API)
+     * POST /api/miniprogram/leads/:id/convert
+     */
+    convertLead(id: string): Promise<any> {
+        return api.post(`/leads/${id}/convert`).then(res => res.data)
     }
 }

@@ -2,7 +2,13 @@ import { NextRequest } from 'next/server';
 import { createLogger } from '@/shared/lib/logger';
 
 const log = createLogger('auth:refresh');
-import { apiSuccess, apiError } from '@/shared/lib/api-response';
+import {
+  apiSuccess,
+  apiBadRequest,
+  apiServerError,
+  apiForbidden,
+  apiUnauthorized,
+} from '@/shared/lib/api-response';
 import { verifyToken, generateAccessToken, generateRefreshToken } from '@/shared/lib/jwt';
 import { db } from '@/shared/api/db';
 import { users, customers } from '@/shared/api/schema';
@@ -25,49 +31,56 @@ async function refreshHandler(request: NextRequest) {
 
     // 参数校验
     if (!refreshToken) {
-      return apiError('refreshToken 不能为空', 400);
+      return apiBadRequest('refreshToken 不能为空');
     }
 
     // 验证 refresh token
     const payload = await verifyToken(refreshToken);
 
     if (!payload) {
-      return apiError('Token 无效或已过期', 401);
+      return apiUnauthorized('Token 无效或已过期');
     }
 
     if (payload.type !== 'refresh') {
-      return apiError('无效的 Token 类型', 401);
+      return apiUnauthorized('无效的 Token 类型');
     }
 
     // 验证用户是否依然存在且有效 (P2.4)
     if (payload.role === 'CUSTOMER') {
       const customer = await db.query.customers.findFirst({
-        where: and(eq(customers.id, payload.userId), eq(customers.tenantId, payload.tenantId)),
+        where: and(
+          eq(customers.id, payload.userId as string),
+          eq(customers.tenantId, payload.tenantId as string)
+        ),
       });
-      if (!customer) return apiError('账户已失效', 401);
+      if (!customer) return apiUnauthorized('账户已失效');
     } else {
       const user = await db.query.users.findFirst({
         where: and(
-          eq(users.id, payload.userId),
-          eq(users.tenantId, payload.tenantId),
+          eq(users.id, payload.userId as string),
+          eq(users.tenantId, payload.tenantId as string),
           eq(users.isActive, true)
         ),
       });
-      if (!user) return apiError('账户已失效或被禁用', 401);
+      if (!user) return apiUnauthorized('账户已失效或被禁用');
+
+      if (user.role === 'FINANCE' || user.role === 'DISPATCHER') {
+        return apiForbidden('您的角色已不支持移动端访问，请使用电脑登录');
+      }
     }
 
     // 生成新的 Token 对
     const newAccessToken = await generateAccessToken(
-      payload.userId,
-      payload.tenantId,
-      payload.phone,
-      payload.role
+      payload.userId as string,
+      payload.tenantId as string,
+      (payload.phone as string) || '',
+      payload.role as string
     );
     const newRefreshToken = await generateRefreshToken(
-      payload.userId,
-      payload.tenantId,
-      payload.phone,
-      payload.role
+      payload.userId as string,
+      payload.tenantId as string,
+      (payload.phone as string) || '',
+      payload.role as string
     );
 
     return apiSuccess({
@@ -81,7 +94,7 @@ async function refreshHandler(request: NextRequest) {
       { error: error instanceof Error ? error.message : String(error) },
       error
     );
-    return apiError('服务器内部错误', 500);
+    return apiServerError('服务器内部错误');
   }
 }
 

@@ -14,6 +14,7 @@ vi.mock('jose', () => {
       setProtectedHeader: vi.fn().mockReturnThis(),
       setIssuedAt: vi.fn().mockReturnThis(),
       setExpirationTime: vi.fn().mockReturnThis(),
+      setIssuer: vi.fn().mockReturnThis(),
       sign: vi.fn().mockResolvedValue('mock-signed-token'),
     };
   });
@@ -22,6 +23,12 @@ vi.mock('jose', () => {
     SignJWT: MockSignJWT,
   };
 });
+
+vi.mock('@/shared/config/env', () => ({
+  env: {
+    AUTH_SECRET: 'test-secret-key-1234567890123456',
+  },
+}));
 
 vi.mock('@/shared/lib/logger', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
@@ -120,7 +127,7 @@ describe('auth-utils 认证工具模块', () => {
 
     it('开发环境下 dev-mock-token 应返回测试用户', async () => {
       const originalNodeEnv = process.env.NODE_ENV;
-      process.env.NODE_ENV = 'development';
+      vi.stubEnv('NODE_ENV', 'development');
 
       const req = new NextRequest('http://localhost/api/test', {
         headers: { authorization: 'Bearer dev-mock-token-test' },
@@ -133,7 +140,11 @@ describe('auth-utils 认证工具模块', () => {
         role: 'admin',
       });
 
-      process.env.NODE_ENV = originalNodeEnv;
+      if (originalNodeEnv !== undefined) {
+        vi.stubEnv('NODE_ENV', originalNodeEnv);
+      } else {
+        vi.unstubAllEnvs();
+      }
     });
 
     it('无 role 的 Token 应返回 role 为 undefined', async () => {

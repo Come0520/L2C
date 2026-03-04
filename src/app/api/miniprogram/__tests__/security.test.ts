@@ -32,10 +32,18 @@ vi.mock('@/shared/api/db', () => ({
 }));
 
 // Mock Auth Utils
-vi.mock('../auth-utils', () => ({
-  getMiniprogramUser: vi.fn(),
-  generateMiniprogramToken: vi.fn(),
-}));
+vi.mock('../auth-utils', async () => {
+  const actual = await vi.importActual('../auth-utils');
+  return {
+    ...actual,
+    getMiniprogramUser: vi.fn(),
+    generateMiniprogramToken: vi.fn(),
+    withMiniprogramAuth: vi.fn((handler) => async (req: NextRequest) => {
+      const user = await authUtils.getMiniprogramUser(req);
+      return handler(req, user);
+    }),
+  };
+});
 
 // Mock Audit Service
 vi.mock('@/shared/services/audit-service', () => ({

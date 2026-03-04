@@ -97,73 +97,66 @@ export interface QuoteExportMenuProps {
  * 导出报价单为 Excel 格式
  */
 async function exportToExcel(quote: QuoteData): Promise<void> {
-  // 动态导入 xlsx 库
-  const XLSX = await import('xlsx');
+  // 动态导入 exceljs 和 file-saver
+  const { Workbook } = await import('exceljs');
+  const { saveAs } = await import('file-saver');
+
+  const workbook = new Workbook();
+  const ws = workbook.addWorksheet('报价明细');
 
   // 准备数据
   const roomMap = new Map((quote.rooms || []).map((r) => [r.id, r.name]));
 
-  const rows = (quote.items || []).map((item) => ({
-    空间: roomMap.get(item.roomId || '') || '未分配',
-    商品名称: item.productName,
-    '宽度(cm)': item.width || '-',
-    '高度(cm)': item.height || '-',
-    数量: item.quantity || '-',
-    '单价(¥)': item.unitPrice || '-',
-    '小计(¥)': item.subtotal || '-',
-  }));
-
-  // 创建空工作表
-  const ws = XLSX.utils.aoa_to_sheet([]);
-
   // 条件插入品牌信息首行
-  let dataStartRow = 0;
+  let dataStartRow = 1;
   if (quote.tenant) {
-    const brandRows: (string | number)[][] = [[quote.tenant.name, '', '', '', '', '', '']];
+    ws.addRow([quote.tenant.name, '', '', '', '', '', '']);
     const contactParts: string[] = [];
     if (quote.tenant.phone) contactParts.push(`电话: ${quote.tenant.phone}`);
     if (quote.tenant.address) contactParts.push(`地址: ${quote.tenant.address}`);
     if (contactParts.length > 0) {
-      brandRows.push([contactParts.join('  |  '), '', '', '', '', '', '']);
+      ws.addRow([contactParts.join('  |  '), '', '', '', '', '', '']);
     }
-    brandRows.push([]); // 空行分隔
-    XLSX.utils.sheet_add_aoa(ws, brandRows, { origin: 'A1' });
-    dataStartRow = brandRows.length;
+    ws.addRow([]); // 空行分隔
+    dataStartRow = ws.rowCount + 1;
   }
 
+  // 设置表头
+  const defaultHeaders = ['空间', '商品名称', '宽度(cm)', '高度(cm)', '数量', '单价(¥)', '小计(¥)'];
+  ws.addRow(defaultHeaders);
+
   // 插入数据
-  XLSX.utils.sheet_add_json(ws, rows, { origin: `A${dataStartRow + 1}` });
+  const rows = (quote.items || []).map((item) => [
+    roomMap.get(item.roomId || '') || '未分配',
+    item.productName,
+    item.width || '-',
+    item.height || '-',
+    item.quantity || '-',
+    item.unitPrice || '-',
+    item.subtotal || '-',
+  ]);
+  ws.addRows(rows);
 
   // 设置列宽
-  ws['!cols'] = [
-    { wch: 15 },
-    { wch: 25 },
-    { wch: 10 },
-    { wch: 10 },
-    { wch: 10 },
-    { wch: 12 },
-    { wch: 12 },
+  ws.columns = [
+    { width: 15 },
+    { width: 25 },
+    { width: 10 },
+    { width: 10 },
+    { width: 10 },
+    { width: 12 },
+    { width: 12 },
   ];
 
   // 添加汇总行
-  const totalRowIndex = dataStartRow + rows.length + 3;
-  XLSX.utils.sheet_add_aoa(
-    ws,
-    [
-      [],
-      ['', '', '', '', '', '商品合计:', quote.totalAmount || 0],
-      ['', '', '', '', '', '折扣:', quote.discountAmount || 0],
-      ['', '', '', '', '', '最终报价:', quote.finalAmount || 0],
-    ],
-    { origin: `A${totalRowIndex}` }
-  );
-
-  // 创建工作簿
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, '报价明细');
+  ws.addRow([]);
+  ws.addRow(['', '', '', '', '', '商品合计:', quote.totalAmount || 0]);
+  ws.addRow(['', '', '', '', '', '折扣:', quote.discountAmount || 0]);
+  ws.addRow(['', '', '', '', '', '最终报价:', quote.finalAmount || 0]);
 
   // 导出文件
-  XLSX.writeFile(wb, `报价单_${quote.quoteNo}.xlsx`);
+  const buffer = await workbook.xlsx.writeBuffer();
+  saveAs(new Blob([buffer], { type: 'application/octet-stream' }), `报价单_${quote.quoteNo}.xlsx`);
 }
 
 /**

@@ -12,7 +12,7 @@ import { NextRequest } from 'next/server';
 import { db } from '@/shared/api/db';
 import { orders, customers } from '@/shared/api/schema';
 import { eq, desc, and, sql } from 'drizzle-orm';
-import { apiSuccess, apiError, apiPaginated } from '@/shared/lib/api-response';
+import { apiSuccess, apiPaginated, apiServerError } from '@/shared/lib/api-response';
 import { authenticateMobile, requireCustomer } from '@/shared/middleware/mobile-auth';
 import { OrderStatusMap, getStatusText } from '@/shared/lib/status-maps';
 import { createLogger } from '@/shared/lib/logger';
@@ -91,6 +91,6 @@ export async function GET(request: NextRequest) {
     return apiPaginated(items, page, pageSize, total);
   } catch (error) {
     log.error('订单列表查询错误', {}, error);
-    return apiError('查询订单列表失败', 500);
+    return apiServerError('查询订单列表失败');
   }
 }

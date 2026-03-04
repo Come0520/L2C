@@ -2,7 +2,12 @@ import { NextRequest } from 'next/server';
 import { createLogger } from '@/shared/lib/logger';
 
 const log = createLogger('auth:mfa:verify');
-import { apiSuccess, apiError } from '@/shared/lib/api-response';
+import {
+  apiSuccess,
+  apiBadRequest,
+  apiServerError,
+  apiUnauthorized,
+} from '@/shared/lib/api-response';
 import { verifyToken, generateAccessToken, generateRefreshToken } from '@/shared/lib/jwt';
 import { VerificationCodeService } from '@/shared/services/verification-code.service';
 import { withRateLimit, getRateLimitKey } from '@/shared/middleware/rate-limiter';
@@ -22,33 +27,37 @@ async function mfaVerifyHandler(request: NextRequest) {
     const { preAuthToken, code } = body;
 
     if (!preAuthToken || !code) {
-      return apiError('缺少必要参数', 400);
+      return apiBadRequest('缺少必要参数');
     }
 
     // 1. 验证 Pre-Auth Token
     const payload = await verifyToken(preAuthToken);
     if (!payload || payload.type !== 'pre-auth') {
-      return apiError('会话已失效，请重新登录', 401);
+      return apiUnauthorized('会话已失效，请重新登录');
     }
 
     // 2. 验证短信验证码
-    const isValid = await VerificationCodeService.verify(payload.userId, code, 'LOGIN_MFA');
+    const isValid = await VerificationCodeService.verify(
+      payload.userId as string,
+      code,
+      'LOGIN_MFA'
+    );
     if (!isValid) {
-      return apiError('验证码错误或已过期', 400);
+      return apiBadRequest('验证码错误或已过期');
     }
 
     // 3. 生成正式 Token
     const accessToken = await generateAccessToken(
-      payload.userId,
-      payload.tenantId,
-      payload.phone,
-      payload.role
+      payload.userId as string,
+      payload.tenantId as string,
+      (payload.phone as string) || '',
+      payload.role as string
     );
     const refreshToken = await generateRefreshToken(
-      payload.userId,
-      payload.tenantId,
-      payload.phone,
-      payload.role
+      payload.userId as string,
+      payload.tenantId as string,
+      (payload.phone as string) || '',
+      payload.role as string
     );
 
     return apiSuccess(
@@ -57,11 +66,11 @@ async function mfaVerifyHandler(request: NextRequest) {
         refreshToken,
         expiresIn: 86400,
         user: {
-          id: payload.userId,
-          tenantId: payload.tenantId,
+          id: payload.userId as string,
+          tenantId: payload.tenantId as string,
           name: undefined,
-          phone: payload.phone,
-          role: payload.role,
+          phone: payload.phone as string,
+          role: payload.role as string,
         },
       },
       '验证通过'
@@ -72,7 +81,7 @@ async function mfaVerifyHandler(request: NextRequest) {
       { error: error instanceof Error ? error.message : String(error) },
       error
     );
-    return apiError('服务器内部错误', 500);
+    return apiServerError('服务器内部错误');
   }
 }
 

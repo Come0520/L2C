@@ -8,7 +8,8 @@
  */
 
 import { NextRequest } from 'next/server';
-import { verifyToken, MobileRole } from '@/shared/lib/jwt';
+import { verifyToken } from '@/shared/lib/jwt';
+import { SystemRoleType } from '@/shared/types/roles';
 import { apiUnauthorized, apiForbidden } from '@/shared/lib/api-response';
 import { createLogger } from '@/shared/lib/logger';
 
@@ -25,7 +26,7 @@ export interface MobileSession {
   userId: string;
   tenantId: string;
   phone: string;
-  role: MobileRole;
+  role: SystemRoleType;
   name?: string;
   traceId: string; // 请求追踪 ID
   userAgent?: string;
@@ -88,10 +89,10 @@ export async function authenticateMobile(request: NextRequest): Promise<AuthResu
 
     // 从 payload 中提取用户信息
     const session: MobileSession = {
-      userId: payload.userId,
-      tenantId: payload.tenantId,
-      phone: payload.phone,
-      role: payload.role,
+      userId: payload.userId as string,
+      tenantId: payload.tenantId as string,
+      phone: (payload.phone as string) || '',
+      role: payload.role as SystemRoleType,
       name: undefined,
       traceId,
       userAgent,
@@ -121,7 +122,7 @@ export async function authenticateMobile(request: NextRequest): Promise<AuthResu
  */
 export function checkMobileRole(
   session: MobileSession,
-  allowedRoles: MobileRole[]
+  allowedRoles: SystemRoleType[]
 ): { allowed: true } | { allowed: false; response: ReturnType<typeof apiForbidden> } {
   if (!allowedRoles.includes(session.role)) {
     return {
@@ -157,7 +158,7 @@ export function requireBoss(session: MobileSession) {
  * 采购端专用权限检查
  */
 export function requirePurchaser(session: MobileSession) {
-  return checkMobileRole(session, ['PURCHASER']);
+  return checkMobileRole(session, ['SUPPLY']);
 }
 
 /**
@@ -171,5 +172,5 @@ export function requireCustomer(session: MobileSession) {
  * 内部员工权限检查（工人/销售/老板/采购）
  */
 export function requireInternal(session: MobileSession) {
-  return checkMobileRole(session, ['WORKER', 'SALES', 'ADMIN', 'PURCHASER']);
+  return checkMobileRole(session, ['WORKER', 'SALES', 'ADMIN', 'SUPPLY']);
 }

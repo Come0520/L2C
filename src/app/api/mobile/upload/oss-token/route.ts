@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { apiSuccess, apiError } from '@/shared/lib/api-response';
+import { apiSuccess, apiServerError } from '@/shared/lib/api-response';
 import { authenticateMobile } from '@/shared/middleware/mobile-auth';
 import { getOSSToken } from '@/features/upload/actions/oss-token';
 import { createLogger } from '@/shared/lib/logger';
@@ -25,12 +25,12 @@ export async function GET(request: NextRequest) {
     const result = await getOSSToken();
 
     if (!result.success) {
-      return apiError(result.error || 'OSS Token 获取失败', 500);
+      return apiServerError(result.error || 'OSS Token 获取失败');
     }
 
     return apiSuccess(result.data);
   } catch (error) {
     log.error('OSS Token 获取错误', {}, error);
-    return apiError('服务器内部错误', 500);
+    return apiServerError('服务器内部错误');
   }
 }

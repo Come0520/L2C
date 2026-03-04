@@ -1,1 +1,323 @@
-"use strict";(wx["webpackJsonp"]=wx["webpackJsonp"]||[]).push([[8324],{6970:function(e,s,a){var n=a(8870),c=a(1212),r=a(467),t=a(5544),i=a(118),o=a(758),l=a.n(o),u=a(6540),d=a(2635),m=a(4848);function h(){var e=(0,u.useState)(""),s=(0,t.A)(e,2),a=s[0],n=s[1],h=(0,u.useState)(!1),x=(0,t.A)(h,2),p=x[0],f=x[1],j=(0,u.useState)(!1),N=(0,t.A)(j,2),b=N[0],g=N[1],v=(0,u.useState)(""),k=(0,t.A)(v,2),S=k[0],w=k[1],A=(0,u.useState)(""),E=(0,t.A)(A,2),T=E[0],Y=E[1],C=(0,u.useState)(""),B=(0,t.A)(C,2),L=B[0],y=B[1],F=(0,u.useState)(""),q=(0,t.A)(F,2),I=q[0],$=q[1];(0,o.useLoad)(function(e){e.tc?n(e.tc):(l().showToast({title:"\u53c2\u6570\u9519\u8bef",icon:"error"}),setTimeout(function(){return l().navigateBack()},1500))});var J=function(e){return/^1\d{10}$/.test(e)},O=(0,u.useCallback)((0,r.A)((0,c.A)().m(function e(){var s,n;return(0,c.A)().w(function(e){while(1)switch(e.p=e.n){case 0:if(S.trim()){e.n=1;break}return e.a(2,l().showToast({title:"\u8bf7\u8f93\u5165\u59d3\u540d",icon:"none"}));case 1:if(J(T)){e.n=2;break}return e.a(2,l().showToast({title:"\u624b\u673a\u53f7\u683c\u5f0f\u9519\u8bef",icon:"none"}));case 2:if(L){e.n=3;break}return e.a(2,l().showToast({title:"\u8bf7\u9009\u62e9\u6240\u5728\u5730\u533a",icon:"none"}));case 3:return f(!0),l().showLoading({title:"\u63d0\u4ea4\u4e2d...",mask:!0}),e.p=4,e.n=5,d.F.post("/miniprogram/tenant/public-booking",{data:{tenantCode:a,customerName:S,customerPhone:T,region:L,detailAddress:I}});case 5:s=e.v,l().hideLoading(),s.success?(g(!0),l().showToast({title:"\u9884\u7ea6\u6210\u529f",icon:"success"})):l().showToast({title:s.error||"\u63d0\u4ea4\u5931\u8d25",icon:"none"}),e.n=7;break;case 6:e.p=6,n=e.v,l().hideLoading(),l().showToast({title:n.message||"\u7f51\u7edc\u5f02\u5e38",icon:"none"});case 7:return e.p=7,f(!1),e.f(7);case 8:return e.a(2)}},e,null,[[4,6,7,8]])})),[a,S,T,L,I]),P=function(){return l().navigateBack()};return b?(0,m.jsxs)(i.Ss,{className:"booking-page success-view",children:[(0,m.jsx)(i.Ss,{className:"success-icon",children:"\ud83c\udf89"}),(0,m.jsx)(i.EY,{className:"success-title",children:"\u9884\u7ea6\u6210\u529f"}),(0,m.jsx)(i.EY,{className:"success-desc",children:"\u60a8\u7684\u4fe1\u606f\u5df2\u63d0\u4ea4\uff0c\u6211\u4eec\u7684\u4e13\u5c5e\u987e\u95ee\u4f1a\u5c3d\u5feb\u4e0e\u60a8\u8054\u7cfb\uff01"}),(0,m.jsx)(i.$n,{className:"btn-primary mt-xl",onClick:P,children:"\u8fd4\u56de\u9996\u9875"})]}):(0,m.jsxs)(i.Ss,{className:"booking-page",children:[(0,m.jsxs)(i.Ss,{className:"booking-header",children:[(0,m.jsx)(i.EY,{className:"header-title",children:"\u4e13\u5c5e\u9884\u7ea6\u767b\u8bb0"}),(0,m.jsx)(i.EY,{className:"header-desc",children:"\u7559\u4e0b\u60a8\u7684\u8054\u7cfb\u65b9\u5f0f\uff0c\u4f53\u9a8c\u4e13\u4e1a\u7a97\u5e18\u5b9a\u5236\u670d\u52a1"})]}),(0,m.jsxs)(i.Ss,{className:"form-card",children:[(0,m.jsxs)(i.Ss,{className:"form-item",children:[(0,m.jsxs)(i.EY,{className:"form-label",children:["\u60a8\u7684\u59d3\u540d ",(0,m.jsx)(i.EY,{className:"required",children:"*"})]}),(0,m.jsx)(i.pd,{className:"form-input",placeholder:"\u8bf7\u8f93\u5165\u60a8\u7684\u79f0\u547c",value:S,onInput:function(e){return w(e.detail.value)}})]}),(0,m.jsxs)(i.Ss,{className:"form-item",children:[(0,m.jsxs)(i.EY,{className:"form-label",children:["\u8054\u7cfb\u7535\u8bdd ",(0,m.jsx)(i.EY,{className:"required",children:"*"})]}),(0,m.jsx)(i.pd,{className:"form-input",type:"number",maxlength:11,placeholder:"\u8bf7\u8f93\u516511\u4f4d\u624b\u673a\u53f7\u7801",value:T,onInput:function(e){return Y(e.detail.value)}})]}),(0,m.jsxs)(i.Ss,{className:"form-item",children:[(0,m.jsxs)(i.EY,{className:"form-label",children:["\u6240\u5728\u5730\u533a ",(0,m.jsx)(i.EY,{className:"required",children:"*"})]}),(0,m.jsx)(i.LC,{mode:"region",onChange:function(e){y(e.detail.value.join(" "))},children:(0,m.jsx)(i.Ss,{className:"form-input picker-value ".concat(L?"":"placeholder"),children:L||"\u8bf7\u9009\u62e9\u7701/\u5e02/\u533a"})})]}),(0,m.jsxs)(i.Ss,{className:"form-item",children:[(0,m.jsx)(i.EY,{className:"form-label",children:"\u8be6\u7ec6\u5730\u5740/\u5c0f\u533a"}),(0,m.jsx)(i.pd,{className:"form-input",placeholder:"\u5982\uff1a\u67d0\u67d0\u5c0f\u533aX\u680bX\u5355\u5143\uff08\u9009\u586b\uff09",value:I,onInput:function(e){return $(e.detail.value)}})]})]}),(0,m.jsx)(i.Ss,{className:"booking-actions",children:(0,m.jsx)(i.$n,{className:"btn-primary",loading:p,disabled:p||!S||!T||!L,onClick:O,children:"\u7acb\u5373\u63d0\u4ea4\u9884\u7ea6"})})]})}var x={navigationBarTitleText:"\u9884\u7ea6\u4e0a\u95e8\u91cf\u5c3a",navigationBarBackgroundColor:"#F2F2F7",navigationBarTextStyle:"black"},p=(0,n.eU)(h,"pages/landing/booking/index",{root:{cn:[]}},x||{});h&&h.behaviors&&(p.behaviors=(p.behaviors||[]).concat(h.behaviors));Page(p)}},function(e){var s=function(s){return e(e.s=s)};e.O(0,[6907,8096,2076],function(){return s(6970)});e.O()}]);
+"use strict";
+(wx["webpackJsonp"] = wx["webpackJsonp"] || []).push([["pages/landing/booking/index"],{
+
+/***/ "./node_modules/@tarojs/taro-loader/lib/entry-cache.js?name=pages/landing/booking/index!./src/pages/landing/booking/index.tsx":
+/*!************************************************************************************************************************************!*\
+  !*** ./node_modules/@tarojs/taro-loader/lib/entry-cache.js?name=pages/landing/booking/index!./src/pages/landing/booking/index.tsx ***!
+  \************************************************************************************************************************************/
+/***/ (function(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": function() { return /* binding */ BookingPage; }
+/* harmony export */ });
+/* harmony import */ var C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/regenerator.js */ "./node_modules/@babel/runtime/helpers/esm/regenerator.js");
+/* harmony import */ var C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js */ "./node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js");
+/* harmony import */ var C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/slicedToArray.js */ "./node_modules/@babel/runtime/helpers/esm/slicedToArray.js");
+/* harmony import */ var _tarojs_components__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! @tarojs/components */ "./node_modules/@tarojs/plugin-platform-weapp/dist/components-react.js");
+/* harmony import */ var _tarojs_taro__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! @tarojs/taro */ "webpack/container/remote/@tarojs/taro");
+/* harmony import */ var _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default = /*#__PURE__*/__webpack_require__.n(_tarojs_taro__WEBPACK_IMPORTED_MODULE_4__);
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! react */ "webpack/container/remote/react");
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_5___default = /*#__PURE__*/__webpack_require__.n(react__WEBPACK_IMPORTED_MODULE_5__);
+/* harmony import */ var _services_api__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! @/services/api */ "./src/services/api.ts");
+/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! react/jsx-runtime */ "webpack/container/remote/react/jsx-runtime");
+/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7___default = /*#__PURE__*/__webpack_require__.n(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__);
+
+
+
+/**
+ * 租户专属落地页 - 预约表单
+ *
+ * @description 客户在此填写的表单，直接成为该租户系统内的线索。
+ */
+
+
+
+
+
+
+function BookingPage() {
+  var _useState = (0,react__WEBPACK_IMPORTED_MODULE_5__.useState)(''),
+    _useState2 = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_2__["default"])(_useState, 2),
+    tenantCode = _useState2[0],
+    setTenantCode = _useState2[1];
+  var _useState3 = (0,react__WEBPACK_IMPORTED_MODULE_5__.useState)(false),
+    _useState4 = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_2__["default"])(_useState3, 2),
+    loading = _useState4[0],
+    setLoading = _useState4[1];
+  var _useState5 = (0,react__WEBPACK_IMPORTED_MODULE_5__.useState)(false),
+    _useState6 = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_2__["default"])(_useState5, 2),
+    submitted = _useState6[0],
+    setSubmitted = _useState6[1];
+
+  // 表单状态
+  var _useState7 = (0,react__WEBPACK_IMPORTED_MODULE_5__.useState)(''),
+    _useState8 = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_2__["default"])(_useState7, 2),
+    customerName = _useState8[0],
+    setCustomerName = _useState8[1];
+  var _useState9 = (0,react__WEBPACK_IMPORTED_MODULE_5__.useState)(''),
+    _useState0 = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_2__["default"])(_useState9, 2),
+    customerPhone = _useState0[0],
+    setCustomerPhone = _useState0[1];
+  var _useState1 = (0,react__WEBPACK_IMPORTED_MODULE_5__.useState)(''),
+    _useState10 = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_2__["default"])(_useState1, 2),
+    region = _useState10[0],
+    setRegion = _useState10[1];
+  var _useState11 = (0,react__WEBPACK_IMPORTED_MODULE_5__.useState)(''),
+    _useState12 = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_2__["default"])(_useState11, 2),
+    detailAddress = _useState12[0],
+    setDetailAddress = _useState12[1];
+  (0,_tarojs_taro__WEBPACK_IMPORTED_MODULE_4__.useLoad)(function (options) {
+    if (options.tc) {
+      setTenantCode(options.tc);
+    } else {
+      _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().showToast({
+        title: '参数错误',
+        icon: 'error'
+      });
+      setTimeout(function () {
+        return _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().navigateBack();
+      }, 1500);
+    }
+  });
+
+  // 校验手机号
+  var validatePhone = function validatePhone(phone) {
+    return /^1\d{10}$/.test(phone);
+  };
+
+  /** 提交预约表单 */
+  var handleSubmit = (0,react__WEBPACK_IMPORTED_MODULE_5__.useCallback)(/*#__PURE__*/(0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])(/*#__PURE__*/(0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__["default"])().m(function _callee() {
+    var res, _t;
+    return (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__["default"])().w(function (_context) {
+      while (1) switch (_context.p = _context.n) {
+        case 0:
+          if (customerName.trim()) {
+            _context.n = 1;
+            break;
+          }
+          return _context.a(2, _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().showToast({
+            title: '请输入姓名',
+            icon: 'none'
+          }));
+        case 1:
+          if (validatePhone(customerPhone)) {
+            _context.n = 2;
+            break;
+          }
+          return _context.a(2, _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().showToast({
+            title: '手机号格式错误',
+            icon: 'none'
+          }));
+        case 2:
+          if (region) {
+            _context.n = 3;
+            break;
+          }
+          return _context.a(2, _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().showToast({
+            title: '请选择所在地区',
+            icon: 'none'
+          }));
+        case 3:
+          setLoading(true);
+          _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().showLoading({
+            title: '提交中...',
+            mask: true
+          });
+          _context.p = 4;
+          _context.n = 5;
+          return _services_api__WEBPACK_IMPORTED_MODULE_6__.api.post('/miniprogram/tenant/public-booking', {
+            data: {
+              tenantCode: tenantCode,
+              customerName: customerName,
+              customerPhone: customerPhone,
+              region: region,
+              detailAddress: detailAddress
+            }
+          });
+        case 5:
+          res = _context.v;
+          _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().hideLoading();
+          if (res.success) {
+            setSubmitted(true);
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().showToast({
+              title: '预约成功',
+              icon: 'success'
+            });
+          } else {
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().showToast({
+              title: res.error || '提交失败',
+              icon: 'none'
+            });
+          }
+          _context.n = 7;
+          break;
+        case 6:
+          _context.p = 6;
+          _t = _context.v;
+          _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().hideLoading();
+          _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().showToast({
+            title: _t.message || '网络异常',
+            icon: 'none'
+          });
+        case 7:
+          _context.p = 7;
+          setLoading(false);
+          return _context.f(7);
+        case 8:
+          return _context.a(2);
+      }
+    }, _callee, null, [[4, 6, 7, 8]]);
+  })), [tenantCode, customerName, customerPhone, region, detailAddress]);
+  var goBack = function goBack() {
+    return _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().navigateBack();
+  };
+  if (submitted) {
+    return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+      className: "booking-page success-view",
+      children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+        className: "success-icon",
+        children: "\uD83C\uDF89"
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+        className: "success-title",
+        children: "\u9884\u7EA6\u6210\u529F"
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+        className: "success-desc",
+        children: "\u60A8\u7684\u4FE1\u606F\u5DF2\u63D0\u4EA4\uFF0C\u6211\u4EEC\u7684\u4E13\u5C5E\u987E\u95EE\u4F1A\u5C3D\u5FEB\u4E0E\u60A8\u8054\u7CFB\uFF01"
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Button, {
+        className: "btn-primary mt-xl",
+        onClick: goBack,
+        children: "\u8FD4\u56DE\u9996\u9875"
+      })]
+    });
+  }
+  return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+    className: "booking-page",
+    children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+      className: "booking-header",
+      children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+        className: "header-title",
+        children: "\u4E13\u5C5E\u9884\u7EA6\u767B\u8BB0"
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+        className: "header-desc",
+        children: "\u7559\u4E0B\u60A8\u7684\u8054\u7CFB\u65B9\u5F0F\uFF0C\u4F53\u9A8C\u4E13\u4E1A\u7A97\u5E18\u5B9A\u5236\u670D\u52A1"
+      })]
+    }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+      className: "form-card",
+      children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+        className: "form-item",
+        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+          className: "form-label",
+          children: ["\u60A8\u7684\u59D3\u540D ", /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+            className: "required",
+            children: "*"
+          })]
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Input, {
+          className: "form-input",
+          placeholder: "\u8BF7\u8F93\u5165\u60A8\u7684\u79F0\u547C",
+          value: customerName,
+          onInput: function onInput(e) {
+            return setCustomerName(e.detail.value);
+          }
+        })]
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+        className: "form-item",
+        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+          className: "form-label",
+          children: ["\u8054\u7CFB\u7535\u8BDD ", /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+            className: "required",
+            children: "*"
+          })]
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Input, {
+          className: "form-input",
+          type: "number",
+          maxlength: 11,
+          placeholder: "\u8BF7\u8F93\u516511\u4F4D\u624B\u673A\u53F7\u7801",
+          value: customerPhone,
+          onInput: function onInput(e) {
+            return setCustomerPhone(e.detail.value);
+          }
+        })]
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+        className: "form-item",
+        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+          className: "form-label",
+          children: ["\u6240\u5728\u5730\u533A ", /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+            className: "required",
+            children: "*"
+          })]
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Picker, {
+          mode: "region",
+          onChange: function onChange(e) {
+            // 微信原生 region picker 返回的是 ['省', '市', '区'] 数组
+            setRegion(e.detail.value.join(' '));
+          },
+          children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+            className: "form-input picker-value ".concat(!region ? 'placeholder' : ''),
+            children: region || '请选择省/市/区'
+          })
+        })]
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+        className: "form-item",
+        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+          className: "form-label",
+          children: "\u8BE6\u7EC6\u5730\u5740/\u5C0F\u533A"
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Input, {
+          className: "form-input",
+          placeholder: "\u5982\uFF1A\u67D0\u67D0\u5C0F\u533AX\u680BX\u5355\u5143\uFF08\u9009\u586B\uFF09",
+          value: detailAddress,
+          onInput: function onInput(e) {
+            return setDetailAddress(e.detail.value);
+          }
+        })]
+      })]
+    }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+      className: "booking-actions",
+      children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Button, {
+        className: "btn-primary",
+        loading: loading,
+        disabled: loading || !customerName || !customerPhone || !region,
+        onClick: handleSubmit,
+        children: "\u7ACB\u5373\u63D0\u4EA4\u9884\u7EA6"
+      })
+    })]
+  });
+}
+
+/***/ }),
+
+/***/ "./src/pages/landing/booking/index.tsx":
+/*!*********************************************!*\
+  !*** ./src/pages/landing/booking/index.tsx ***!
+  \*********************************************/
+/***/ (function(__unused_webpack_module, __unused_webpack___webpack_exports__, __webpack_require__) {
+
+/* harmony import */ var _tarojs_runtime__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @tarojs/runtime */ "webpack/container/remote/@tarojs/runtime");
+/* harmony import */ var _tarojs_runtime__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_tarojs_runtime__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _node_modules_tarojs_taro_loader_lib_entry_cache_js_name_pages_landing_booking_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! !!../../../../node_modules/@tarojs/taro-loader/lib/entry-cache.js?name=pages/landing/booking/index!./index.tsx */ "./node_modules/@tarojs/taro-loader/lib/entry-cache.js?name=pages/landing/booking/index!./src/pages/landing/booking/index.tsx");
+
+
+var config = {"navigationBarTitleText":"预约上门量尺","navigationBarBackgroundColor":"#F2F2F7","navigationBarTextStyle":"black"};
+
+
+
+var taroOption = (0,_tarojs_runtime__WEBPACK_IMPORTED_MODULE_0__.createPageConfig)(_node_modules_tarojs_taro_loader_lib_entry_cache_js_name_pages_landing_booking_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"], 'pages/landing/booking/index', {root:{cn:[]}}, config || {})
+if (_node_modules_tarojs_taro_loader_lib_entry_cache_js_name_pages_landing_booking_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"] && _node_modules_tarojs_taro_loader_lib_entry_cache_js_name_pages_landing_booking_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"].behaviors) {
+  taroOption.behaviors = (taroOption.behaviors || []).concat(_node_modules_tarojs_taro_loader_lib_entry_cache_js_name_pages_landing_booking_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"].behaviors)
+}
+var inst = Page(taroOption)
+
+
+
+/* unused harmony default export */ var __WEBPACK_DEFAULT_EXPORT__ = (_node_modules_tarojs_taro_loader_lib_entry_cache_js_name_pages_landing_booking_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"]);
+
+
+/***/ })
+
+},
+/******/ function(__webpack_require__) { // webpackRuntimeModules
+/******/ var __webpack_exec__ = function(moduleId) { return __webpack_require__(__webpack_require__.s = moduleId); }
+/******/ __webpack_require__.O(0, ["taro","vendors","common"], function() { return __webpack_exec__("./src/pages/landing/booking/index.tsx"); });
+/******/ var __webpack_exports__ = __webpack_require__.O();
+/******/ }
+]);
+//# sourceMappingURL=index.js.map

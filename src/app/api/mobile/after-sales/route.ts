@@ -7,7 +7,7 @@ import { NextRequest } from 'next/server';
 import { db } from '@/shared/api/db';
 import { customers, afterSalesTickets, orders } from '@/shared/api/schema';
 import { eq, desc, and } from 'drizzle-orm';
-import { apiSuccess, apiError, apiNotFound } from '@/shared/lib/api-response';
+import { apiSuccess, apiNotFound, apiBadRequest, apiServerError } from '@/shared/lib/api-response';
 import { authenticateMobile, requireCustomer } from '@/shared/middleware/mobile-auth';
 import { generateTicketNo } from '@/features/after-sales/utils';
 import { z } from 'zod';
@@ -45,11 +45,11 @@ export async function POST(request: NextRequest) {
     const rawBody = await request.json();
     const result = createAfterSalesSchema.safeParse(rawBody);
     if (!result.success) {
-      return apiError(`参数校验失败: ${result.error.issues[0].message}`, 400);
+      return apiBadRequest(`参数校验失败: ${result.error.issues[0].message}`);
     }
     body = result.data;
   } catch {
-    return apiError('请求体格式错误', 400);
+    return apiBadRequest('请求体格式错误');
   }
 
   const { orderId, type, reason, photos } = body;
@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     log.error('售后申请创建错误', {}, error);
-    return apiError('提交售后申请失败', 500);
+    return apiServerError('提交售后申请失败');
   }
 }
 
@@ -195,7 +195,7 @@ export async function GET(request: NextRequest) {
     return apiSuccess({ items });
   } catch (error) {
     log.error('售后列表查询错误', {}, error);
-    return apiError('查询售后列表失败', 500);
+    return apiServerError('查询售后列表失败');
   }
 }
 

@@ -7,7 +7,7 @@ import { NextRequest } from 'next/server';
 import { db } from '@/shared/api/db';
 import { installTasks, orders, customers } from '@/shared/api/schema';
 import { eq, and } from 'drizzle-orm';
-import { apiSuccess, apiError, apiNotFound } from '@/shared/lib/api-response';
+import { apiSuccess, apiNotFound, apiServerError } from '@/shared/lib/api-response';
 import { authenticateMobile, requireCustomer } from '@/shared/middleware/mobile-auth';
 import { createLogger } from '@/shared/lib/logger';
 
@@ -96,7 +96,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     });
   } catch (error) {
     log.error('安装进度查询错误', {}, error);
-    return apiError('查询安装进度失败', 500);
+    return apiServerError('查询安装进度失败');
   }
 }
 

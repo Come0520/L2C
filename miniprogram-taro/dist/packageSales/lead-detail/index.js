@@ -1,1 +1,299 @@
-"use strict";require("../sub-vendors.js");(wx["webpackJsonp"]=wx["webpackJsonp"]||[]).push([[3523],{3355:function(e,s,a){var n=a(8870),l=a(1212),c=a(467),i=a(5544),t=a(118),r=a(758),o=a.n(r),d=a(6540),u=a(5152),m=a(4848);function h(){var e,s,a=(0,d.useState)(null),n=(0,i.A)(a,2),h=n[0],x=n[1],N=(0,d.useState)([]),f=(0,i.A)(N,2),j=f[0],v=f[1],S=(0,d.useState)(!0),p=(0,i.A)(S,2),b=p[0],E=p[1],Y=(0,d.useState)(""),g=(0,i.A)(Y,2),w=g[0],k=g[1];(0,r.useLoad)(function(){var e=(0,c.A)((0,l.A)().m(function e(s){var a,n,c,t,r,o;return(0,l.A)().w(function(e){while(1)switch(e.p=e.n){case 0:return a=s.id,k(a),e.p=1,e.n=2,Promise.all([u.M.getLeadDetail(a),u.M.getLeadFollowUps(a)]);case 2:n=e.v,c=(0,i.A)(n,2),t=c[0],r=c[1],t&&x(t),r&&v(r),e.n=4;break;case 3:e.p=3,o=e.v,console.error("Failed to fetch lead detail:",o);case 4:return e.p=4,E(!1),e.f(4);case 5:return e.a(2)}},e,null,[[1,3,4,5]])}));return function(s){return e.apply(this,arguments)}}());var y=function(e){var s={PENDING_FOLLOWUP:"\u5f85\u8ddf\u8fdb",FOLLOWING:"\u8ddf\u8fdb\u4e2d",QUOTED:"\u5df2\u62a5\u4ef7",LOST:"\u5df2\u6d41\u5931",CONVERTED:"\u5df2\u8f6c\u5316"};return s[e]||e};return b?(0,m.jsx)(t.Ss,{className:"page flex-center",children:(0,m.jsx)(t.Ss,{className:"loading",children:"\u52a0\u8f7d\u4e2d..."})}):h?(0,m.jsx)(t.Ss,{className:"lead-detail-page",children:(0,m.jsxs)(t.BM,{className:"detail-scroll",scrollY:!0,enhanced:!0,showScrollbar:!1,children:[(0,m.jsxs)(t.Ss,{className:"info-card card",children:[(0,m.jsx)(t.EY,{className:"lead-name",children:h.customerName}),(0,m.jsx)(t.EY,{className:"lead-phone",children:h.customerPhone}),(0,m.jsxs)(t.Ss,{className:"info-row",children:[(0,m.jsx)(t.EY,{className:"info-label",children:"\u72b6\u6001"}),(0,m.jsx)(t.EY,{className:"info-value status",children:y(h.status)})]}),(0,m.jsxs)(t.Ss,{className:"info-row",children:[(0,m.jsx)(t.EY,{className:"info-label",children:"\u610f\u5411"}),(0,m.jsx)(t.EY,{className:"info-value",children:"HIGH"===h.intentionLevel?"\u9ad8\u610f\u5411":"MEDIUM"===h.intentionLevel?"\u4e2d\u610f\u5411":"\u4f4e\u610f\u5411"})]}),(0,m.jsxs)(t.Ss,{className:"info-row",children:[(0,m.jsx)(t.EY,{className:"info-label",children:"\u6765\u6e90"}),(0,m.jsx)(t.EY,{className:"info-value",children:(null===(e=h.sourceChannel)||void 0===e?void 0:e.name)||"\u672a\u77e5\u6765\u6e90"})]}),h.address&&(0,m.jsxs)(t.Ss,{className:"info-row",children:[(0,m.jsx)(t.EY,{className:"info-label",children:"\u5730\u5740"}),(0,m.jsx)(t.EY,{className:"info-value",children:h.address})]}),h.community&&(0,m.jsxs)(t.Ss,{className:"info-row",children:[(0,m.jsx)(t.EY,{className:"info-label",children:"\u5c0f\u533a"}),(0,m.jsxs)(t.EY,{className:"info-value",children:[h.community," ",h.houseType||""]})]}),(null===(s=h.assignedSales)||void 0===s?void 0:s.name)&&(0,m.jsxs)(t.Ss,{className:"info-row",children:[(0,m.jsx)(t.EY,{className:"info-label",children:"\u8d1f\u8d23\u4eba"}),(0,m.jsx)(t.EY,{className:"info-value",children:h.assignedSales.name})]})]}),(0,m.jsxs)(t.Ss,{className:"activities-section",children:[(0,m.jsxs)(t.Ss,{className:"section-header flex-between",children:[(0,m.jsx)(t.EY,{className:"section-title",children:"\u8ddf\u8fdb\u8bb0\u5f55"}),(0,m.jsx)(t.Ss,{className:"btn-add-activity",onClick:function(){return o().navigateTo({url:"/packageSales/quick-follow-up/index?id=".concat(w)})},children:(0,m.jsx)(t.EY,{children:"+ \u5feb\u901f\u8ddf\u8fdb"})})]}),null===j||void 0===j?void 0:j.map(function(e){return(0,m.jsxs)(t.Ss,{className:"activity-item card",children:[(0,m.jsxs)(t.Ss,{className:"flex-between",children:[(0,m.jsx)(t.EY,{className:"activity-type",children:e.type}),(0,m.jsx)(t.EY,{className:"activity-date",children:new Date(e.createdAt).toLocaleString()})]}),(0,m.jsx)(t.EY,{className:"activity-content",children:e.content})]},e.id)}),(!j||0===j.length)&&(0,m.jsx)(t.Ss,{className:"empty flex-center",children:(0,m.jsx)(t.EY,{className:"empty-text",children:"\u6682\u65e0\u8ddf\u8fdb\u8bb0\u5f55"})})]}),(0,m.jsxs)(t.Ss,{className:"bottom-bar",children:[(0,m.jsx)(t.Ss,{className:"btn btn-outline",onClick:function(){return o().navigateTo({url:"/packageSales/lead-actions/index?id=".concat(w)})},children:"\u7ba1\u7406"}),(0,m.jsx)(t.Ss,{className:"btn btn-outline",onClick:function(){return o().navigateTo({url:"/packageCustomer/quote-view/index?customerId=".concat(w)})},children:"\u62a5\u4ef7"}),(0,m.jsx)(t.Ss,{className:"btn btn-primary",onClick:function(){return o().navigateTo({url:"/packageSales/quick-follow-up/index?id=".concat(w)})},children:"\u5199\u8ddf\u8fdb"}),(0,m.jsx)(t.Ss,{className:"safe-bottom-space"})]})]})}):(0,m.jsx)(t.Ss,{className:"page flex-center",children:(0,m.jsx)(t.EY,{children:"\u7ebf\u7d22\u4e0d\u5b58\u5728"})})}var x={navigationBarTitleText:"detail"},N=(0,n.eU)(h,"packageSales/lead-detail/index",{root:{cn:[]}},x||{});h&&h.behaviors&&(N.behaviors=(N.behaviors||[]).concat(h.behaviors));Page(N)}},function(e){var s=function(s){return e(e.s=s)};e.O(0,[9486,6907,8096,2076],function(){return s(3355)});e.O()}]);
+"use strict";require("../sub-vendors.js");
+(wx["webpackJsonp"] = wx["webpackJsonp"] || []).push([["packageSales/lead-detail/index"],{
+
+/***/ "./node_modules/@tarojs/taro-loader/lib/entry-cache.js?name=packageSales/lead-detail/index!./src/packageSales/lead-detail/index.tsx":
+/*!******************************************************************************************************************************************!*\
+  !*** ./node_modules/@tarojs/taro-loader/lib/entry-cache.js?name=packageSales/lead-detail/index!./src/packageSales/lead-detail/index.tsx ***!
+  \******************************************************************************************************************************************/
+/***/ (function(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": function() { return /* binding */ LeadDetailPage; }
+/* harmony export */ });
+/* harmony import */ var C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/regenerator.js */ "./node_modules/@babel/runtime/helpers/esm/regenerator.js");
+/* harmony import */ var C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js */ "./node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js");
+/* harmony import */ var C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/slicedToArray.js */ "./node_modules/@babel/runtime/helpers/esm/slicedToArray.js");
+/* harmony import */ var _tarojs_components__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! @tarojs/components */ "./node_modules/@tarojs/plugin-platform-weapp/dist/components-react.js");
+/* harmony import */ var _tarojs_taro__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! @tarojs/taro */ "webpack/container/remote/@tarojs/taro");
+/* harmony import */ var _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default = /*#__PURE__*/__webpack_require__.n(_tarojs_taro__WEBPACK_IMPORTED_MODULE_4__);
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! react */ "webpack/container/remote/react");
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_5___default = /*#__PURE__*/__webpack_require__.n(react__WEBPACK_IMPORTED_MODULE_5__);
+/* harmony import */ var _services_lead_service__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! @/services/lead-service */ "./src/services/lead-service.ts");
+/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! react/jsx-runtime */ "webpack/container/remote/react/jsx-runtime");
+/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7___default = /*#__PURE__*/__webpack_require__.n(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__);
+
+
+
+/**
+ * 线索详情 + 跟进记录
+ */
+
+
+
+
+
+
+function LeadDetailPage() {
+  var _lead$sourceChannel, _lead$assignedSales;
+  var _useState = (0,react__WEBPACK_IMPORTED_MODULE_5__.useState)(null),
+    _useState2 = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_2__["default"])(_useState, 2),
+    lead = _useState2[0],
+    setLead = _useState2[1];
+  var _useState3 = (0,react__WEBPACK_IMPORTED_MODULE_5__.useState)([]),
+    _useState4 = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_2__["default"])(_useState3, 2),
+    activities = _useState4[0],
+    setActivities = _useState4[1];
+  var _useState5 = (0,react__WEBPACK_IMPORTED_MODULE_5__.useState)(true),
+    _useState6 = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_2__["default"])(_useState5, 2),
+    loading = _useState6[0],
+    setLoading = _useState6[1];
+  var _useState7 = (0,react__WEBPACK_IMPORTED_MODULE_5__.useState)(''),
+    _useState8 = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_2__["default"])(_useState7, 2),
+    leadId = _useState8[0],
+    setLeadId = _useState8[1];
+  (0,_tarojs_taro__WEBPACK_IMPORTED_MODULE_4__.useLoad)(/*#__PURE__*/function () {
+    var _ref = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])(/*#__PURE__*/(0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__["default"])().m(function _callee(params) {
+      var id, _yield$Promise$all, _yield$Promise$all2, leadRes, activitiesRes, _t;
+      return (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__["default"])().w(function (_context) {
+        while (1) switch (_context.p = _context.n) {
+          case 0:
+            id = params.id;
+            setLeadId(id);
+            _context.p = 1;
+            _context.n = 2;
+            return Promise.all([_services_lead_service__WEBPACK_IMPORTED_MODULE_6__.leadService.getLeadDetail(id), _services_lead_service__WEBPACK_IMPORTED_MODULE_6__.leadService.getLeadFollowUps(id)]);
+          case 2:
+            _yield$Promise$all = _context.v;
+            _yield$Promise$all2 = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_2__["default"])(_yield$Promise$all, 2);
+            leadRes = _yield$Promise$all2[0];
+            activitiesRes = _yield$Promise$all2[1];
+            if (leadRes) setLead(leadRes);
+            if (activitiesRes) setActivities(activitiesRes);
+            _context.n = 4;
+            break;
+          case 3:
+            _context.p = 3;
+            _t = _context.v;
+            console.error('Failed to fetch lead detail:', _t);
+          case 4:
+            _context.p = 4;
+            setLoading(false);
+            return _context.f(4);
+          case 5:
+            return _context.a(2);
+        }
+      }, _callee, null, [[1, 3, 4, 5]]);
+    }));
+    return function (_x) {
+      return _ref.apply(this, arguments);
+    };
+  }());
+
+  // 状态文本转换 Helper
+  var getStatusText = function getStatusText(status) {
+    var map = {
+      'PENDING_FOLLOWUP': '待跟进',
+      'FOLLOWING': '跟进中',
+      'QUOTED': '已报价',
+      'LOST': '已流失',
+      'CONVERTED': '已转化'
+    };
+    return map[status] || status;
+  };
+  if (loading) return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+    className: "page flex-center",
+    children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+      className: "loading",
+      children: "\u52A0\u8F7D\u4E2D..."
+    })
+  });
+  if (!lead) return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+    className: "page flex-center",
+    children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+      children: "\u7EBF\u7D22\u4E0D\u5B58\u5728"
+    })
+  });
+  return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+    className: "lead-detail-page",
+    children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.ScrollView, {
+      className: "detail-scroll",
+      scrollY: true,
+      enhanced: true,
+      showScrollbar: false,
+      children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+        className: "info-card card",
+        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+          className: "lead-name",
+          children: lead.customerName
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+          className: "lead-phone",
+          children: lead.customerPhone
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+          className: "info-row",
+          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+            className: "info-label",
+            children: "\u72B6\u6001"
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+            className: "info-value status",
+            children: getStatusText(lead.status)
+          })]
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+          className: "info-row",
+          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+            className: "info-label",
+            children: "\u610F\u5411"
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+            className: "info-value",
+            children: lead.intentionLevel === 'HIGH' ? '高意向' : lead.intentionLevel === 'MEDIUM' ? '中意向' : '低意向'
+          })]
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+          className: "info-row",
+          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+            className: "info-label",
+            children: "\u6765\u6E90"
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+            className: "info-value",
+            children: ((_lead$sourceChannel = lead.sourceChannel) === null || _lead$sourceChannel === void 0 ? void 0 : _lead$sourceChannel.name) || '未知来源'
+          })]
+        }), lead.address && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+          className: "info-row",
+          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+            className: "info-label",
+            children: "\u5730\u5740"
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+            className: "info-value",
+            children: lead.address
+          })]
+        }), lead.community && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+          className: "info-row",
+          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+            className: "info-label",
+            children: "\u5C0F\u533A"
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+            className: "info-value",
+            children: [lead.community, " ", lead.houseType || '']
+          })]
+        }), ((_lead$assignedSales = lead.assignedSales) === null || _lead$assignedSales === void 0 ? void 0 : _lead$assignedSales.name) && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+          className: "info-row",
+          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+            className: "info-label",
+            children: "\u8D1F\u8D23\u4EBA"
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+            className: "info-value",
+            children: lead.assignedSales.name
+          })]
+        })]
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+        className: "activities-section",
+        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+          className: "section-header flex-between",
+          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+            className: "section-title",
+            children: "\u8DDF\u8FDB\u8BB0\u5F55"
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+            className: "btn-add-activity",
+            onClick: function onClick() {
+              return _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().navigateTo({
+                url: "/packageSales/quick-follow-up/index?id=".concat(leadId)
+              });
+            },
+            children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+              children: "+ \u5FEB\u901F\u8DDF\u8FDB"
+            })
+          })]
+        }), activities === null || activities === void 0 ? void 0 : activities.map(function (a) {
+          return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+            className: "activity-item card",
+            children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+              className: "flex-between",
+              children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+                className: "activity-type",
+                children: a.type
+              }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+                className: "activity-date",
+                children: new Date(a.createdAt).toLocaleString()
+              })]
+            }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+              className: "activity-content",
+              children: a.content
+            })]
+          }, a.id);
+        }), (!activities || activities.length === 0) && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+          className: "empty flex-center",
+          children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+            className: "empty-text",
+            children: "\u6682\u65E0\u8DDF\u8FDB\u8BB0\u5F55"
+          })
+        })]
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+        className: "bottom-bar",
+        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+          className: "btn btn-outline",
+          onClick: function onClick() {
+            return _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().navigateTo({
+              url: "/packageSales/lead-actions/index?id=".concat(leadId)
+            });
+          },
+          children: "\u7BA1\u7406"
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+          className: "btn btn-outline",
+          onClick: function onClick() {
+            return _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().navigateTo({
+              url: "/packageCustomer/quote-view/index?customerId=".concat(leadId)
+            });
+          },
+          children: "\u62A5\u4EF7"
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+          className: "btn btn-primary",
+          onClick: function onClick() {
+            return _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().navigateTo({
+              url: "/packageSales/quick-follow-up/index?id=".concat(leadId)
+            });
+          },
+          children: "\u5199\u8DDF\u8FDB"
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+          className: "safe-bottom-space"
+        })]
+      })]
+    })
+  });
+}
+
+/***/ }),
+
+/***/ "./src/packageSales/lead-detail/index.tsx":
+/*!************************************************!*\
+  !*** ./src/packageSales/lead-detail/index.tsx ***!
+  \************************************************/
+/***/ (function(__unused_webpack_module, __unused_webpack___webpack_exports__, __webpack_require__) {
+
+/* harmony import */ var _tarojs_runtime__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @tarojs/runtime */ "webpack/container/remote/@tarojs/runtime");
+/* harmony import */ var _tarojs_runtime__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_tarojs_runtime__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _node_modules_tarojs_taro_loader_lib_entry_cache_js_name_packageSales_lead_detail_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! !!../../../node_modules/@tarojs/taro-loader/lib/entry-cache.js?name=packageSales/lead-detail/index!./index.tsx */ "./node_modules/@tarojs/taro-loader/lib/entry-cache.js?name=packageSales/lead-detail/index!./src/packageSales/lead-detail/index.tsx");
+
+
+var config = {"navigationBarTitleText":"detail"};
+
+
+
+var taroOption = (0,_tarojs_runtime__WEBPACK_IMPORTED_MODULE_0__.createPageConfig)(_node_modules_tarojs_taro_loader_lib_entry_cache_js_name_packageSales_lead_detail_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"], 'packageSales/lead-detail/index', {root:{cn:[]}}, config || {})
+if (_node_modules_tarojs_taro_loader_lib_entry_cache_js_name_packageSales_lead_detail_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"] && _node_modules_tarojs_taro_loader_lib_entry_cache_js_name_packageSales_lead_detail_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"].behaviors) {
+  taroOption.behaviors = (taroOption.behaviors || []).concat(_node_modules_tarojs_taro_loader_lib_entry_cache_js_name_packageSales_lead_detail_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"].behaviors)
+}
+var inst = Page(taroOption)
+
+
+
+/* unused harmony default export */ var __WEBPACK_DEFAULT_EXPORT__ = (_node_modules_tarojs_taro_loader_lib_entry_cache_js_name_packageSales_lead_detail_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"]);
+
+
+/***/ })
+
+},
+/******/ function(__webpack_require__) { // webpackRuntimeModules
+/******/ var __webpack_exec__ = function(moduleId) { return __webpack_require__(__webpack_require__.s = moduleId); }
+/******/ __webpack_require__.O(0, ["packageSales/sub-vendors","taro","vendors","common"], function() { return __webpack_exec__("./src/packageSales/lead-detail/index.tsx"); });
+/******/ var __webpack_exports__ = __webpack_require__.O();
+/******/ }
+]);
+//# sourceMappingURL=index.js.map

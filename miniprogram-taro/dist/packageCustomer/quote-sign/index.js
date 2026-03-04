@@ -1,1 +1,291 @@
-"use strict";require("../sub-vendors.js");(wx["webpackJsonp"]=wx["webpackJsonp"]||[]).push([[6371],{4867:function(e,n,t){var s=t(8870),a=t(1212),r=t(467),c=t(5544),i=t(118),o=t(758),u=t.n(o),l=t(6540),h=t(2635),d=t(8360),f=t(4848);function v(){var e="signCanvas",n=(0,l.useState)(""),t=(0,c.A)(n,2),s=t[0],v=t[1],x=(0,l.useRef)(null),m=(0,l.useRef)(null),g=(0,l.useState)(!1),p=(0,c.A)(g,2),b=p[0],w=p[1],S=(0,l.useState)(!1),T=(0,c.A)(S,2),j=T[0],k=T[1],N=u().getSystemInfoSync().pixelRatio||1;(0,o.useLoad)(function(e){v(e.id||"")}),(0,l.useEffect)(function(){F()},[]);var F=function(){u().nextTick(function(){u().createSelectorQuery().select("#".concat(e)).fields({node:!0,size:!0}).exec(function(e){if(e&&e[0]&&e[0].node){var n=e[0].node,t=n.getContext("2d");n.width=e[0].width*N,n.height=e[0].height*N,t.scale(N,N),t.lineCap="round",t.lineJoin="round",t.lineWidth=4,t.strokeStyle="#1D1D1F",x.current=t,m.current=n}})})},y=function(e){if(x.current){var n=e.touches[0];x.current.beginPath(),x.current.moveTo(n.x,n.y),w(!0)}},E=function(e){if(x.current&&b){var n=e.touches[0];x.current.lineTo(n.x,n.y),x.current.stroke(),k(!0)}},C=function(){w(!1)},A=function(){x.current&&m.current&&(x.current.clearRect(0,0,m.current.width,m.current.height),x.current.beginPath(),k(!1))},Y=function(){j?s?m.current&&(u().showLoading({title:"\u63d0\u4ea4\u4e2d...",mask:!0}),u().canvasToTempFilePath({canvas:m.current,success:function(){var e=(0,r.A)((0,a.A)().m(function e(n){var t,r,c,i,o;return(0,a.A)().w(function(e){while(1)switch(e.p=e.n){case 0:return t=n.tempFilePath,e.p=1,e.n=2,h.F.upload("/upload",t,"file");case 2:if(c=e.v,c.success&&null!==(r=c.data)&&void 0!==r&&r.url){e.n=3;break}throw new Error(c.error||"\u4e0a\u4f20\u7b7e\u540d\u5931\u8d25");case 3:return i=c.data.url,e.n=4,d.s.confirmQuote(s,i);case 4:e.v,u().hideLoading(),u().showToast({title:"\u7b7e\u7f72\u6210\u529f",icon:"success",duration:2e3}),setTimeout(function(){u().navigateBack()},2e3),e.n=6;break;case 5:e.p=5,o=e.v,u().hideLoading(),u().showToast({title:o.message||"\u786e\u8ba4\u5931\u8d25\uff0c\u8bf7\u91cd\u8bd5",icon:"none"});case 6:return e.a(2)}},e,null,[[1,5]])}));function n(n){return e.apply(this,arguments)}return n}(),fail:function(e){u().hideLoading(),console.error("Failed to export signature image:",e),u().showToast({title:"\u751f\u6210\u622a\u53d6\u56fe\u7247\u5931\u8d25",icon:"error"})}})):u().showToast({title:"\u53c2\u6570\u9519\u8bef",icon:"error"}):u().showToast({title:"\u8bf7\u5148\u5b8c\u6210\u7b7e\u5b57",icon:"none"})};return(0,f.jsxs)(i.Ss,{className:"quote-sign-page",children:[(0,f.jsxs)(i.Ss,{className:"header-info",children:[(0,f.jsx)(i.EY,{className:"title",children:"\u8bf7\u5728\u4e0b\u65b9\u7a7a\u767d\u5904\u7b7e\u540d"}),(0,f.jsxs)(i.EY,{className:"subtitle",children:["\u5355\u53f7\uff1a",s]})]}),(0,f.jsxs)(i.Ss,{className:"canvas-container",children:[(0,f.jsx)(i.Hl,{type:"2d",id:e,className:"sign-canvas",onTouchStart:y,onTouchMove:E,onTouchEnd:C,disableScroll:!0}),!j&&(0,f.jsx)(i.Ss,{className:"canvas-placeholder",children:(0,f.jsx)(i.EY,{children:"\u5728\u6b64\u533a\u57df\u624b\u5199\u7b7e\u540d"})})]}),(0,f.jsxs)(i.Ss,{className:"agreements",children:[(0,f.jsx)(i.EY,{className:"text",children:"\u7b7e\u7f72\u5373\u8868\u793a\u60a8\u5df2\u7ecf\u9605\u8bfb\u5e76\u540c\u610f"}),(0,f.jsx)(i.EY,{className:"link",children:"\u300a\u65bd\u5de5\u62a5\u4ef7\u534f\u8bae\u6761\u7ea6\u300b"}),(0,f.jsx)(i.EY,{className:"text",children:"\uff0c\u672c\u62a5\u4ef7\u4ec5\u4f5c\u4e3a\u9884\u4f30\u53c2\u8003\uff0c\u6700\u7ec8\u4ee5\u5b9e\u9645\u6d4b\u91cf\u786e\u8ba4\u4e3a\u51c6\u3002"})]}),(0,f.jsxs)(i.Ss,{className:"action-bar",children:[(0,f.jsx)(i.$n,{className:"btn btn-outline",onClick:A,children:"\u91cd\u7b7e"}),(0,f.jsx)(i.$n,{className:"btn btn-primary ".concat(j?"":"disabled"),onClick:Y,children:"\u786e\u8ba4\u63d0\u4ea4"})]})]})}var x={navigationBarTitleText:"\u786e\u8ba4\u5e76\u7b7e\u5b57",disableScroll:!0,backgroundColor:"#FFFFFF"},m=(0,s.eU)(v,"packageCustomer/quote-sign/index",{root:{cn:[]}},x||{});v&&v.behaviors&&(m.behaviors=(m.behaviors||[]).concat(v.behaviors));Page(m)}},function(e){var n=function(n){return e(e.s=n)};e.O(0,[8952,6907,8096,2076],function(){return n(4867)});e.O()}]);
+"use strict";require("../sub-vendors.js");
+(wx["webpackJsonp"] = wx["webpackJsonp"] || []).push([["packageCustomer/quote-sign/index"],{
+
+/***/ "./node_modules/@tarojs/taro-loader/lib/entry-cache.js?name=packageCustomer/quote-sign/index!./src/packageCustomer/quote-sign/index.tsx":
+/*!**********************************************************************************************************************************************!*\
+  !*** ./node_modules/@tarojs/taro-loader/lib/entry-cache.js?name=packageCustomer/quote-sign/index!./src/packageCustomer/quote-sign/index.tsx ***!
+  \**********************************************************************************************************************************************/
+/***/ (function(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": function() { return /* binding */ QuoteSign; }
+/* harmony export */ });
+/* harmony import */ var C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/regenerator.js */ "./node_modules/@babel/runtime/helpers/esm/regenerator.js");
+/* harmony import */ var C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js */ "./node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js");
+/* harmony import */ var C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/slicedToArray.js */ "./node_modules/@babel/runtime/helpers/esm/slicedToArray.js");
+/* harmony import */ var _tarojs_components__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! @tarojs/components */ "./node_modules/@tarojs/plugin-platform-weapp/dist/components-react.js");
+/* harmony import */ var _tarojs_taro__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! @tarojs/taro */ "webpack/container/remote/@tarojs/taro");
+/* harmony import */ var _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default = /*#__PURE__*/__webpack_require__.n(_tarojs_taro__WEBPACK_IMPORTED_MODULE_4__);
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! react */ "webpack/container/remote/react");
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_5___default = /*#__PURE__*/__webpack_require__.n(react__WEBPACK_IMPORTED_MODULE_5__);
+/* harmony import */ var _services_api__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! @/services/api */ "./src/services/api.ts");
+/* harmony import */ var _services_quote_service__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! @/services/quote-service */ "./src/services/quote-service.ts");
+/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! react/jsx-runtime */ "webpack/container/remote/react/jsx-runtime");
+/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8___default = /*#__PURE__*/__webpack_require__.n(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__);
+
+
+
+
+
+
+
+
+
+
+function QuoteSign() {
+  var canvasId = 'signCanvas';
+  var _useState = (0,react__WEBPACK_IMPORTED_MODULE_5__.useState)(''),
+    _useState2 = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_2__["default"])(_useState, 2),
+    quoteId = _useState2[0],
+    setQuoteId = _useState2[1];
+
+  // 画布与绘制相关上下文
+  var ctxRef = (0,react__WEBPACK_IMPORTED_MODULE_5__.useRef)(null);
+  var canvasNodeRef = (0,react__WEBPACK_IMPORTED_MODULE_5__.useRef)(null);
+  var _useState3 = (0,react__WEBPACK_IMPORTED_MODULE_5__.useState)(false),
+    _useState4 = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_2__["default"])(_useState3, 2),
+    isDrawing = _useState4[0],
+    setIsDrawing = _useState4[1];
+  var _useState5 = (0,react__WEBPACK_IMPORTED_MODULE_5__.useState)(false),
+    _useState6 = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_2__["default"])(_useState5, 2),
+    hasSignature = _useState6[0],
+    setHasSignature = _useState6[1];
+
+  // Dpr for HiDPI screens
+  var dpr = _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().getSystemInfoSync().pixelRatio || 1;
+  (0,_tarojs_taro__WEBPACK_IMPORTED_MODULE_4__.useLoad)(function (params) {
+    setQuoteId(params.id || '');
+  });
+  (0,react__WEBPACK_IMPORTED_MODULE_5__.useEffect)(function () {
+    var initCanvas = function initCanvas() {
+      _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().nextTick(function () {
+        _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().createSelectorQuery().select("#".concat(canvasId)).fields({
+          node: true,
+          size: true
+        }).exec(function (res) {
+          if (res && res[0] && res[0].node) {
+            var canvas = res[0].node;
+            var ctx = canvas.getContext('2d');
+
+            // Set true size
+            canvas.width = res[0].width * dpr;
+            canvas.height = res[0].height * dpr;
+            ctx.scale(dpr, dpr);
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.lineWidth = 4;
+            ctx.strokeStyle = '#1D1D1F'; // $text-title
+
+            ctxRef.current = ctx;
+            canvasNodeRef.current = canvas;
+          }
+        });
+      });
+    };
+    initCanvas();
+  }, [dpr]);
+
+  // --- 签名绘制事件 ---
+  var handleTouchStart = function handleTouchStart(e) {
+    if (!ctxRef.current) return;
+    var touch = e.touches[0];
+    ctxRef.current.beginPath();
+    ctxRef.current.moveTo(touch.x, touch.y);
+    setIsDrawing(true);
+  };
+  var handleTouchMove = function handleTouchMove(e) {
+    if (!ctxRef.current || !isDrawing) return;
+    var touch = e.touches[0];
+    ctxRef.current.lineTo(touch.x, touch.y);
+    ctxRef.current.stroke();
+    setHasSignature(true);
+  };
+  var handleTouchEnd = function handleTouchEnd() {
+    setIsDrawing(false);
+  };
+
+  // --- 操作按钮 ---
+  var handleClear = function handleClear() {
+    if (!ctxRef.current || !canvasNodeRef.current) return;
+    ctxRef.current.clearRect(0, 0, canvasNodeRef.current.width, canvasNodeRef.current.height);
+    ctxRef.current.beginPath(); // Reset path
+    setHasSignature(false);
+  };
+  var handleSubmit = function handleSubmit() {
+    if (!hasSignature) {
+      _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().showToast({
+        title: '请先完成签字',
+        icon: 'none'
+      });
+      return;
+    }
+    if (!quoteId) {
+      _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().showToast({
+        title: '参数错误',
+        icon: 'error'
+      });
+      return;
+    }
+    if (!canvasNodeRef.current) return;
+    _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().showLoading({
+      title: '提交中...',
+      mask: true
+    });
+
+    // 1. 生成图片
+    _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().canvasToTempFilePath({
+      canvas: canvasNodeRef.current,
+      success: function () {
+        var _success = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])(/*#__PURE__*/(0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__["default"])().m(function _callee(res) {
+          var tempFilePath, _uploadRes$data, uploadRes, signatureUrl, _t;
+          return (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__["default"])().w(function (_context) {
+            while (1) switch (_context.p = _context.n) {
+              case 0:
+                tempFilePath = res.tempFilePath;
+                _context.p = 1;
+                _context.n = 2;
+                return _services_api__WEBPACK_IMPORTED_MODULE_6__.api.upload('/upload', tempFilePath, 'file');
+              case 2:
+                uploadRes = _context.v;
+                if (!(!uploadRes.success || !((_uploadRes$data = uploadRes.data) !== null && _uploadRes$data !== void 0 && _uploadRes$data.url))) {
+                  _context.n = 3;
+                  break;
+                }
+                throw new Error(uploadRes.error || '上传签名失败');
+              case 3:
+                signatureUrl = uploadRes.data.url; // 3. 提交报价确认
+                _context.n = 4;
+                return _services_quote_service__WEBPACK_IMPORTED_MODULE_7__.quoteService.confirmQuote(quoteId, signatureUrl);
+              case 4:
+                _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().hideLoading();
+                _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().showToast({
+                  title: '签署成功',
+                  icon: 'success',
+                  duration: 2000
+                });
+                setTimeout(function () {
+                  // 返回上一页刷新状态
+                  _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().navigateBack();
+                }, 2000);
+                _context.n = 6;
+                break;
+              case 5:
+                _context.p = 5;
+                _t = _context.v;
+                _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().hideLoading();
+                _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().showToast({
+                  title: _t.message || '确认失败，请重试',
+                  icon: 'none'
+                });
+              case 6:
+                return _context.a(2);
+            }
+          }, _callee, null, [[1, 5]]);
+        }));
+        function success(_x) {
+          return _success.apply(this, arguments);
+        }
+        return success;
+      }(),
+      fail: function fail(err) {
+        _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().hideLoading();
+        console.error('Failed to export signature image:', err);
+        _tarojs_taro__WEBPACK_IMPORTED_MODULE_4___default().showToast({
+          title: '生成截取图片失败',
+          icon: 'error'
+        });
+      }
+    });
+  };
+  return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+    className: "quote-sign-page",
+    children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+      className: "header-info",
+      children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+        className: "title",
+        children: "\u8BF7\u5728\u4E0B\u65B9\u7A7A\u767D\u5904\u7B7E\u540D"
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+        className: "subtitle",
+        children: ["\u5355\u53F7\uFF1A", quoteId]
+      })]
+    }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+      className: "canvas-container",
+      children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Canvas, {
+        type: "2d",
+        id: canvasId,
+        className: "sign-canvas",
+        onTouchStart: handleTouchStart,
+        onTouchMove: handleTouchMove,
+        onTouchEnd: handleTouchEnd,
+        disableScroll: true
+      }), !hasSignature && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+        className: "canvas-placeholder",
+        children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+          children: "\u5728\u6B64\u533A\u57DF\u624B\u5199\u7B7E\u540D"
+        })
+      })]
+    }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+      className: "agreements",
+      children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+        className: "text",
+        children: "\u7B7E\u7F72\u5373\u8868\u793A\u60A8\u5DF2\u7ECF\u9605\u8BFB\u5E76\u540C\u610F"
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+        className: "link",
+        children: "\u300A\u65BD\u5DE5\u62A5\u4EF7\u534F\u8BAE\u6761\u7EA6\u300B"
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Text, {
+        className: "text",
+        children: "\uFF0C\u672C\u62A5\u4EF7\u4EC5\u4F5C\u4E3A\u9884\u4F30\u53C2\u8003\uFF0C\u6700\u7EC8\u4EE5\u5B9E\u9645\u6D4B\u91CF\u786E\u8BA4\u4E3A\u51C6\u3002"
+      })]
+    }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.View, {
+      className: "action-bar",
+      children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Button, {
+        className: "btn btn-outline",
+        onClick: handleClear,
+        children: "\u91CD\u7B7E"
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_8__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_3__.Button, {
+        className: "btn btn-primary ".concat(!hasSignature ? 'disabled' : ''),
+        onClick: handleSubmit,
+        children: "\u786E\u8BA4\u63D0\u4EA4"
+      })]
+    })]
+  });
+}
+
+/***/ }),
+
+/***/ "./src/packageCustomer/quote-sign/index.tsx":
+/*!**************************************************!*\
+  !*** ./src/packageCustomer/quote-sign/index.tsx ***!
+  \**************************************************/
+/***/ (function(__unused_webpack_module, __unused_webpack___webpack_exports__, __webpack_require__) {
+
+/* harmony import */ var _tarojs_runtime__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @tarojs/runtime */ "webpack/container/remote/@tarojs/runtime");
+/* harmony import */ var _tarojs_runtime__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_tarojs_runtime__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _node_modules_tarojs_taro_loader_lib_entry_cache_js_name_packageCustomer_quote_sign_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! !!../../../node_modules/@tarojs/taro-loader/lib/entry-cache.js?name=packageCustomer/quote-sign/index!./index.tsx */ "./node_modules/@tarojs/taro-loader/lib/entry-cache.js?name=packageCustomer/quote-sign/index!./src/packageCustomer/quote-sign/index.tsx");
+
+
+var config = {"navigationBarTitleText":"确认并签字","disableScroll":true,"backgroundColor":"#FFFFFF"};
+
+
+
+var taroOption = (0,_tarojs_runtime__WEBPACK_IMPORTED_MODULE_0__.createPageConfig)(_node_modules_tarojs_taro_loader_lib_entry_cache_js_name_packageCustomer_quote_sign_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"], 'packageCustomer/quote-sign/index', {root:{cn:[]}}, config || {})
+if (_node_modules_tarojs_taro_loader_lib_entry_cache_js_name_packageCustomer_quote_sign_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"] && _node_modules_tarojs_taro_loader_lib_entry_cache_js_name_packageCustomer_quote_sign_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"].behaviors) {
+  taroOption.behaviors = (taroOption.behaviors || []).concat(_node_modules_tarojs_taro_loader_lib_entry_cache_js_name_packageCustomer_quote_sign_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"].behaviors)
+}
+var inst = Page(taroOption)
+
+
+
+/* unused harmony default export */ var __WEBPACK_DEFAULT_EXPORT__ = (_node_modules_tarojs_taro_loader_lib_entry_cache_js_name_packageCustomer_quote_sign_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"]);
+
+
+/***/ })
+
+},
+/******/ function(__webpack_require__) { // webpackRuntimeModules
+/******/ var __webpack_exec__ = function(moduleId) { return __webpack_require__(__webpack_require__.s = moduleId); }
+/******/ __webpack_require__.O(0, ["packageCustomer/sub-vendors","taro","vendors","common"], function() { return __webpack_exec__("./src/packageCustomer/quote-sign/index.tsx"); });
+/******/ var __webpack_exports__ = __webpack_require__.O();
+/******/ }
+]);
+//# sourceMappingURL=index.js.map

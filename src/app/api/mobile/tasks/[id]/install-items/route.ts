@@ -5,7 +5,13 @@ const log = createLogger('mobile:tasks:install-items');
 import { db } from '@/shared/api/db';
 import { installTasks, installItems } from '@/shared/api/schema';
 import { eq, and, inArray } from 'drizzle-orm';
-import { apiSuccess, apiError, apiNotFound, apiForbidden } from '@/shared/lib/api-response';
+import {
+  apiSuccess,
+  apiNotFound,
+  apiForbidden,
+  apiBadRequest,
+  apiServerError,
+} from '@/shared/lib/api-response';
 import { authenticateMobile, requireWorker } from '@/shared/middleware/mobile-auth';
 
 interface RouteParams {
@@ -51,7 +57,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       { taskId, error: error instanceof Error ? error.message : String(error) },
       error
     );
-    return apiError('获取安装项失败', 500);
+    return apiServerError('获取安装项失败');
   }
 }
 
@@ -75,7 +81,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     // items: Array<{ id: string, isInstalled: boolean, actualInstalledQuantity?: number, issueCategory?: string }>
 
     if (!Array.isArray(items) || items.length === 0) {
-      return apiError('缺少更新数据', 400);
+      return apiBadRequest('缺少更新数据');
     }
 
     // 1. Verify Task
@@ -89,7 +95,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     // 允许 IN_PROGRESS 或 PENDING_CONFIRM (补录)
     if (!['IN_PROGRESS', 'PENDING_CONFIRM'].includes(task.status)) {
-      return apiError(`当前状态(${task.status})不允许更新安装项`, 400);
+      return apiBadRequest(`当前状态(${task.status})不允许更新安装项`);
     }
 
     // 2. Batch Update
@@ -136,6 +142,6 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       { taskId, error: error instanceof Error ? error.message : String(error) },
       error
     );
-    return apiError('更新格式错误或部分安装项无效', 500);
+    return apiServerError('更新格式错误或部分安装项无效');
   }
 }

@@ -1,1 +1,479 @@
-"use strict";require("../sub-vendors.js");(wx["webpackJsonp"]=wx["webpackJsonp"]||[]).push([[4321],{5416:function(e,s,n){var a=n(8870),c=n(9379),r=n(1212),i=n(467),t=n(5544),l=n(118),o=n(758),d=n.n(o),u=n(6540),h=n(7471),m=n(923),p=n(4848);function f(){var e=(0,u.useState)([]),s=(0,t.A)(e,2),n=s[0],a=s[1],f=(0,u.useState)(!1),x=(0,t.A)(f,2),N=x[0],j=x[1],b=(0,u.useState)({visible:!1,orderId:"",price:"",reason:""}),w=(0,t.A)(b,2),v=w[0],g=w[1],S=function(){var e=(0,i.A)((0,r.A)().m(function e(){var s;return(0,r.A)().w(function(e){while(1)switch(e.p=e.n){case 0:return e.p=0,j(!0),e.n=1,h.b.getBiddableTasks();case 1:s=e.v,s.success||s.data?a(s.data||[]):d().showToast({title:s.error||"\u83b7\u53d6\u62a2\u5355\u6c60\u5931\u8d25",icon:"none"}),e.n=3;break;case 2:e.p=2,e.v,d().showToast({title:"\u7f51\u7edc\u5f02\u5e38",icon:"none"});case 3:return e.p=3,j(!1),d().stopPullDownRefresh(),e.f(3);case 4:return e.a(2)}},e,null,[[0,2,3,4]])}));return function(){return e.apply(this,arguments)}}();(0,o.useLoad)(function(){S()}),(0,o.useDidShow)(function(){N||0!==n.length||S()}),(0,o.usePullDownRefresh)(function(){S()});var A=function(e,s){d().showModal({title:"\u786e\u8ba4\u63a5\u5355",content:"\u540c\u610f\u4ee5 \uffe5".concat(s," \u7684\u4ef7\u683c\u63a5\u4e0b\u8be5\u8ba2\u5355\uff1f"),success:function(){var s=(0,i.A)((0,r.A)().m(function s(n){var a;return(0,r.A)().w(function(s){while(1)switch(s.p=s.n){case 0:if(!n.confirm){s.n=4;break}return d().showLoading({title:"\u5904\u7406\u4e2d..."}),s.p=1,s.n=2,m.p.negotiateTask(e,"ACCEPT");case 2:d().hideLoading(),d().showToast({title:"\u63a5\u5355\u6210\u529f",icon:"success"}),S(),s.n=4;break;case 3:s.p=3,a=s.v,d().hideLoading(),d().showToast({title:a.message||"\u63a5\u5355\u5931\u8d25",icon:"none"});case 4:return s.a(2)}},s,null,[[1,3]])}));function n(e){return s.apply(this,arguments)}return n}()})},k=function(e){d().showModal({title:"\u6b8b\u5fcd\u62d2\u7edd",content:"\u62d2\u7edd\u540e\u5c06\u4e0d\u5728\u60a8\u7684\u62a2\u5355\u6c60\u663e\u793a\uff0c\u786e\u8ba4\u62d2\u7edd\uff1f",success:function(){var s=(0,i.A)((0,r.A)().m(function s(n){var c;return(0,r.A)().w(function(s){while(1)switch(s.p=s.n){case 0:if(!n.confirm){s.n=4;break}return d().showLoading({title:"\u5904\u7406\u4e2d..."}),s.p=1,s.n=2,m.p.negotiateTask(e,"REJECT");case 2:d().hideLoading(),d().showToast({title:"\u5df2\u62d2\u7edd",icon:"none"}),a(function(s){return s.filter(function(s){return s.id!==e})}),s.n=4;break;case 3:s.p=3,c=s.v,d().hideLoading(),d().showToast({title:c.message||"\u64cd\u4f5c\u5931\u8d25",icon:"none"});case 4:return s.a(2)}},s,null,[[1,3]])}));function n(e){return s.apply(this,arguments)}return n}()})},E=function(e){g({visible:!0,orderId:e,price:"",reason:""})},Y=function(){var e=(0,i.A)((0,r.A)().m(function e(){var s;return(0,r.A)().w(function(e){while(1)switch(e.p=e.n){case 0:if(v.price){e.n=1;break}return d().showToast({title:"\u8bf7\u8f93\u5165\u671f\u671b\u4ef7\u683c",icon:"none"}),e.a(2);case 1:return d().showLoading({title:"\u63d0\u4ea4\u8bae\u4ef7..."}),e.p=2,e.n=3,m.p.negotiateTask(v.orderId,"COUNTER",{price:v.price,reason:v.reason});case 3:d().hideLoading(),d().showToast({title:"\u8bae\u4ef7\u5df2\u63d0\u4ea4",icon:"success"}),g((0,c.A)((0,c.A)({},v),{},{visible:!1})),S(),e.n=5;break;case 4:e.p=4,s=e.v,d().hideLoading(),d().showToast({title:s.message||"\u63d0\u4ea4\u5931\u8d25",icon:"none"});case 5:return e.a(2)}},e,null,[[2,4]])}));return function(){return e.apply(this,arguments)}}();return(0,p.jsxs)(l.Ss,{className:"order-bid-page",children:[(0,p.jsxs)(l.Ss,{className:"page-header",children:[(0,p.jsx)(l.EY,{className:"title",children:"\u5f85\u63a5\u5de5\u5355"}),(0,p.jsxs)(l.EY,{className:"subtitle",children:["\u5171 ",n.length," \u4e2a\u65b0\u8ba2\u5355\u6b63\u5728\u7b49\u5f85\u5206\u914d"]})]}),(0,p.jsx)(l.BM,{scrollY:!0,className:"order-list",children:n.length>0?n.map(function(e){return(0,p.jsxs)(l.Ss,{className:"order-card",children:[(0,p.jsxs)(l.Ss,{className:"card-header",children:[(0,p.jsxs)(l.Ss,{className:"left",children:[(0,p.jsx)(l.EY,{className:"tag ".concat(e.type.toLowerCase()),children:e.typeLabel}),(0,p.jsx)(l.EY,{className:"order-id",children:e.taskNo||e.id})]}),(0,p.jsx)(l.EY,{className:"distance",children:e.distance})]}),(0,p.jsxs)(l.Ss,{className:"card-body",children:[(0,p.jsxs)(l.Ss,{className:"info-row",children:[(0,p.jsx)(l.EY,{className:"label",children:"\u670d\u52a1\u65f6\u95f4\uff1a"}),(0,p.jsxs)(l.EY,{className:"value highlight",children:[e.scheduledDate?e.scheduledDate.substring(0,10):"\u5c3d\u5feb",e.timeSlot?" ".concat(e.timeSlot):""]})]}),(0,p.jsxs)(l.Ss,{className:"info-row",children:[(0,p.jsx)(l.EY,{className:"label",children:"\u670d\u52a1\u5730\u5740\uff1a"}),(0,p.jsx)(l.EY,{className:"value",children:e.address})]}),(0,p.jsxs)(l.Ss,{className:"info-row",children:[(0,p.jsx)(l.EY,{className:"label",children:"\u5ba2\u6237\u79f0\u547c\uff1a"}),(0,p.jsx)(l.EY,{className:"value",children:e.customerName})]})]}),(0,p.jsxs)(l.Ss,{className:"card-footer",children:[(0,p.jsxs)(l.Ss,{className:"price-area",children:[(0,p.jsx)(l.EY,{className:"label",children:"\u7cfb\u7edf\u62a5\u4ef7"}),(0,p.jsxs)(l.EY,{className:"price",children:["\uffe5",e.systemPrice]})]}),(0,p.jsxs)(l.Ss,{className:"action-area",children:[(0,p.jsx)(l.$n,{className:"btn reject",onClick:function(){return k(e.id)},children:"\u62d2\u7edd"}),(0,p.jsx)(l.$n,{className:"btn counter",onClick:function(){return E(e.id)},children:"\u8bae\u4ef7"}),(0,p.jsx)(l.$n,{className:"btn accept",onClick:function(){return A(e.id,e.systemPrice)},children:"\u63a5\u5355"})]})]})]},e.id)}):(0,p.jsx)(l.Ss,{className:"empty-state",children:(0,p.jsx)(l.EY,{className:"empty-text",children:N?"\u52a0\u8f7d\u4e2d...":"\u6682\u65e0\u65b0\u6d3e\u5355\uff0c\u4f11\u606f\u4e00\u4e0b\u5427"})})}),v.visible&&(0,p.jsx)(l.Ss,{className:"modal-overlay",children:(0,p.jsxs)(l.Ss,{className:"modal-content",children:[(0,p.jsxs)(l.Ss,{className:"modal-header",children:[(0,p.jsx)(l.EY,{className:"modal-title",children:"\u5de5\u5355\u8bae\u4ef7"}),(0,p.jsx)(l.EY,{className:"close-btn",onClick:function(){return g((0,c.A)((0,c.A)({},v),{},{visible:!1}))},children:"\xd7"})]}),(0,p.jsxs)(l.Ss,{className:"modal-body",children:[(0,p.jsxs)(l.Ss,{className:"form-item",children:[(0,p.jsx)(l.EY,{className:"label",children:"\u671f\u671b\u4ef7\u683c (\u5143)"}),(0,p.jsx)(l.pd,{className:"input price-input",type:"digit",placeholder:"\u8bf7\u8f93\u5165\u60a8\u7684\u5fc3\u7406\u4ef7\u4f4d",value:v.price,onInput:function(e){return g((0,c.A)((0,c.A)({},v),{},{price:e.detail.value}))}})]}),(0,p.jsxs)(l.Ss,{className:"form-item",children:[(0,p.jsx)(l.EY,{className:"label",children:"\u8bae\u4ef7\u7406\u7531 (\u9009\u586b)"}),(0,p.jsx)(l.pd,{className:"input",placeholder:"\u5982\uff1a\u8def\u7a0b\u8f83\u8fdc\u3001\u697c\u5c42\u8f83\u9ad8\u65e0\u7535\u68af\u7b49",value:v.reason,onInput:function(e){return g((0,c.A)((0,c.A)({},v),{},{reason:e.detail.value}))}})]})]}),(0,p.jsx)(l.Ss,{className:"modal-footer",children:(0,p.jsx)(l.$n,{className:"submit-btn",onClick:Y,children:"\u63d0\u4ea4\u8bae\u4ef7\u7533\u8bf7"})})]})})]})}var x={navigationBarTitleText:"\u63a5\u5355\u5927\u5385",backgroundColor:"#F2F2F7",enablePullDownRefresh:!0},N=(0,a.eU)(f,"packageWorker/order-bid/index",{root:{cn:[]}},x||{});f&&f.behaviors&&(N.behaviors=(N.behaviors||[]).concat(f.behaviors));Page(N)}},function(e){var s=function(s){return e(e.s=s)};e.O(0,[8886,6907,8096,2076],function(){return s(5416)});e.O()}]);
+"use strict";require("../sub-vendors.js");
+(wx["webpackJsonp"] = wx["webpackJsonp"] || []).push([["packageWorker/order-bid/index"],{
+
+/***/ "./node_modules/@tarojs/taro-loader/lib/entry-cache.js?name=packageWorker/order-bid/index!./src/packageWorker/order-bid/index.tsx":
+/*!****************************************************************************************************************************************!*\
+  !*** ./node_modules/@tarojs/taro-loader/lib/entry-cache.js?name=packageWorker/order-bid/index!./src/packageWorker/order-bid/index.tsx ***!
+  \****************************************************************************************************************************************/
+/***/ (function(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": function() { return /* binding */ WorkerOrderBidPage; }
+/* harmony export */ });
+/* harmony import */ var C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_objectSpread2_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/objectSpread2.js */ "./node_modules/@babel/runtime/helpers/esm/objectSpread2.js");
+/* harmony import */ var C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/regenerator.js */ "./node_modules/@babel/runtime/helpers/esm/regenerator.js");
+/* harmony import */ var C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js */ "./node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js");
+/* harmony import */ var C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/slicedToArray.js */ "./node_modules/@babel/runtime/helpers/esm/slicedToArray.js");
+/* harmony import */ var _tarojs_components__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! @tarojs/components */ "./node_modules/@tarojs/plugin-platform-weapp/dist/components-react.js");
+/* harmony import */ var _tarojs_taro__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! @tarojs/taro */ "webpack/container/remote/@tarojs/taro");
+/* harmony import */ var _tarojs_taro__WEBPACK_IMPORTED_MODULE_5___default = /*#__PURE__*/__webpack_require__.n(_tarojs_taro__WEBPACK_IMPORTED_MODULE_5__);
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! react */ "webpack/container/remote/react");
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_6___default = /*#__PURE__*/__webpack_require__.n(react__WEBPACK_IMPORTED_MODULE_6__);
+/* harmony import */ var _services_engineer_service__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! @/services/engineer-service */ "./src/services/engineer-service.ts");
+/* harmony import */ var _services_task_service__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! @/services/task-service */ "./src/services/task-service.ts");
+/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! react/jsx-runtime */ "webpack/container/remote/react/jsx-runtime");
+/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9___default = /*#__PURE__*/__webpack_require__.n(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__);
+
+
+
+
+
+
+
+
+
+
+
+function WorkerOrderBidPage() {
+  var _useState = (0,react__WEBPACK_IMPORTED_MODULE_6__.useState)([]),
+    _useState2 = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_3__["default"])(_useState, 2),
+    orders = _useState2[0],
+    setOrders = _useState2[1];
+  var _useState3 = (0,react__WEBPACK_IMPORTED_MODULE_6__.useState)(false),
+    _useState4 = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_3__["default"])(_useState3, 2),
+    loading = _useState4[0],
+    setLoading = _useState4[1];
+  var _useState5 = (0,react__WEBPACK_IMPORTED_MODULE_6__.useState)({
+      visible: false,
+      orderId: '',
+      price: '',
+      reason: ''
+    }),
+    _useState6 = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_3__["default"])(_useState5, 2),
+    counterModal = _useState6[0],
+    setCounterModal = _useState6[1];
+  var fetchTasks = /*#__PURE__*/function () {
+    var _ref = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_2__["default"])(/*#__PURE__*/(0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().m(function _callee() {
+      var res, _t;
+      return (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().w(function (_context) {
+        while (1) switch (_context.p = _context.n) {
+          case 0:
+            _context.p = 0;
+            setLoading(true);
+            _context.n = 1;
+            return _services_engineer_service__WEBPACK_IMPORTED_MODULE_7__.engineerService.getBiddableTasks();
+          case 1:
+            res = _context.v;
+            if (res.success || res.data) {
+              setOrders(res.data || []);
+            } else {
+              _tarojs_taro__WEBPACK_IMPORTED_MODULE_5___default().showToast({
+                title: res.error || '获取抢单池失败',
+                icon: 'none'
+              });
+            }
+            _context.n = 3;
+            break;
+          case 2:
+            _context.p = 2;
+            _t = _context.v;
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_5___default().showToast({
+              title: '网络异常',
+              icon: 'none'
+            });
+          case 3:
+            _context.p = 3;
+            setLoading(false);
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_5___default().stopPullDownRefresh();
+            return _context.f(3);
+          case 4:
+            return _context.a(2);
+        }
+      }, _callee, null, [[0, 2, 3, 4]]);
+    }));
+    return function fetchTasks() {
+      return _ref.apply(this, arguments);
+    };
+  }();
+  (0,_tarojs_taro__WEBPACK_IMPORTED_MODULE_5__.useLoad)(function () {
+    fetchTasks();
+  });
+  (0,_tarojs_taro__WEBPACK_IMPORTED_MODULE_5__.useDidShow)(function () {
+    if (!loading && orders.length === 0) {
+      fetchTasks();
+    }
+  });
+  (0,_tarojs_taro__WEBPACK_IMPORTED_MODULE_5__.usePullDownRefresh)(function () {
+    fetchTasks();
+  });
+  var handleAccept = function handleAccept(id, price) {
+    _tarojs_taro__WEBPACK_IMPORTED_MODULE_5___default().showModal({
+      title: '确认接单',
+      content: "\u540C\u610F\u4EE5 \uFFE5".concat(price, " \u7684\u4EF7\u683C\u63A5\u4E0B\u8BE5\u8BA2\u5355\uFF1F"),
+      success: function () {
+        var _success = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_2__["default"])(/*#__PURE__*/(0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().m(function _callee2(res) {
+          var _t2;
+          return (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().w(function (_context2) {
+            while (1) switch (_context2.p = _context2.n) {
+              case 0:
+                if (!res.confirm) {
+                  _context2.n = 4;
+                  break;
+                }
+                _tarojs_taro__WEBPACK_IMPORTED_MODULE_5___default().showLoading({
+                  title: '处理中...'
+                });
+                _context2.p = 1;
+                _context2.n = 2;
+                return _services_task_service__WEBPACK_IMPORTED_MODULE_8__.taskService.negotiateTask(id, 'ACCEPT');
+              case 2:
+                _tarojs_taro__WEBPACK_IMPORTED_MODULE_5___default().hideLoading();
+                _tarojs_taro__WEBPACK_IMPORTED_MODULE_5___default().showToast({
+                  title: '接单成功',
+                  icon: 'success'
+                });
+                fetchTasks(); // Refresh list
+                _context2.n = 4;
+                break;
+              case 3:
+                _context2.p = 3;
+                _t2 = _context2.v;
+                _tarojs_taro__WEBPACK_IMPORTED_MODULE_5___default().hideLoading();
+                _tarojs_taro__WEBPACK_IMPORTED_MODULE_5___default().showToast({
+                  title: _t2.message || '接单失败',
+                  icon: 'none'
+                });
+              case 4:
+                return _context2.a(2);
+            }
+          }, _callee2, null, [[1, 3]]);
+        }));
+        function success(_x) {
+          return _success.apply(this, arguments);
+        }
+        return success;
+      }()
+    });
+  };
+  var handleReject = function handleReject(id) {
+    _tarojs_taro__WEBPACK_IMPORTED_MODULE_5___default().showModal({
+      title: '残忍拒绝',
+      content: '拒绝后将不在您的抢单池显示，确认拒绝？',
+      success: function () {
+        var _success2 = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_2__["default"])(/*#__PURE__*/(0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().m(function _callee3(res) {
+          var _t3;
+          return (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().w(function (_context3) {
+            while (1) switch (_context3.p = _context3.n) {
+              case 0:
+                if (!res.confirm) {
+                  _context3.n = 4;
+                  break;
+                }
+                _tarojs_taro__WEBPACK_IMPORTED_MODULE_5___default().showLoading({
+                  title: '处理中...'
+                });
+                _context3.p = 1;
+                _context3.n = 2;
+                return _services_task_service__WEBPACK_IMPORTED_MODULE_8__.taskService.negotiateTask(id, 'REJECT');
+              case 2:
+                _tarojs_taro__WEBPACK_IMPORTED_MODULE_5___default().hideLoading();
+                _tarojs_taro__WEBPACK_IMPORTED_MODULE_5___default().showToast({
+                  title: '已拒绝',
+                  icon: 'none'
+                });
+                setOrders(function (prev) {
+                  return prev.filter(function (o) {
+                    return o.id !== id;
+                  });
+                });
+                _context3.n = 4;
+                break;
+              case 3:
+                _context3.p = 3;
+                _t3 = _context3.v;
+                _tarojs_taro__WEBPACK_IMPORTED_MODULE_5___default().hideLoading();
+                _tarojs_taro__WEBPACK_IMPORTED_MODULE_5___default().showToast({
+                  title: _t3.message || '操作失败',
+                  icon: 'none'
+                });
+              case 4:
+                return _context3.a(2);
+            }
+          }, _callee3, null, [[1, 3]]);
+        }));
+        function success(_x2) {
+          return _success2.apply(this, arguments);
+        }
+        return success;
+      }()
+    });
+  };
+  var openCounterModal = function openCounterModal(id) {
+    setCounterModal({
+      visible: true,
+      orderId: id,
+      price: '',
+      reason: ''
+    });
+  };
+  var submitCounterOffer = /*#__PURE__*/function () {
+    var _ref2 = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_2__["default"])(/*#__PURE__*/(0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().m(function _callee4() {
+      var _t4;
+      return (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])().w(function (_context4) {
+        while (1) switch (_context4.p = _context4.n) {
+          case 0:
+            if (counterModal.price) {
+              _context4.n = 1;
+              break;
+            }
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_5___default().showToast({
+              title: '请输入期望价格',
+              icon: 'none'
+            });
+            return _context4.a(2);
+          case 1:
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_5___default().showLoading({
+              title: '提交议价...'
+            });
+            _context4.p = 2;
+            _context4.n = 3;
+            return _services_task_service__WEBPACK_IMPORTED_MODULE_8__.taskService.negotiateTask(counterModal.orderId, 'COUNTER', {
+              price: counterModal.price,
+              reason: counterModal.reason
+            });
+          case 3:
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_5___default().hideLoading();
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_5___default().showToast({
+              title: '议价已提交',
+              icon: 'success'
+            });
+            setCounterModal((0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_objectSpread2_js__WEBPACK_IMPORTED_MODULE_0__["default"])((0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_objectSpread2_js__WEBPACK_IMPORTED_MODULE_0__["default"])({}, counterModal), {}, {
+              visible: false
+            }));
+            fetchTasks();
+            _context4.n = 5;
+            break;
+          case 4:
+            _context4.p = 4;
+            _t4 = _context4.v;
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_5___default().hideLoading();
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_5___default().showToast({
+              title: _t4.message || '提交失败',
+              icon: 'none'
+            });
+          case 5:
+            return _context4.a(2);
+        }
+      }, _callee4, null, [[2, 4]]);
+    }));
+    return function submitCounterOffer() {
+      return _ref2.apply(this, arguments);
+    };
+  }();
+  return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+    className: "order-bid-page",
+    children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+      className: "page-header",
+      children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+        className: "title",
+        children: "\u5F85\u63A5\u5DE5\u5355"
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+        className: "subtitle",
+        children: ["\u5171 ", orders.length, " \u4E2A\u65B0\u8BA2\u5355\u6B63\u5728\u7B49\u5F85\u5206\u914D"]
+      })]
+    }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.ScrollView, {
+      scrollY: true,
+      className: "order-list",
+      children: orders.length > 0 ? orders.map(function (order) {
+        return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+          className: "order-card",
+          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+            className: "card-header",
+            children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+              className: "left",
+              children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+                className: "tag ".concat(order.type.toLowerCase()),
+                children: order.typeLabel
+              }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+                className: "order-id",
+                children: order.taskNo || order.id
+              })]
+            }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+              className: "distance",
+              children: order.distance
+            })]
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+            className: "card-body",
+            children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+              className: "info-row",
+              children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+                className: "label",
+                children: "\u670D\u52A1\u65F6\u95F4\uFF1A"
+              }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+                className: "value highlight",
+                children: [order.scheduledDate ? order.scheduledDate.substring(0, 10) : '尽快', order.timeSlot ? " ".concat(order.timeSlot) : '']
+              })]
+            }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+              className: "info-row",
+              children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+                className: "label",
+                children: "\u670D\u52A1\u5730\u5740\uFF1A"
+              }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+                className: "value",
+                children: order.address
+              })]
+            }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+              className: "info-row",
+              children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+                className: "label",
+                children: "\u5BA2\u6237\u79F0\u547C\uFF1A"
+              }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+                className: "value",
+                children: order.customerName
+              })]
+            })]
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+            className: "card-footer",
+            children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+              className: "price-area",
+              children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+                className: "label",
+                children: "\u7CFB\u7EDF\u62A5\u4EF7"
+              }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+                className: "price",
+                children: ["\uFFE5", order.systemPrice]
+              })]
+            }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+              className: "action-area",
+              children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Button, {
+                className: "btn reject",
+                onClick: function onClick() {
+                  return handleReject(order.id);
+                },
+                children: "\u62D2\u7EDD"
+              }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Button, {
+                className: "btn counter",
+                onClick: function onClick() {
+                  return openCounterModal(order.id);
+                },
+                children: "\u8BAE\u4EF7"
+              }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Button, {
+                className: "btn accept",
+                onClick: function onClick() {
+                  return handleAccept(order.id, order.systemPrice);
+                },
+                children: "\u63A5\u5355"
+              })]
+            })]
+          })]
+        }, order.id);
+      }) : /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+        className: "empty-state",
+        children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+          className: "empty-text",
+          children: loading ? '加载中...' : '暂无新派单，休息一下吧'
+        })
+      })
+    }), counterModal.visible && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+      className: "modal-overlay",
+      children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+        className: "modal-content",
+        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+          className: "modal-header",
+          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+            className: "modal-title",
+            children: "\u5DE5\u5355\u8BAE\u4EF7"
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+            className: "close-btn",
+            onClick: function onClick() {
+              return setCounterModal((0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_objectSpread2_js__WEBPACK_IMPORTED_MODULE_0__["default"])((0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_objectSpread2_js__WEBPACK_IMPORTED_MODULE_0__["default"])({}, counterModal), {}, {
+                visible: false
+              }));
+            },
+            children: "\xD7"
+          })]
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+          className: "modal-body",
+          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+            className: "form-item",
+            children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+              className: "label",
+              children: "\u671F\u671B\u4EF7\u683C (\u5143)"
+            }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Input, {
+              className: "input price-input",
+              type: "digit",
+              placeholder: "\u8BF7\u8F93\u5165\u60A8\u7684\u5FC3\u7406\u4EF7\u4F4D",
+              value: counterModal.price,
+              onInput: function onInput(e) {
+                return setCounterModal((0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_objectSpread2_js__WEBPACK_IMPORTED_MODULE_0__["default"])((0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_objectSpread2_js__WEBPACK_IMPORTED_MODULE_0__["default"])({}, counterModal), {}, {
+                  price: e.detail.value
+                }));
+              }
+            })]
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+            className: "form-item",
+            children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Text, {
+              className: "label",
+              children: "\u8BAE\u4EF7\u7406\u7531 (\u9009\u586B)"
+            }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Input, {
+              className: "input",
+              placeholder: "\u5982\uFF1A\u8DEF\u7A0B\u8F83\u8FDC\u3001\u697C\u5C42\u8F83\u9AD8\u65E0\u7535\u68AF\u7B49",
+              value: counterModal.reason,
+              onInput: function onInput(e) {
+                return setCounterModal((0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_objectSpread2_js__WEBPACK_IMPORTED_MODULE_0__["default"])((0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_objectSpread2_js__WEBPACK_IMPORTED_MODULE_0__["default"])({}, counterModal), {}, {
+                  reason: e.detail.value
+                }));
+              }
+            })]
+          })]
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.View, {
+          className: "modal-footer",
+          children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_4__.Button, {
+            className: "submit-btn",
+            onClick: submitCounterOffer,
+            children: "\u63D0\u4EA4\u8BAE\u4EF7\u7533\u8BF7"
+          })
+        })]
+      })
+    })]
+  });
+}
+
+/***/ }),
+
+/***/ "./src/packageWorker/order-bid/index.tsx":
+/*!***********************************************!*\
+  !*** ./src/packageWorker/order-bid/index.tsx ***!
+  \***********************************************/
+/***/ (function(__unused_webpack_module, __unused_webpack___webpack_exports__, __webpack_require__) {
+
+/* harmony import */ var _tarojs_runtime__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @tarojs/runtime */ "webpack/container/remote/@tarojs/runtime");
+/* harmony import */ var _tarojs_runtime__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_tarojs_runtime__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _node_modules_tarojs_taro_loader_lib_entry_cache_js_name_packageWorker_order_bid_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! !!../../../node_modules/@tarojs/taro-loader/lib/entry-cache.js?name=packageWorker/order-bid/index!./index.tsx */ "./node_modules/@tarojs/taro-loader/lib/entry-cache.js?name=packageWorker/order-bid/index!./src/packageWorker/order-bid/index.tsx");
+
+
+var config = {"navigationBarTitleText":"接单大厅","backgroundColor":"#F2F2F7","enablePullDownRefresh":true};
+
+
+
+var taroOption = (0,_tarojs_runtime__WEBPACK_IMPORTED_MODULE_0__.createPageConfig)(_node_modules_tarojs_taro_loader_lib_entry_cache_js_name_packageWorker_order_bid_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"], 'packageWorker/order-bid/index', {root:{cn:[]}}, config || {})
+if (_node_modules_tarojs_taro_loader_lib_entry_cache_js_name_packageWorker_order_bid_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"] && _node_modules_tarojs_taro_loader_lib_entry_cache_js_name_packageWorker_order_bid_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"].behaviors) {
+  taroOption.behaviors = (taroOption.behaviors || []).concat(_node_modules_tarojs_taro_loader_lib_entry_cache_js_name_packageWorker_order_bid_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"].behaviors)
+}
+var inst = Page(taroOption)
+
+
+
+/* unused harmony default export */ var __WEBPACK_DEFAULT_EXPORT__ = (_node_modules_tarojs_taro_loader_lib_entry_cache_js_name_packageWorker_order_bid_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"]);
+
+
+/***/ })
+
+},
+/******/ function(__webpack_require__) { // webpackRuntimeModules
+/******/ var __webpack_exec__ = function(moduleId) { return __webpack_require__(__webpack_require__.s = moduleId); }
+/******/ __webpack_require__.O(0, ["packageWorker/sub-vendors","taro","vendors","common"], function() { return __webpack_exec__("./src/packageWorker/order-bid/index.tsx"); });
+/******/ var __webpack_exports__ = __webpack_require__.O();
+/******/ }
+]);
+//# sourceMappingURL=index.js.map

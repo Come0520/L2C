@@ -371,6 +371,24 @@ export const approveQuote = createSafeAction(approveQuoteSchema, async (data, co
     throw new Error('无权执行此操作');
   }
 
+  // F3: 自我审批防护——业务规则：审批人不得是报价单的创建人
+  const quoteForApproval = await db.query.quotes.findFirst({
+    where: and(eq(quotes.id, data.id), eq(quotes.tenantId, context.session.user.tenantId)),
+    columns: { createdBy: true },
+  });
+  if (!quoteForApproval) {
+    logger.warn(`[${traceId}] [quotes] 报价单不存在或无权操作`, { quoteId: data.id, traceId });
+    throw new Error('报价单不存在或无权操作');
+  }
+  if (quoteForApproval.createdBy === context.session.user.id) {
+    logger.warn(`[${traceId}] [quotes] 拒绝自我审批：审批人与创建人相同`, {
+      userId: context.session.user.id,
+      quoteId: data.id,
+      traceId,
+    });
+    throw new Error('不允许审批自己创建的报价单');
+  }
+
   // 【乐观锁】前置版本检查
   await preflightVersionCheck(data.id, context.session.user.tenantId, data.version);
 

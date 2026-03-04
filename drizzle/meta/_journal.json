@@ -309,6 +309,13 @@
       "when": 1772607688635,
       "tag": "0043_handy_tyrannus",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1772628803796,
+      "tag": "0044_yielding_payback",
+      "breakpoints": true
     }
   ]
 }

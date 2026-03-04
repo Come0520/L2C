@@ -9,7 +9,7 @@ import { NextRequest } from 'next/server';
 import { db } from '@/shared/api/db';
 import { quotes } from '@/shared/api/schema';
 import { eq, and, desc, like, or, sql, isNull } from 'drizzle-orm';
-import { apiPaginated, apiError } from '@/shared/lib/api-response';
+import { apiPaginated, apiServerError } from '@/shared/lib/api-response';
 import { authenticateMobile, requireSales } from '@/shared/middleware/mobile-auth';
 import { createLogger } from '@/shared/lib/logger';
 
@@ -108,7 +108,7 @@ export async function GET(request: NextRequest) {
     return apiPaginated(items, page, pageSize, total);
   } catch (error) {
     log.error('[Mobile API][quotes] 报价列表查询错误', { error, userId: session.userId });
-    return apiError('查询报价列表失败', 500);
+    return apiServerError('查询报价列表失败');
   }
 }
 

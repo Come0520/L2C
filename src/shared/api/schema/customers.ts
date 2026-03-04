@@ -104,6 +104,10 @@ export const customers = pgTable(
       table.tenantId,
       table.updatedAt
     ),
+
+    // [Fix 2.2] Data Integrity: Unique phone/customerNo per tenant
+    custUniquePhoneIdx: unique('idx_customers_tenant_phone').on(table.tenantId, table.phone),
+    custUniqueNoIdx: unique('idx_customers_tenant_no').on(table.tenantId, table.customerNo),
   })
 );
 

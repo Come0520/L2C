@@ -1,1 +1,290 @@
-"use strict";require("../sub-vendors.js");(wx["webpackJsonp"]=wx["webpackJsonp"]||[]).push([[2217],{2170:function(e,s,a){var n=a(8870),t=a(1212),c=a(467),l=a(4467),i=a(9379),r=a(5544),o=a(118),d=a(758),m=a.n(d),u=a(6540),h=a(2357),x=a(4848);function p(){var e=(0,u.useState)(""),s=(0,r.A)(e,2),a=s[0],n=s[1],p=(0,u.useState)(""),f=(0,r.A)(p,2),j=f[0],N=f[1],g={logo:"https://via.placeholder.com/100x100/0071E3/FFFFFF?text=Logo",name:"\u4e91\u7aef\u7cbe\u88c5",slogan:"\u4e3a\u60a8\u6253\u9020\u7406\u60f3\u4e2d\u7684\u5bb6",cases:[{img:"https://via.placeholder.com/400x300/E5E5EA/999999?text=Case1",title:"\u7eff\u5730\u4e91\u90fd\u4f1a 120\u33a1 \u73b0\u4ee3\u7b80\u7ea6"},{img:"https://via.placeholder.com/400x300/E5E5EA/999999?text=Case2",title:"\u4fdd\u5229\u9999\u69df 89\u33a1 \u5317\u6b27\u98ce\u60c5"}]},b=(0,u.useState)({name:"",phone:"",address:""}),v=(0,r.A)(b,2),F=v[0],E=v[1],A=(0,u.useState)(!1),S=(0,r.A)(A,2),w=S[0],Y=S[1];(0,d.useLoad)(function(e){n(e.inviterId||""),N(e.tenantId||"")});var k=function(e){return function(s){return E(function(a){return(0,i.A)((0,i.A)({},a),{},(0,l.A)({},e,s.detail.value))})}},T=function(){var e=(0,c.A)((0,t.A)().m(function e(){return(0,t.A)().w(function(e){while(1)switch(e.n){case 0:if((0,h.hj)(F.name)){e.n=1;break}return m().showToast({title:"\u8bf7\u8f93\u5165\u60a8\u7684\u79f0\u547c",icon:"none"}),e.a(2);case 1:if((0,h.BH)(F.phone)){e.n=2;break}return m().showToast({title:"\u8bf7\u8f93\u5165\u6b63\u786e\u7684\u624b\u673a\u53f7",icon:"none"}),e.a(2);case 2:Y(!0);try{(0,i.A)((0,i.A)({},F),{},{inviterId:a,tenantId:j,source:"REFERRAL"}),setTimeout(function(){Y(!1),m().showToast({title:"\u9884\u7ea6\u6210\u529f\uff0c\u5ba2\u670d\u5c06\u5c3d\u5feb\u8054\u7cfb\u60a8",icon:"none",duration:2500}),E({name:"",phone:"",address:""})},1e3)}catch(e){Y(!1),m().showToast({title:"\u7f51\u7edc\u9519\u8bef\uff0c\u8bf7\u91cd\u8bd5",icon:"none"})}case 3:return e.a(2)}},e)}));return function(){return e.apply(this,arguments)}}(),C=function(){m().switchTab({url:"/pages/index/index"})};return(0,x.jsxs)(o.Ss,{className:"refer-landing-page",children:[(0,x.jsxs)(o.BM,{scrollY:!0,className:"content-scroll",children:[(0,x.jsxs)(o.Ss,{className:"hero-section",children:[(0,x.jsx)(o._V,{className:"brand-logo",src:g.logo,mode:"aspectFit"}),(0,x.jsx)(o.EY,{className:"brand-name",children:g.name}),(0,x.jsx)(o.EY,{className:"brand-slogan",children:g.slogan})]}),(0,x.jsxs)(o.Ss,{className:"form-card",children:[(0,x.jsx)(o.EY,{className:"card-title",children:"\u9884\u7ea6\u514d\u8d39\u91cf\u5c3a\u4e0e\u8bbe\u8ba1"}),(0,x.jsxs)(o.Ss,{className:"form-item",children:[(0,x.jsx)(o.EY,{className:"label",children:"\u60a8\u7684\u79f0\u547c"}),(0,x.jsx)(o.pd,{className:"input-field",placeholder:"\u5982\uff1a\u5f20\u5148\u751f / \u674e\u5973\u58eb",value:F.name,onInput:k("name")})]}),(0,x.jsxs)(o.Ss,{className:"form-item",children:[(0,x.jsx)(o.EY,{className:"label",children:"\u8054\u7cfb\u7535\u8bdd"}),(0,x.jsx)(o.pd,{className:"input-field",type:"number",maxlength:11,placeholder:"\u8bf7\u8f93\u5165\u624b\u673a\u53f7",value:F.phone,onInput:k("phone")})]}),(0,x.jsxs)(o.Ss,{className:"form-item",children:[(0,x.jsx)(o.EY,{className:"label",children:"\u623f\u5c4b\u5730\u5740"}),(0,x.jsx)(o.pd,{className:"input-field",placeholder:"\u5982\uff1a\u5317\u4eac\u5e02\u671d\u9633\u533a\u7eff\u5730\u4e91\u90fd\u4f1a",value:F.address,onInput:k("address")})]}),(0,x.jsx)(o.$n,{className:"submit-btn",loading:w,disabled:w,onClick:T,children:"\u7acb\u5373\u9884\u7ea6"}),(0,x.jsx)(o.EY,{className:"privacy-text",children:"\u70b9\u51fb\u9884\u7ea6\u5373\u8868\u793a\u60a8\u540c\u610f\u6211\u4eec\u7684\u300a\u9690\u79c1\u534f\u8bae\u300b\uff0c\u6211\u4eec\u5c06\u4e25\u683c\u4fdd\u62a4\u60a8\u7684\u4fe1\u606f\u5b89\u5168\u3002"})]}),(0,x.jsxs)(o.Ss,{className:"cases-section",children:[(0,x.jsx)(o.EY,{className:"section-title",children:"\u7cbe\u9009\u6848\u4f8b"}),(0,x.jsx)(o.Ss,{className:"case-list",children:g.cases.map(function(e,s){return(0,x.jsxs)(o.Ss,{className:"case-card",children:[(0,x.jsx)(o._V,{className:"case-img",src:e.img,mode:"aspectFill"}),(0,x.jsx)(o.EY,{className:"case-title",children:e.title})]},s)})})]}),(0,x.jsx)(o.Ss,{className:"safe-area-bottom"})]}),(0,x.jsx)(o.Ss,{className:"float-home-btn",onClick:C,children:(0,x.jsx)(o.EY,{children:"\u8fd4\u56de\u9996\u9875"})})]})}var f={navigationBarTitleText:"\u54c1\u724c\u4f53\u9a8c",backgroundColor:"#FFFFFF",navigationBarBackgroundColor:"#FFFFFF"},j=(0,n.eU)(p,"packageCustomer/refer-landing/index",{root:{cn:[]}},f||{});p&&p.behaviors&&(j.behaviors=(j.behaviors||[]).concat(p.behaviors));Page(j)}},function(e){var s=function(s){return e(e.s=s)};e.O(0,[6907,8096,2076],function(){return s(2170)});e.O()}]);
+"use strict";require("../sub-vendors.js");
+(wx["webpackJsonp"] = wx["webpackJsonp"] || []).push([["packageCustomer/refer-landing/index"],{
+
+/***/ "./node_modules/@tarojs/taro-loader/lib/entry-cache.js?name=packageCustomer/refer-landing/index!./src/packageCustomer/refer-landing/index.tsx":
+/*!****************************************************************************************************************************************************!*\
+  !*** ./node_modules/@tarojs/taro-loader/lib/entry-cache.js?name=packageCustomer/refer-landing/index!./src/packageCustomer/refer-landing/index.tsx ***!
+  \****************************************************************************************************************************************************/
+/***/ (function(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": function() { return /* binding */ ReferLandingPage; }
+/* harmony export */ });
+/* harmony import */ var C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/regenerator.js */ "./node_modules/@babel/runtime/helpers/esm/regenerator.js");
+/* harmony import */ var C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js */ "./node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js");
+/* harmony import */ var C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_defineProperty_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/defineProperty.js */ "./node_modules/@babel/runtime/helpers/esm/defineProperty.js");
+/* harmony import */ var C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_objectSpread2_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/objectSpread2.js */ "./node_modules/@babel/runtime/helpers/esm/objectSpread2.js");
+/* harmony import */ var C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./node_modules/@babel/runtime/helpers/esm/slicedToArray.js */ "./node_modules/@babel/runtime/helpers/esm/slicedToArray.js");
+/* harmony import */ var _tarojs_components__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! @tarojs/components */ "./node_modules/@tarojs/plugin-platform-weapp/dist/components-react.js");
+/* harmony import */ var _tarojs_taro__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! @tarojs/taro */ "webpack/container/remote/@tarojs/taro");
+/* harmony import */ var _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default = /*#__PURE__*/__webpack_require__.n(_tarojs_taro__WEBPACK_IMPORTED_MODULE_6__);
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! react */ "webpack/container/remote/react");
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_7___default = /*#__PURE__*/__webpack_require__.n(react__WEBPACK_IMPORTED_MODULE_7__);
+/* harmony import */ var _utils_validate__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! @/utils/validate */ "./src/utils/validate.ts");
+/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! react/jsx-runtime */ "webpack/container/remote/react/jsx-runtime");
+/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9___default = /*#__PURE__*/__webpack_require__.n(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__);
+
+
+
+
+
+
+
+
+
+
+
+function ReferLandingPage() {
+  var _useState = (0,react__WEBPACK_IMPORTED_MODULE_7__.useState)(''),
+    _useState2 = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_4__["default"])(_useState, 2),
+    inviterId = _useState2[0],
+    setInviterId = _useState2[1];
+  var _useState3 = (0,react__WEBPACK_IMPORTED_MODULE_7__.useState)(''),
+    _useState4 = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_4__["default"])(_useState3, 2),
+    tenantId = _useState4[0],
+    setTenantId = _useState4[1];
+
+  // 模拟品牌数据
+  var brandInfo = {
+    logo: 'https://via.placeholder.com/100x100/0071E3/FFFFFF?text=Logo',
+    name: '云端精装',
+    slogan: '为您打造理想中的家',
+    cases: [{
+      img: 'https://via.placeholder.com/400x300/E5E5EA/999999?text=Case1',
+      title: '绿地云都会 120㎡ 现代简约'
+    }, {
+      img: 'https://via.placeholder.com/400x300/E5E5EA/999999?text=Case2',
+      title: '保利香槟 89㎡ 北欧风情'
+    }]
+  };
+  var _useState5 = (0,react__WEBPACK_IMPORTED_MODULE_7__.useState)({
+      name: '',
+      phone: '',
+      address: ''
+    }),
+    _useState6 = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_4__["default"])(_useState5, 2),
+    form = _useState6[0],
+    setForm = _useState6[1];
+  var _useState7 = (0,react__WEBPACK_IMPORTED_MODULE_7__.useState)(false),
+    _useState8 = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_slicedToArray_js__WEBPACK_IMPORTED_MODULE_4__["default"])(_useState7, 2),
+    loading = _useState8[0],
+    setLoading = _useState8[1];
+  (0,_tarojs_taro__WEBPACK_IMPORTED_MODULE_6__.useLoad)(function (params) {
+    setInviterId(params.inviterId || '');
+    setTenantId(params.tenantId || '');
+  });
+  var update = function update(field) {
+    return function (e) {
+      return setForm(function (prev) {
+        return (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_objectSpread2_js__WEBPACK_IMPORTED_MODULE_3__["default"])((0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_objectSpread2_js__WEBPACK_IMPORTED_MODULE_3__["default"])({}, prev), {}, (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_defineProperty_js__WEBPACK_IMPORTED_MODULE_2__["default"])({}, field, e.detail.value));
+      });
+    };
+  };
+  var handleSubmit = /*#__PURE__*/function () {
+    var _ref = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_asyncToGenerator_js__WEBPACK_IMPORTED_MODULE_1__["default"])(/*#__PURE__*/(0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__["default"])().m(function _callee() {
+      var payload;
+      return (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_regenerator_js__WEBPACK_IMPORTED_MODULE_0__["default"])().w(function (_context) {
+        while (1) switch (_context.n) {
+          case 0:
+            if ((0,_utils_validate__WEBPACK_IMPORTED_MODULE_8__.isNotEmpty)(form.name)) {
+              _context.n = 1;
+              break;
+            }
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().showToast({
+              title: '请输入您的称呼',
+              icon: 'none'
+            });
+            return _context.a(2);
+          case 1:
+            if ((0,_utils_validate__WEBPACK_IMPORTED_MODULE_8__.isValidPhone)(form.phone)) {
+              _context.n = 2;
+              break;
+            }
+            _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().showToast({
+              title: '请输入正确的手机号',
+              icon: 'none'
+            });
+            return _context.a(2);
+          case 2:
+            setLoading(true);
+            try {
+              // 模拟提交线索
+              payload = (0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_objectSpread2_js__WEBPACK_IMPORTED_MODULE_3__["default"])((0,C_Users_bigey_Documents_Antigravity_L2C_miniprogram_taro_node_modules_babel_runtime_helpers_esm_objectSpread2_js__WEBPACK_IMPORTED_MODULE_3__["default"])({}, form), {}, {
+                inviterId: inviterId,
+                tenantId: tenantId,
+                source: 'REFERRAL'
+              }); // const res = await api.post('/leads', { data: payload })
+              setTimeout(function () {
+                setLoading(false);
+                _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().showToast({
+                  title: '预约成功，客服将尽快联系您',
+                  icon: 'none',
+                  duration: 2500
+                });
+                setForm({
+                  name: '',
+                  phone: '',
+                  address: ''
+                });
+              }, 1000);
+            } catch (err) {
+              setLoading(false);
+              _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().showToast({
+                title: '网络错误，请重试',
+                icon: 'none'
+              });
+            }
+          case 3:
+            return _context.a(2);
+        }
+      }, _callee);
+    }));
+    return function handleSubmit() {
+      return _ref.apply(this, arguments);
+    };
+  }();
+  var handleGoHome = function handleGoHome() {
+    _tarojs_taro__WEBPACK_IMPORTED_MODULE_6___default().switchTab({
+      url: '/pages/index/index'
+    });
+  };
+  return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+    className: "refer-landing-page",
+    children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.ScrollView, {
+      scrollY: true,
+      className: "content-scroll",
+      children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+        className: "hero-section",
+        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Image, {
+          className: "brand-logo",
+          src: brandInfo.logo,
+          mode: "aspectFit"
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+          className: "brand-name",
+          children: brandInfo.name
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+          className: "brand-slogan",
+          children: brandInfo.slogan
+        })]
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+        className: "form-card",
+        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+          className: "card-title",
+          children: "\u9884\u7EA6\u514D\u8D39\u91CF\u5C3A\u4E0E\u8BBE\u8BA1"
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+          className: "form-item",
+          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+            className: "label",
+            children: "\u60A8\u7684\u79F0\u547C"
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Input, {
+            className: "input-field",
+            placeholder: "\u5982\uFF1A\u5F20\u5148\u751F / \u674E\u5973\u58EB",
+            value: form.name,
+            onInput: update('name')
+          })]
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+          className: "form-item",
+          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+            className: "label",
+            children: "\u8054\u7CFB\u7535\u8BDD"
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Input, {
+            className: "input-field",
+            type: "number",
+            maxlength: 11,
+            placeholder: "\u8BF7\u8F93\u5165\u624B\u673A\u53F7",
+            value: form.phone,
+            onInput: update('phone')
+          })]
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+          className: "form-item",
+          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+            className: "label",
+            children: "\u623F\u5C4B\u5730\u5740"
+          }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Input, {
+            className: "input-field",
+            placeholder: "\u5982\uFF1A\u5317\u4EAC\u5E02\u671D\u9633\u533A\u7EFF\u5730\u4E91\u90FD\u4F1A",
+            value: form.address,
+            onInput: update('address')
+          })]
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Button, {
+          className: "submit-btn",
+          loading: loading,
+          disabled: loading,
+          onClick: handleSubmit,
+          children: "\u7ACB\u5373\u9884\u7EA6"
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+          className: "privacy-text",
+          children: "\u70B9\u51FB\u9884\u7EA6\u5373\u8868\u793A\u60A8\u540C\u610F\u6211\u4EEC\u7684\u300A\u9690\u79C1\u534F\u8BAE\u300B\uFF0C\u6211\u4EEC\u5C06\u4E25\u683C\u4FDD\u62A4\u60A8\u7684\u4FE1\u606F\u5B89\u5168\u3002"
+        })]
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+        className: "cases-section",
+        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+          className: "section-title",
+          children: "\u7CBE\u9009\u6848\u4F8B"
+        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+          className: "case-list",
+          children: brandInfo.cases.map(function (item, idx) {
+            return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsxs)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+              className: "case-card",
+              children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Image, {
+                className: "case-img",
+                src: item.img,
+                mode: "aspectFill"
+              }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+                className: "case-title",
+                children: item.title
+              })]
+            }, idx);
+          })
+        })]
+      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+        className: "safe-area-bottom"
+      })]
+    }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.View, {
+      className: "float-home-btn",
+      onClick: handleGoHome,
+      children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_9__.jsx)(_tarojs_components__WEBPACK_IMPORTED_MODULE_5__.Text, {
+        children: "\u8FD4\u56DE\u9996\u9875"
+      })
+    })]
+  });
+}
+
+/***/ }),
+
+/***/ "./src/packageCustomer/refer-landing/index.tsx":
+/*!*****************************************************!*\
+  !*** ./src/packageCustomer/refer-landing/index.tsx ***!
+  \*****************************************************/
+/***/ (function(__unused_webpack_module, __unused_webpack___webpack_exports__, __webpack_require__) {
+
+/* harmony import */ var _tarojs_runtime__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @tarojs/runtime */ "webpack/container/remote/@tarojs/runtime");
+/* harmony import */ var _tarojs_runtime__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_tarojs_runtime__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _node_modules_tarojs_taro_loader_lib_entry_cache_js_name_packageCustomer_refer_landing_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! !!../../../node_modules/@tarojs/taro-loader/lib/entry-cache.js?name=packageCustomer/refer-landing/index!./index.tsx */ "./node_modules/@tarojs/taro-loader/lib/entry-cache.js?name=packageCustomer/refer-landing/index!./src/packageCustomer/refer-landing/index.tsx");
+
+
+var config = {"navigationBarTitleText":"品牌体验","backgroundColor":"#FFFFFF","navigationBarBackgroundColor":"#FFFFFF"};
+
+
+
+var taroOption = (0,_tarojs_runtime__WEBPACK_IMPORTED_MODULE_0__.createPageConfig)(_node_modules_tarojs_taro_loader_lib_entry_cache_js_name_packageCustomer_refer_landing_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"], 'packageCustomer/refer-landing/index', {root:{cn:[]}}, config || {})
+if (_node_modules_tarojs_taro_loader_lib_entry_cache_js_name_packageCustomer_refer_landing_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"] && _node_modules_tarojs_taro_loader_lib_entry_cache_js_name_packageCustomer_refer_landing_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"].behaviors) {
+  taroOption.behaviors = (taroOption.behaviors || []).concat(_node_modules_tarojs_taro_loader_lib_entry_cache_js_name_packageCustomer_refer_landing_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"].behaviors)
+}
+var inst = Page(taroOption)
+
+
+
+/* unused harmony default export */ var __WEBPACK_DEFAULT_EXPORT__ = (_node_modules_tarojs_taro_loader_lib_entry_cache_js_name_packageCustomer_refer_landing_index_index_tsx__WEBPACK_IMPORTED_MODULE_1__["default"]);
+
+
+/***/ })
+
+},
+/******/ function(__webpack_require__) { // webpackRuntimeModules
+/******/ var __webpack_exec__ = function(moduleId) { return __webpack_require__(__webpack_require__.s = moduleId); }
+/******/ __webpack_require__.O(0, ["taro","vendors","common"], function() { return __webpack_exec__("./src/packageCustomer/refer-landing/index.tsx"); });
+/******/ var __webpack_exports__ = __webpack_require__.O();
+/******/ }
+]);
+//# sourceMappingURL=index.js.map

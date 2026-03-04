@@ -1,0 +1,36 @@
+import { db } from './src/server/db';
+import { users } from './src/server/db/schema';
+import { eq } from 'drizzle-orm';
+import bcrypt from 'bcryptjs';
+
+async function main() {
+    try {
+        const admin = await db.query.users.findFirst({
+            where: eq(users.phone, '13800000001')
+        });
+
+        if (admin) {
+            console.log('Test admin user exists:', admin.id);
+            const hashedPassword = await bcrypt.hash('123456', 10);
+            await db.update(users).set({ password: hashedPassword }).where(eq(users.phone, '13800000001'));
+            console.log('Password reset to 123456');
+        } else {
+            console.log('Test admin user does NOT exist. Creating...');
+            const hashedPassword = await bcrypt.hash('123456', 10);
+            await db.insert(users).values({
+                id: 'admin_test_1',
+                phone: '13800000001',
+                password: hashedPassword,
+                name: '测试管理员',
+                role: 'ADMIN',
+                status: 'ACTIVE'
+            });
+            console.log('Test admin created.');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+    }
+    process.exit(0);
+}
+
+main();

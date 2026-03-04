@@ -5,7 +5,13 @@ const log = createLogger('mobile:tasks:install-accept');
 import { db } from '@/shared/api/db';
 import { installTasks } from '@/shared/api/schema';
 import { eq, and } from 'drizzle-orm';
-import { apiSuccess, apiError, apiNotFound, apiForbidden } from '@/shared/lib/api-response';
+import {
+  apiSuccess,
+  apiNotFound,
+  apiForbidden,
+  apiBadRequest,
+  apiServerError,
+} from '@/shared/lib/api-response';
 import { authenticateMobile, requireWorker } from '@/shared/middleware/mobile-auth';
 import { AuditService } from '@/shared/services/audit-service';
 
@@ -32,7 +38,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const { action, reason: _reason } = body;
 
     if (!['accept', 'reject'].includes(action)) {
-      return apiError('无效的操作类型', 400);
+      return apiBadRequest('无效的操作类型');
     }
 
     const task = await db.query.installTasks.findFirst({
@@ -45,7 +51,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     // 状态校验：必须是 PENDING_ACCEPT
     if (task.status !== 'PENDING_ACCEPT') {
-      return apiError(`当前状态(${task.status})无法进行接单/拒单操作`, 400);
+      return apiBadRequest(`当前状态(${task.status})无法进行接单/拒单操作`);
     }
 
     const now = new Date();
@@ -118,6 +124,6 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       { taskId, error: error instanceof Error ? error.message : String(error) },
       error
     );
-    return apiError('操作失败', 500);
+    return apiServerError('操作失败');
   }
 }

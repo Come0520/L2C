@@ -1,1 +1,245 @@
-.refer-share-page{background-color:#f2f2f7;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;min-height:100vh}.refer-share-page .content-scroll{-webkit-flex:1;-ms-flex:1;flex:1;height:100vh}.refer-share-page .share-banner{background:-webkit-linear-gradient(315deg,#0071e3,#00c6ff);background:linear-gradient(135deg,#0071e3,#00c6ff);border-bottom-left-radius:40rpx;border-bottom-right-radius:40rpx;color:#fff;margin-bottom:48rpx;padding:80rpx 40rpx;text-align:center}.refer-share-page .share-banner .banner-title{display:block;font-size:56rpx;font-weight:800;margin-bottom:16rpx;text-shadow:0 4rpx 12rpx rgba(0,0,0,.1)}.refer-share-page .share-banner .banner-subtitle{display:block;font-size:30rpx;opacity:.9}.refer-share-page .stats-card{background-color:#fff;border-radius:28rpx;-webkit-box-shadow:0 1rpx 4rpx rgba(0,0,0,.05);box-shadow:0 1rpx 4rpx rgba(0,0,0,.05);display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-justify-content:space-around;margin:-60rpx 24rpx 24rpx;padding:32rpx;position:relative;z-index:10;-ms-flex-pack:distribute;-webkit-align-items:center;justify-content:space-around;-ms-flex-align:center;align-items:center}.refer-share-page .stats-card .stat-item{-webkit-align-items:center;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;-ms-flex-align:center;align-items:center}.refer-share-page .stats-card .stat-item .num{color:#0071e3;font-family:SF Pro Display,sans-serif;font-size:44rpx;font-weight:700;margin-bottom:8rpx}.refer-share-page .stats-card .stat-item .label{color:#6e6e73;font-size:24rpx}.refer-share-page .stats-card .divider{background-color:rgba(60,60,67,.1);height:60rpx;width:1rpx}.refer-share-page .action-card{background-color:#fff;border-radius:28rpx;-webkit-box-shadow:0 1rpx 4rpx rgba(0,0,0,.05);box-shadow:0 1rpx 4rpx rgba(0,0,0,.05);margin:0 24rpx 24rpx;padding:48rpx 24rpx}.refer-share-page .action-card .btn-wechat{-webkit-align-items:center;background-color:#07c160;border-radius:100rpx;color:#fff;display:-webkit-flex;display:-ms-flexbox;display:flex;height:88rpx;-ms-flex-align:center;align-items:center;-webkit-justify-content:center;-ms-flex-pack:center;font-size:32rpx;font-weight:600;justify-content:center;margin-bottom:24rpx}.refer-share-page .action-card .btn-wechat::after{border:none}.refer-share-page .action-card .btn-wechat:active{opacity:.8}.refer-share-page .action-card .btn-poster{-webkit-align-items:center;background-color:#fff;border:2rpx solid #0071e3;border-radius:100rpx;color:#0071e3;display:-webkit-flex;display:-ms-flexbox;display:flex;height:88rpx;-ms-flex-align:center;align-items:center;-webkit-justify-content:center;-ms-flex-pack:center;font-size:32rpx;font-weight:600;justify-content:center}.refer-share-page .action-card .btn-poster::after{border:none}.refer-share-page .action-card .btn-poster:active{background-color:rgba(0,113,227,.05)}.refer-share-page .records-card{background-color:#fff;border-radius:28rpx;-webkit-box-shadow:0 1rpx 4rpx rgba(0,0,0,.05);box-shadow:0 1rpx 4rpx rgba(0,0,0,.05);margin:0 24rpx 24rpx;padding:24rpx}.refer-share-page .records-card .section-title{border-bottom:1rpx solid rgba(60,60,67,.1);color:#1d1d1f;display:block;font-size:30rpx;font-weight:600;margin-bottom:24rpx;padding-bottom:16rpx}.refer-share-page .records-card .record-list .record-item{display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-justify-content:space-between;-ms-flex-pack:justify;-webkit-align-items:center;justify-content:space-between;-ms-flex-align:center;align-items:center;padding:16rpx 0}.refer-share-page .records-card .record-list .record-item .left{-webkit-align-items:center;display:-webkit-flex;display:-ms-flexbox;display:flex;-ms-flex-align:center;align-items:center}.refer-share-page .records-card .record-list .record-item .left .avatar{-webkit-align-items:center;background-color:rgba(0,113,227,.1);border-radius:50%;color:#0071e3;display:-webkit-flex;display:-ms-flexbox;display:flex;height:72rpx;width:72rpx;-ms-flex-align:center;align-items:center;-webkit-justify-content:center;-ms-flex-pack:center;font-size:30rpx;font-weight:600;justify-content:center;margin-right:16rpx}.refer-share-page .records-card .record-list .record-item .left .info{display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column}.refer-share-page .records-card .record-list .record-item .left .info .name{color:#1d1d1f;font-size:30rpx;font-weight:500;margin-bottom:4rpx}.refer-share-page .records-card .record-list .record-item .left .info .time{color:#6e6e73;font-size:20rpx}.refer-share-page .records-card .record-list .record-item .status{font-size:24rpx;font-weight:500}.refer-share-page .records-card .record-list .record-item .status.success{color:#34c759}.refer-share-page .records-card .record-list .record-item .status.pending{color:#ff9500}.refer-share-page .records-card .empty{color:#aeaeb2;font-size:24rpx;padding:40rpx 0;text-align:center}
+@charset "UTF-8";/*!*****************************************************************************************************************************************************************************************************************************************************************************************************************************************!*\
+  !*** css ./node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[1].oneOf[2].use[1]!./node_modules/postcss-loader/dist/cjs.js??ruleSet[1].rules[1].oneOf[2].use[2]!./node_modules/resolve-url-loader/index.js!./node_modules/sass-loader/dist/cjs.js??ruleSet[1].rules[1].oneOf[2].use[4]!./src/packageCustomer/refer-share/index.scss ***!
+  \*****************************************************************************************************************************************************************************************************************************************************************************************************************************************/
+
+/* ====================================================
+ * Apple Design System - 变量与常量定义
+ *
+ * @description 提取最核心的 iOS 18 和 Apple 官网设计规范。
+ * 所有 px 值在 Taro 构建时自动 1:1 转为 rpx (designWidth=750)。
+ * 因此这里的 px 值 = rpx 值，需按真实小程序比例书写。
+ *
+ * 参考：750rpx = iPhone 6/7/8 屏幕宽度 (375pt × 2)
+ *        1rpx ≈ 0.5pt
+ *
+ * ==================================================== */
+.refer-share-page {
+  background-color: #F2F2F7;
+  min-height: 100vh;
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-flex-direction: column;
+      -ms-flex-direction: column;
+          flex-direction: column;
+}
+.refer-share-page .content-scroll {
+  -webkit-flex: 1;
+      -ms-flex: 1;
+          flex: 1;
+  height: 100vh;
+}
+.refer-share-page .share-banner {
+  background: -webkit-linear-gradient(315deg, #0071E3 0%, #00C6FF 100%);
+  background: linear-gradient(135deg, #0071E3 0%, #00C6FF 100%);
+  padding: 80rpx 40rpx;
+  color: #fff;
+  text-align: center;
+  border-bottom-left-radius: 40rpx;
+  border-bottom-right-radius: 40rpx;
+  margin-bottom: 48rpx;
+}
+.refer-share-page .share-banner .banner-title {
+  font-size: 56rpx;
+  font-weight: 800;
+  display: block;
+  margin-bottom: 16rpx;
+  text-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.1);
+}
+.refer-share-page .share-banner .banner-subtitle {
+  font-size: 30rpx;
+  opacity: 0.9;
+  display: block;
+}
+.refer-share-page .stats-card {
+  background-color: #FFFFFF;
+  margin: -60rpx 24rpx 24rpx;
+  border-radius: 28rpx;
+  padding: 32rpx;
+  -webkit-box-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.05);
+          box-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.05);
+  position: relative;
+  z-index: 10;
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-justify-content: space-around;
+      -ms-flex-pack: distribute;
+          justify-content: space-around;
+  -webkit-align-items: center;
+      -ms-flex-align: center;
+          align-items: center;
+}
+.refer-share-page .stats-card .stat-item {
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-flex-direction: column;
+      -ms-flex-direction: column;
+          flex-direction: column;
+  -webkit-align-items: center;
+      -ms-flex-align: center;
+          align-items: center;
+}
+.refer-share-page .stats-card .stat-item .num {
+  font-size: 44rpx;
+  font-weight: 700;
+  color: #0071E3;
+  font-family: "SF Pro Display", sans-serif;
+  margin-bottom: 8rpx;
+}
+.refer-share-page .stats-card .stat-item .label {
+  font-size: 24rpx;
+  color: #6E6E73;
+}
+.refer-share-page .stats-card .divider {
+  width: 1rpx;
+  height: 60rpx;
+  background-color: rgba(60, 60, 67, 0.1);
+}
+.refer-share-page .action-card {
+  background-color: #FFFFFF;
+  margin: 0 24rpx 24rpx;
+  border-radius: 28rpx;
+  padding: 48rpx 24rpx;
+  -webkit-box-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.05);
+          box-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.05);
+}
+.refer-share-page .action-card .btn-wechat {
+  background-color: #07C160;
+  color: #fff;
+  border-radius: 100rpx;
+  height: 88rpx;
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-align-items: center;
+      -ms-flex-align: center;
+          align-items: center;
+  -webkit-justify-content: center;
+      -ms-flex-pack: center;
+          justify-content: center;
+  font-size: 32rpx;
+  font-weight: 600;
+  margin-bottom: 24rpx;
+}
+.refer-share-page .action-card .btn-wechat::after {
+  border: none;
+}
+.refer-share-page .action-card .btn-wechat:active {
+  opacity: 0.8;
+}
+.refer-share-page .action-card .btn-poster {
+  background-color: #fff;
+  color: #0071E3;
+  border: 2rpx solid #0071E3;
+  border-radius: 100rpx;
+  height: 88rpx;
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-align-items: center;
+      -ms-flex-align: center;
+          align-items: center;
+  -webkit-justify-content: center;
+      -ms-flex-pack: center;
+          justify-content: center;
+  font-size: 32rpx;
+  font-weight: 600;
+}
+.refer-share-page .action-card .btn-poster::after {
+  border: none;
+}
+.refer-share-page .action-card .btn-poster:active {
+  background-color: rgba(0, 113, 227, 0.05);
+}
+.refer-share-page .records-card {
+  background-color: #FFFFFF;
+  margin: 0 24rpx 24rpx;
+  border-radius: 28rpx;
+  padding: 24rpx;
+  -webkit-box-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.05);
+          box-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.05);
+}
+.refer-share-page .records-card .section-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1D1D1F;
+  display: block;
+  margin-bottom: 24rpx;
+  padding-bottom: 16rpx;
+  border-bottom: 1rpx solid rgba(60, 60, 67, 0.1);
+}
+.refer-share-page .records-card .record-list .record-item {
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-justify-content: space-between;
+      -ms-flex-pack: justify;
+          justify-content: space-between;
+  -webkit-align-items: center;
+      -ms-flex-align: center;
+          align-items: center;
+  padding: 16rpx 0;
+}
+.refer-share-page .records-card .record-list .record-item .left {
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-align-items: center;
+      -ms-flex-align: center;
+          align-items: center;
+}
+.refer-share-page .records-card .record-list .record-item .left .avatar {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 50%;
+  background-color: rgba(0, 113, 227, 0.1);
+  color: #0071E3;
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-align-items: center;
+      -ms-flex-align: center;
+          align-items: center;
+  -webkit-justify-content: center;
+      -ms-flex-pack: center;
+          justify-content: center;
+  font-size: 30rpx;
+  font-weight: 600;
+  margin-right: 16rpx;
+}
+.refer-share-page .records-card .record-list .record-item .left .info {
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-flex-direction: column;
+      -ms-flex-direction: column;
+          flex-direction: column;
+}
+.refer-share-page .records-card .record-list .record-item .left .info .name {
+  font-size: 30rpx;
+  color: #1D1D1F;
+  font-weight: 500;
+  margin-bottom: 4rpx;
+}
+.refer-share-page .records-card .record-list .record-item .left .info .time {
+  font-size: 20rpx;
+  color: #6E6E73;
+}
+.refer-share-page .records-card .record-list .record-item .status {
+  font-size: 24rpx;
+  font-weight: 500;
+}
+.refer-share-page .records-card .record-list .record-item .status.success {
+  color: #34C759;
+}
+.refer-share-page .records-card .record-list .record-item .status.pending {
+  color: #FF9500;
+}
+.refer-share-page .records-card .empty {
+  padding: 40rpx 0;
+  text-align: center;
+  color: #AEAEB2;
+  font-size: 24rpx;
+}

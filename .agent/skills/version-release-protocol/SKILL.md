@@ -7,7 +7,9 @@ description: Use when you are ready to release a new version, update the honor w
 
 ## Overview
 
-标准化的6步版本发布协议，覆盖从测试到 ECS 部署的全链路闭环。确保代码正确性、版本历史可追溯、以及安全的生产环境部署。
+标准化的 **7 步版本发布协议**，覆盖从**质量门禁**到 ECS 部署的全链路闭环。确保系统稳定性、代码正确性、版本历史可追溯、以及安全的生产环境部署。
+
+**核心升级**：在构建部署之前，新增 Step 0 质量门禁，联动 4 个专业 Skill 进行深度验证。
 
 ## When to Use
 
@@ -19,10 +21,11 @@ description: Use when you are ready to release a new version, update the honor w
 
 - "回滚至上一版"、"版本回滚"、"新版有问题"、"退回上一版"
 
-→ 收到回滚口令时，**跳过6步协议，直接执行 [紧急回滚](#🚨-紧急回滚新版有问题时) 章节**。
+→ 收到回滚口令时，**跳过7步协议，直接执行 [紧急回滚](#🚨-紧急回滚新版有问题时) 章节**。
 
 ## Red Flags - STOP and Start Over
 
+- **跳过质量门禁：** "门禁太慢了，直接部署吧" → 不行。Step 0 所有硬性门禁必须通过。
 - **跳过测试：** "改动很小，直接部署吧" → 不行。测试必须全部通过。
 - **忽略构建报错：** "只有几个类型警告，可以强行打包" → 绝对不行。必须在本地完整运行 `pnpm run build` 且做到 0 报错，否则绝对禁止部署。
 - **在 ECS 上构建：** "我在服务器上跑 `pnpm build`" → 绝对不行。ECS 只有 4GB 内存，会 OOM 崩溃。
@@ -31,10 +34,135 @@ description: Use when you are ready to release a new version, update the honor w
 - **不备份旧产物：** "直接覆盖 tar 包" → 不行。必须先重命名旧备份以支持秒级回滚。
 - **跳过 Docker build：** "直接 `docker-compose up -d`" → 不行。必须先 `build --no-cache` 重建镜像，否则新代码不生效。
 - **schema 改动未 generate：** "虽然改了 schema.ts，但没有执行 `pnpm db:generate`" → 绝对不行。每次修改 `src/shared/api/schema/` 下的任何文件，必须立即运行 `pnpm db:generate` 生成迁移 SQL 文件，并将生成的文件一并提交到 Git，否则 ECS 上的 db-migrate 容器将无法感知变更。
+- **忽略门禁 FAIL：** "只有一个模块低于 L3，无所谓" → 不行。门禁 FAIL 就是 FAIL。
+- **跳过 API 检查：** "API 应该没问题" → 不行。"应该" 不是证据，必须跑 `api-health-audit`。
 
-## The 6-Step Protocol
+## The 7-Step Protocol
 
 严格按顺序执行，禁止跳步。
+
+---
+
+### Step 0: 质量门禁 (Quality Gate) — 编排器
+
+> **此步骤为发布前的深度审计，由编排器依次调度 4 个专业 Skill。**
+> **执行原则**：遵循 `verification-before-completion` 技能 — 证据先于主张，所有声明必须有验证输出支撑。
+
+#### Gate 0.1: 构建完整性 🔧
+
+**执行方式**：直接运行命令
+
+| #     | 检查项          | 通过标准                         | 验证命令                        |
+| ----- | --------------- | -------------------------------- | ------------------------------- |
+| 0.1.1 | TypeScript 编译 | `pnpm run build` **0 error**     | `pnpm run build`                |
+| 0.1.2 | ESLint 代码规范 | `pnpm lint` **0 error**          | `pnpm lint`                     |
+| 0.1.3 | 单元测试        | `pnpm run test:run` **全部通过** | `pnpm run test:run`             |
+| 0.1.4 | 依赖安全        | **0 high/critical 漏洞**         | `pnpm audit --audit-level=high` |
+
+🚫 **硬性门禁**：0.1.1 或 0.1.3 失败 → 中止发布
+
+#### Gate 0.2: 数据层完整性 🗄️
+
+**执行方式**：直接检查
+
+| #     | 检查项          | 通过标准                                    | 验证方式                                                |
+| ----- | --------------- | ------------------------------------------- | ------------------------------------------------------- |
+| 0.2.1 | Schema 变更同步 | 若 schema 有变更，`pnpm db:generate` 已执行 | `git diff --name-only HEAD~5 -- src/shared/api/schema/` |
+| 0.2.2 | 迁移文件完整    | `drizzle/` 中迁移编号连续                   | `ls drizzle/`                                           |
+| 0.2.3 | 破坏性变更      | 删列/改类型需用户书面确认                   | 人工确认                                                |
+
+🚫 **硬性门禁**：0.2.1 未执行 → 中止发布
+
+#### Gate 0.3: 认证权限审计 🔐
+
+**执行方式**：📡 **调用 `auth-security-audit` Skill**
+
+调用时展示以下引导语：
+
+> "正在执行 Gate 0.3：认证权限审计。调用 `auth-security-audit` Skill 进行 5 大检查点验证..."
+
+**接收返回**：
+
+- `auth-security-audit` 返回 **PASS** → 继续
+- `auth-security-audit` 返回 **FAIL** → 🚫 **中止发布**，展示失败详情
+
+#### Gate 0.4: API 全量审计 🌐
+
+**执行方式**：📡 **调用 `api-health-audit` Skill**
+
+调用时展示以下引导语：
+
+> "正在执行 Gate 0.4：API 全量审计。调用 `api-health-audit` Skill 批量验证所有 API 端点..."
+
+**接收返回**：
+
+- `api-health-audit` 返回 **PASS** → 继续
+- `api-health-audit` 返回 **FAIL** → 🚫 **中止发布**，展示失败的 API 清单
+
+#### Gate 0.5: 变更模块审计 📊
+
+**执行方式**：📡 **调用 `module-maturity-assessment` Skill（发布门禁模式）** + 📡 **调用 `module-audit` Skill（Release Checkpoint Mode）**
+
+**步骤**：
+
+1. 先调用 `module-maturity-assessment`（Batch Release Scan），获取变更模块的成熟度评分
+2. 再调用 `module-audit`（Release Checkpoint Mode），对变更模块做 1 轮八维扫描
+
+**接收返回**：
+
+- 所有变更模块 ≥ L3 且无 Critical 问题 → 继续
+- 任何变更模块 < L3 → 🚫 **中止发布**
+- 发现 Critical 级安全/DB 问题 → 🚫 **中止发布**
+
+#### Gate 0.6: 用户体验验证 🎨
+
+**执行方式**：浏览器检查 + 代码审查
+
+| #     | 检查项   | 通过标准                                     | 验证方式   |
+| ----- | -------- | -------------------------------------------- | ---------- |
+| 0.6.1 | 错误熔断 | `error.tsx` 和 `global-error.tsx` 存在且有效 | 代码检查   |
+| 0.6.2 | 加载状态 | 核心页面有 Loading/Skeleton 组件             | 代码检查   |
+| 0.6.3 | 空状态   | 列表页面有空状态引导                         | 代码检查   |
+| 0.6.4 | 首屏性能 | 工作台首屏加载 ≤ 3 秒                        | 浏览器测试 |
+
+🚫 **硬性门禁**：0.6.1 失败 → 中止发布
+⚠️ **软性**：0.6.2-0.6.4 记录不阻断
+
+#### Gate 0.7: 部署容灾确认 🛡️
+
+**执行方式**：人工确认 + 命令验证
+
+| #     | 检查项       | 通过标准                      | 验证方式                                            |
+| ----- | ------------ | ----------------------------- | --------------------------------------------------- |
+| 0.7.1 | 环境变量同步 | 用户确认新增变量已同步 ECS    | 主动询问用户                                        |
+| 0.7.2 | 回滚可用     | ECS 上有 ≥ 1 个 backup tar 包 | `ssh ecs "ls /root/L2C/next-build-backup-*.tar.gz"` |
+| 0.7.3 | 磁盘空间     | ECS 磁盘使用率 < 90%          | `ssh ecs "df -h /"`                                 |
+
+🚫 **硬性门禁**：0.7.1 未确认 → 中止发布
+
+---
+
+**Step 0 总结输出**：
+
+```markdown
+# 质量门禁报告 (Quality Gate Report)
+
+| Gate | 名称         |  结果   | 详情                              |
+| :--: | :----------- | :-----: | :-------------------------------- |
+| 0.1  | 构建完整性   | ✅ PASS | build 0 error, test 3/3 pass      |
+| 0.2  | 数据层完整性 | ✅ PASS | 无 schema 变更                    |
+| 0.3  | 认证权限     | ✅ PASS | auth-security-audit: 23/23 通过   |
+| 0.4  | API 可用性   | ✅ PASS | api-health-audit: 27/27 ✅        |
+| 0.5  | 变更模块     | ✅ PASS | orders(L3), leads(L3), 0 Critical |
+| 0.6  | 用户体验     | ✅ PASS | 错误页有效, 1 个加载态建议        |
+| 0.7  | 部署容灾     | ✅ PASS | 用户已确认 env, 备份可用          |
+
+## 门禁判定：✅ ALL PASS — 允许进入 Step 1
+```
+
+全部 Gate 通过后，向用户汇报质量门禁通过，继续执行 Step 1。
+
+---
 
 ### Step 1: 验证与预检 (Testing, Env, DB)
 

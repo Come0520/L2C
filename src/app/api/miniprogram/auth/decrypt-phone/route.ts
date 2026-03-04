@@ -7,7 +7,7 @@ import { NextRequest } from 'next/server';
 import { db } from '@/shared/api/db';
 import { users, tenantMembers } from '@/shared/api/schema';
 import { eq, and } from 'drizzle-orm';
-import { apiSuccess, apiError } from '@/shared/lib/api-response';
+import { apiSuccess, apiBadRequest, apiServerError, apiForbidden } from '@/shared/lib/api-response';
 import { logger } from '@/shared/lib/logger';
 import { generateMiniprogramToken, generateTempLoginToken } from '../../auth-utils';
 import { DecryptPhoneSchema } from '../../miniprogram-schemas';
@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
     // Zod 输入验证
     const parsed = DecryptPhoneSchema.safeParse(body);
     if (!parsed.success) {
-      return apiError(parsed.error.issues[0].message, 400);
+      return apiBadRequest(parsed.error.issues[0].message);
     }
 
     const { code, openId } = parsed.data;
@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
     const phoneNumber = phoneInfo.phoneNumber || phoneInfo.purePhoneNumber;
 
     if (!phoneNumber) {
-      return apiError('无法获取手机号', 400);
+      return apiBadRequest('无法获取手机号');
     }
 
     logger.info('[DecryptPhone] 手机号解密成功', { route: 'decrypt-phone' });
@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
       });
 
       if (memberships.length === 0) {
-        return apiError('您尚未加入任何企业', 403);
+        return apiForbidden('您尚未加入任何企业');
       }
 
       const { AuditService } = await import('@/shared/services/audit-service');
@@ -172,6 +172,6 @@ export async function POST(request: NextRequest) {
   } catch (error: unknown) {
     logger.error('[DecryptPhone] 手机号解密异常', { route: 'decrypt-phone', error });
     // 安全：不向客户端暴露技术细节
-    return apiError('手机号验证服务异常', 500);
+    return apiServerError('手机号验证服务异常');
   }
 }

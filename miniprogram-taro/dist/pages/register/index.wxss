@@ -1,1 +1,407 @@
-.apple-hero{color:#1d1d1f;font-size:44rpx;font-size:56rpx;font-weight:700;letter-spacing:-.5rpx;letter-spacing:-1rpx;line-height:1.2}.apple-page-title{color:#1d1d1f;font-size:44rpx;font-weight:700;letter-spacing:-.5rpx;line-height:1.2}.apple-title-2{color:#1d1d1f;font-size:40rpx;font-weight:600;letter-spacing:-.3rpx;line-height:1.3}.apple-title-3{color:#1d1d1f;font-size:36rpx;font-weight:600;line-height:1.3}.apple-body{color:#1d1d1f;font-size:28rpx;line-height:1.5}.apple-desc{color:#1d1d1f;color:#6e6e73;font-size:28rpx;line-height:1.5}.apple-caption{color:#6e6e73;font-size:24rpx;letter-spacing:.3rpx}.apple-card{background-color:#fff;border-radius:28rpx;-webkit-box-shadow:0 1rpx 4rpx rgba(0,0,0,.05);box-shadow:0 1rpx 4rpx rgba(0,0,0,.05);overflow:hidden;padding:32rpx 24rpx}.apple-grouped-list{background-color:#fff;border-radius:20rpx;-webkit-box-shadow:0 1rpx 4rpx rgba(0,0,0,.05);box-shadow:0 1rpx 4rpx rgba(0,0,0,.05);margin:0 24rpx 16rpx;overflow:hidden}.apple-list-row{-webkit-align-items:center;display:-webkit-flex;display:-ms-flexbox;display:flex;-ms-flex-align:center;align-items:center;background-color:transparent;min-height:88rpx;padding:0 24rpx;position:relative}.apple-list-row:not(:last-child)::after{background-color:rgba(60,60,67,.1);bottom:0;content:"";height:1rpx;left:24rpx;position:absolute;right:0;-webkit-transform:scaleY(.5);-ms-transform:scaleY(.5);transform:scaleY(.5)}.apple-list-label{color:#1d1d1f;-webkit-flex-shrink:0;font-size:28rpx;font-weight:500;width:160rpx;-ms-flex-negative:0;flex-shrink:0}.apple-list-input{background:transparent;border:none;color:#1d1d1f;-webkit-flex:1;-ms-flex:1;flex:1;font-size:28rpx;height:88rpx;text-align:right}.ph-color{color:#aeaeb2}.apple-btn-primary{background:transparent;border:none;line-height:1;margin:0;outline:none;padding:0;text-align:center}.apple-btn-primary::after{border:none}.apple-btn-primary:active{opacity:.7}.apple-btn-primary[disabled]{opacity:.4;pointer-events:none}.apple-btn-primary{background-color:#0071e3;border-radius:100rpx;color:#fff;font-size:30rpx;font-weight:600;height:88rpx;letter-spacing:.5rpx;line-height:88rpx;width:100%}.apple-btn-secondary{background:transparent;border:none;line-height:1;margin:0;outline:none;padding:0;text-align:center}.apple-btn-secondary::after{border:none}.apple-btn-secondary:active{opacity:.7}.apple-btn-secondary[disabled]{opacity:.4;pointer-events:none}.apple-btn-secondary{background-color:#e0f0ff;border-radius:100rpx;color:#0071e3;font-size:30rpx;font-weight:600;height:88rpx;line-height:88rpx;width:100%}.apple-btn-ghost{background:transparent;border:none;line-height:1;margin:0;outline:none;padding:0;text-align:center}.apple-btn-ghost::after{border:none}.apple-btn-ghost:active{opacity:.7}.apple-btn-ghost[disabled]{opacity:.4;pointer-events:none}.apple-btn-ghost{color:#6e6e73;font-size:28rpx;padding:16rpx}.apple-btn-ghost.primary-color{color:#0071e3}.apple-section-header{color:#6e6e73;display:block;font-size:24rpx;letter-spacing:.3rpx;padding:24rpx 24rpx 8rpx;text-transform:uppercase}.apple-header-padding{padding:32rpx 24rpx 16rpx}.apple-safe-area-bottom{padding-bottom:env(safe-area-inset-bottom)}.text-success{color:#34c759}.text-warning{color:#ff9500}.text-danger{color:#ff3b30}.text-primary{color:#0071e3}.register-page{background:#f2f2f7;-webkit-box-sizing:border-box;box-sizing:border-box;color:#1d1d1f;font-size:28rpx;line-height:1.5;min-height:100vh;padding:0 24rpx calc(env(safe-area-inset-bottom) + 120rpx)}.register-page .page-header{padding:48rpx 8rpx 16rpx}.register-page .page-header .page-title{color:#1d1d1f;display:block;font-size:44rpx;font-size:44px;font-weight:700;letter-spacing:-.5rpx;line-height:1.2;margin-bottom:8rpx}.register-page .page-header .page-desc{color:#6e6e73;display:block;font-size:24rpx;font-size:28rpx;letter-spacing:.3rpx}.register-page .form-group-title{color:#6e6e73;display:block;font-size:24rpx;letter-spacing:.3rpx;margin:24rpx 8rpx 8rpx 28rpx;text-transform:uppercase}.register-page .form-group-title .optional{font-size:80%;font-weight:400}.register-page .form-group{background-color:#fff;border-radius:20rpx;-webkit-box-shadow:0 1rpx 4rpx rgba(0,0,0,.05);box-shadow:0 1rpx 4rpx rgba(0,0,0,.05);margin:0 24rpx 16rpx;overflow:hidden}.register-page .required{color:#ff3b30;margin-left:4rpx}.register-page .picker-input{-webkit-flex:1;-ms-flex:1;flex:1;height:88rpx;line-height:88rpx;text-align:right}.register-page .picker-value{text-align:right;width:100%}.register-page .textarea-row{-webkit-align-items:flex-start;min-height:200rpx;padding:24rpx;-ms-flex-align:start;align-items:flex-start}.register-page .textarea-row .textarea-input{height:160rpx;text-align:left;width:100%}.register-page .strength-bar-wrap{background:#fff;padding:8rpx 24rpx 16rpx 28rpx}.register-page .strength-bar-wrap .strength-bar-bg{background:#f2f2f7;border-radius:3rpx;height:6rpx;margin-bottom:8rpx;overflow:hidden}.register-page .strength-bar-wrap .strength-bar-fill{border-radius:3rpx;height:100%;-webkit-transition:width .3s ease,background-color .3s ease;transition:width .3s ease,background-color .3s ease}.register-page .strength-bar-wrap .strength-text{color:#6e6e73;font-size:24rpx;font-size:24px;font-weight:500;letter-spacing:.3rpx}.register-page .form-footer{margin-top:48rpx;padding:0 16rpx}.register-page .form-footer .error-box{margin-bottom:24rpx;text-align:center}.register-page .form-footer .error-box .error-text{color:#6e6e73;color:#ff3b30;font-size:24rpx;letter-spacing:.3rpx}
+/*!****************************************************************************************************************************************************************************************************************************************************************************************************************************!*\
+  !*** css ./node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[1].oneOf[2].use[1]!./node_modules/postcss-loader/dist/cjs.js??ruleSet[1].rules[1].oneOf[2].use[2]!./node_modules/resolve-url-loader/index.js!./node_modules/sass-loader/dist/cjs.js??ruleSet[1].rules[1].oneOf[2].use[4]!./src/pages/register/index.scss ***!
+  \****************************************************************************************************************************************************************************************************************************************************************************************************************************/
+@charset "UTF-8";
+/* ====================================================
+ * Apple Design System - 桶文件 (Barrel)
+ *
+ * @description 统一转发整个设计系统的所有成员（变量、Mixin、工具类）。
+ * 外部文件只需 @use './styles' as * 即可访问所有成员。
+ * ==================================================== */
+/* ====================================================
+ * Apple Design System - 变量与常量定义
+ *
+ * @description 提取最核心的 iOS 18 和 Apple 官网设计规范。
+ * 所有 px 值在 Taro 构建时自动 1:1 转为 rpx (designWidth=750)。
+ * 因此这里的 px 值 = rpx 值，需按真实小程序比例书写。
+ *
+ * 参考：750rpx = iPhone 6/7/8 屏幕宽度 (375pt × 2)
+ *        1rpx ≈ 0.5pt
+ *
+ * ==================================================== */
+/* ====================================================
+ * Apple Design System - 桶文件 (Barrel)
+ *
+ * @description 统一转发整个设计系统的所有成员（变量、Mixin、工具类）。
+ * 外部文件只需 @use './styles' as * 即可访问所有成员。
+ * ==================================================== */
+/* ====================================================
+ * Apple Design System - 核心 Mixin 库
+ *
+ * @description 将高频出现的 UI 组合封装为 Mixin，方便复用或二次扩展。
+ * 所有尺寸已适配微信小程序 750rpx 基准（px = rpx）。
+ * ==================================================== */
+/* ====================================================
+ * Apple Design System - 桶文件 (Barrel)
+ *
+ * @description 统一转发整个设计系统的所有成员（变量、Mixin、工具类）。
+ * 外部文件只需 @use './styles' as * 即可访问所有成员。
+ * ==================================================== */
+/* ====================================================
+ * Apple Design System - 公共类 (Utilities)
+ *
+ * @description 根据 Mixins 导出的全局原子级或组件级 Class。
+ * 供全项目在 .tsx 中直接加 className 使用，彻底避免硬编码。
+ * ==================================================== */
+/* ── Typography (文字排版) ── */
+.apple-hero {
+  font-size: 44rpx;
+  font-weight: 700;
+  color: #1D1D1F;
+  letter-spacing: -0.5rpx;
+  line-height: 1.2;
+  font-size: 56rpx;
+  letter-spacing: -1rpx;
+}
+.apple-page-title {
+  font-size: 44rpx;
+  font-weight: 700;
+  color: #1D1D1F;
+  letter-spacing: -0.5rpx;
+  line-height: 1.2;
+}
+.apple-title-2 {
+  font-size: 40rpx;
+  font-weight: 600;
+  color: #1D1D1F;
+  letter-spacing: -0.3rpx;
+  line-height: 1.3;
+}
+.apple-title-3 {
+  font-size: 36rpx;
+  font-weight: 600;
+  color: #1D1D1F;
+  line-height: 1.3;
+}
+.apple-body {
+  font-size: 28rpx;
+  color: #1D1D1F;
+  line-height: 1.5;
+}
+.apple-desc {
+  font-size: 28rpx;
+  color: #1D1D1F;
+  line-height: 1.5;
+  color: #6E6E73;
+}
+.apple-caption {
+  font-size: 24rpx;
+  color: #6E6E73;
+  letter-spacing: 0.3rpx;
+}
+/* ── Shapes & Cards (卡片容器) ── */
+.apple-card {
+  background-color: #FFFFFF;
+  border-radius: 28rpx;
+  -webkit-box-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.05);
+          box-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  padding: 32rpx 24rpx;
+}
+/* ── Grouped List Forms (iOS 设置/表单列表) ── */
+.apple-grouped-list {
+  background-color: #FFFFFF;
+  border-radius: 20rpx;
+  -webkit-box-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.05);
+          box-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  margin: 0 24rpx 16rpx;
+}
+.apple-list-row {
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-align-items: center;
+      -ms-flex-align: center;
+          align-items: center;
+  min-height: 88rpx;
+  padding: 0 24rpx 0 24rpx;
+  position: relative;
+  background-color: transparent;
+}
+.apple-list-row:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 24rpx;
+  right: 0;
+  height: 1rpx;
+  background-color: rgba(60, 60, 67, 0.1);
+  -webkit-transform: scaleY(0.5);
+      -ms-transform: scaleY(0.5);
+          transform: scaleY(0.5);
+}
+.apple-list-label {
+  width: 160rpx;
+  font-size: 28rpx;
+  font-weight: 500;
+  color: #1D1D1F;
+  -webkit-flex-shrink: 0;
+      -ms-flex-negative: 0;
+          flex-shrink: 0;
+}
+.apple-list-input {
+  -webkit-flex: 1;
+      -ms-flex: 1;
+          flex: 1;
+  height: 88rpx;
+  font-size: 28rpx;
+  color: #1D1D1F;
+  text-align: right;
+  background: transparent;
+  border: none;
+}
+/* 占位符颜色类 */
+.ph-color {
+  color: #AEAEB2;
+}
+/* ── Buttons (按钮系统) ── */
+.apple-btn-primary {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  outline: none;
+  line-height: 1;
+  text-align: center;
+}
+.apple-btn-primary::after {
+  border: none;
+}
+.apple-btn-primary:active {
+  opacity: 0.7;
+}
+.apple-btn-primary[disabled] {
+  opacity: 0.4;
+  pointer-events: none;
+}
+.apple-btn-primary {
+  width: 100%;
+  height: 88rpx;
+  line-height: 88rpx;
+  background-color: #0071E3;
+  color: #FFFFFF;
+  border-radius: 100rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+  letter-spacing: 0.5rpx;
+}
+.apple-btn-secondary {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  outline: none;
+  line-height: 1;
+  text-align: center;
+}
+.apple-btn-secondary::after {
+  border: none;
+}
+.apple-btn-secondary:active {
+  opacity: 0.7;
+}
+.apple-btn-secondary[disabled] {
+  opacity: 0.4;
+  pointer-events: none;
+}
+.apple-btn-secondary {
+  width: 100%;
+  height: 88rpx;
+  line-height: 88rpx;
+  background-color: #e0f0ff;
+  color: #0071E3;
+  border-radius: 100rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+}
+/* 幽灵/文字按钮 */
+.apple-btn-ghost {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  outline: none;
+  line-height: 1;
+  text-align: center;
+}
+.apple-btn-ghost::after {
+  border: none;
+}
+.apple-btn-ghost:active {
+  opacity: 0.7;
+}
+.apple-btn-ghost[disabled] {
+  opacity: 0.4;
+  pointer-events: none;
+}
+.apple-btn-ghost {
+  color: #6E6E73;
+  font-size: 28rpx;
+  padding: 16rpx;
+}
+.apple-btn-ghost.primary-color {
+  color: #0071E3;
+}
+/* ── Section Header (分组标题) ── */
+.apple-section-header {
+  font-size: 24rpx;
+  color: #6E6E73;
+  letter-spacing: 0.3rpx;
+  display: block;
+  padding: 24rpx 24rpx 8rpx;
+  text-transform: uppercase;
+}
+/* ── Common Layout Utilities ── */
+.apple-header-padding {
+  padding: 32rpx 24rpx 16rpx;
+}
+.apple-safe-area-bottom {
+  padding-bottom: constant(safe-area-inset-bottom);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+/* ── 状态颜色 ── */
+.text-success {
+  color: #34C759;
+}
+.text-warning {
+  color: #FF9500;
+}
+.text-danger {
+  color: #FF3B30;
+}
+.text-primary {
+  color: #0071E3;
+}
+.register-page {
+  min-height: 100vh;
+  background: #F2F2F7;
+  padding: 0 24rpx calc(env(safe-area-inset-bottom) + 120rpx);
+  font-size: 28rpx;
+  color: #1D1D1F;
+  line-height: 1.5;
+  -webkit-box-sizing: border-box;
+          box-sizing: border-box;
+}
+.register-page .page-header {
+  padding: 48rpx 8rpx 16rpx;
+}
+.register-page .page-header .page-title {
+  display: block;
+  font-size: 44rpx;
+  font-weight: 700;
+  color: #1D1D1F;
+  letter-spacing: -0.5rpx;
+  line-height: 1.2;
+  font-size: 44px;
+  margin-bottom: 8rpx;
+}
+.register-page .page-header .page-desc {
+  display: block;
+  font-size: 24rpx;
+  color: #6E6E73;
+  letter-spacing: 0.3rpx;
+  font-size: 28rpx;
+}
+.register-page {
+  /* 组标题：仿 iOS 设置页的 Section Header */
+}
+.register-page .form-group-title {
+  display: block;
+  margin: 24rpx 8rpx 8rpx 28rpx;
+  font-size: 24rpx;
+  color: #6E6E73;
+  letter-spacing: 0.3rpx;
+  text-transform: uppercase;
+}
+.register-page .form-group-title .optional {
+  font-weight: normal;
+  font-size: 80%;
+}
+.register-page {
+  /* iOS Grouped List */
+}
+.register-page .form-group {
+  background-color: #FFFFFF;
+  border-radius: 20rpx;
+  -webkit-box-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.05);
+          box-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  margin: 0 24rpx 16rpx;
+  margin-bottom: 16rpx;
+}
+.register-page .required {
+  color: #FF3B30;
+  margin-left: 4rpx;
+}
+.register-page {
+  /* 覆盖部分定制需求 */
+}
+.register-page .picker-input {
+  -webkit-flex: 1;
+      -ms-flex: 1;
+          flex: 1;
+  height: 88rpx;
+  line-height: 88rpx;
+  text-align: right;
+}
+.register-page .picker-value {
+  width: 100%;
+  text-align: right;
+}
+.register-page .textarea-row {
+  padding: 24rpx 24rpx;
+  min-height: 200rpx;
+  -webkit-align-items: flex-start;
+      -ms-flex-align: start;
+          align-items: flex-start;
+}
+.register-page .textarea-row .textarea-input {
+  width: 100%;
+  height: 160rpx;
+  text-align: left;
+}
+.register-page {
+  /* 密码强度条 */
+}
+.register-page .strength-bar-wrap {
+  padding: 8rpx 24rpx 16rpx 28rpx;
+  background: #FFFFFF;
+}
+.register-page .strength-bar-wrap .strength-bar-bg {
+  height: 6rpx;
+  background: #F2F2F7;
+  border-radius: 3rpx;
+  overflow: hidden;
+  margin-bottom: 8rpx;
+}
+.register-page .strength-bar-wrap .strength-bar-fill {
+  height: 100%;
+  border-radius: 3rpx;
+  -webkit-transition: width 0.3s ease, background-color 0.3s ease;
+  transition: width 0.3s ease, background-color 0.3s ease;
+}
+.register-page .strength-bar-wrap .strength-text {
+  font-size: 24rpx;
+  color: #6E6E73;
+  letter-spacing: 0.3rpx;
+  font-size: 24px;
+  font-weight: 500;
+}
+.register-page {
+  /* 提交栏 */
+}
+.register-page .form-footer {
+  margin-top: 48rpx;
+  padding: 0 16rpx;
+}
+.register-page .form-footer .error-box {
+  margin-bottom: 24rpx;
+  text-align: center;
+}
+.register-page .form-footer .error-box .error-text {
+  font-size: 24rpx;
+  color: #6E6E73;
+  letter-spacing: 0.3rpx;
+  color: #FF3B30;
+}

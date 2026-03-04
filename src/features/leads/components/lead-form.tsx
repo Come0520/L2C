@@ -5,8 +5,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { createLeadSchema, LeadFormValues } from '../schemas';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/shared/ui/form';
 import { Input } from '@/shared/ui/input';
-// PhoneInput 组件在 E2E 测试中与 Playwright 不兼容，
-// 已替换为带有 +86 前缀标签的普通 Input 组件
+import { PhoneInput } from '@/components/ui/phone-input';
+import { AddressInput } from '@/components/ui/address-input';
 import { Button } from '@/shared/ui/button';
 import { Textarea } from '@/shared/ui/textarea';
 import { ChannelPicker } from '@/features/channels/components/channel-picker';
@@ -16,6 +16,9 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { SmartDuplicateCheck } from './SmartDuplicateCheck';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
+import { useTenant } from '@/shared/providers/tenant-provider';
+import { CurrencyInput } from '@/components/ui/currency-input';
+import { SocialInput } from '@/components/ui/social-input';
 
 interface ConflictData {
   type: 'PHONE' | 'ADDRESS';
@@ -41,6 +44,7 @@ const INTENTION_LEVELS = [
 
 export function LeadForm({ initialData, isEdit = false, onSuccess, tenantId }: LeadFormProps) {
   const router = useRouter();
+  const { tenant } = useTenant();
   const [conflictData, setConflictData] = useState<ConflictData | null>(null);
   const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
 
@@ -65,6 +69,39 @@ export function LeadForm({ initialData, isEdit = false, onSuccess, tenantId }: L
   });
 
   const onSubmit = async (values: LeadFormValues) => {
+    const handleServerError = (errorMsg: string, fallbackMsg: string) => {
+      try {
+        const parsed = JSON.parse(errorMsg);
+        if (Array.isArray(parsed)) {
+          parsed.forEach((err) => {
+            if (err.path && err.path[0]) {
+              form.setError(err.path[0] as Extract<keyof LeadFormValues, string>, {
+                type: 'server',
+                message: err.message,
+              });
+            }
+          });
+          return;
+        }
+      } catch {
+        // Fallback to keyword matching
+        if (
+          errorMsg.includes('号码') ||
+          errorMsg.includes('手机') ||
+          errorMsg.includes('电话') ||
+          errorMsg.includes('phone')
+        ) {
+          form.setError('customerPhone', { type: 'server', message: errorMsg });
+          return;
+        }
+        if (errorMsg.includes('名称') || errorMsg.includes('姓名')) {
+          form.setError('customerName', { type: 'server', message: errorMsg });
+          return;
+        }
+      }
+      toast.error(errorMsg || fallbackMsg);
+    };
+
     try {
       if (isEdit) {
         if (!initialData?.id || typeof initialData.id !== 'string') return;
@@ -73,7 +110,7 @@ export function LeadForm({ initialData, isEdit = false, onSuccess, tenantId }: L
           toast.success('线索更新成功');
           onSuccess?.();
         } else {
-          toast.error(res.error || '更新失败');
+          handleServerError(res.error || '', '更新失败');
         }
       } else {
         const res = await createLead(values);
@@ -86,7 +123,8 @@ export function LeadForm({ initialData, isEdit = false, onSuccess, tenantId }: L
           return;
         }
         if (!res.success) {
-          throw new Error(res.error || '创建失败');
+          handleServerError(res.error || '', '创建失败');
+          return;
         }
         toast.success('线索创建成功');
         onSuccess?.();
@@ -136,21 +174,12 @@ export function LeadForm({ initialData, isEdit = false, onSuccess, tenantId }: L
                 <FormItem>
                   <FormLabel>联系电话</FormLabel>
                   <FormControl>
-                    <div className="flex items-center gap-1">
-                      <span className="text-muted-foreground bg-muted flex h-10 items-center rounded-l-md border px-2 py-2 text-sm">
-                        +86
-                      </span>
-                      <Input
-                        type="tel"
-                        placeholder="输入手机号"
-                        className="rounded-l-none border-l-0"
-                        value={field.value?.replace(/^\+86/, '') || ''}
-                        onChange={(e) => {
-                          const raw = e.target.value.replace(/\D/g, '');
-                          field.onChange(raw ? `+86${raw}` : '');
-                        }}
-                      />
-                    </div>
+                    <PhoneInput
+                      placeholder="输入手机号"
+                      defaultCountry="CN"
+                      data-testid="phone-input"
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -166,7 +195,7 @@ export function LeadForm({ initialData, isEdit = false, onSuccess, tenantId }: L
                 <FormItem>
                   <FormLabel>微信</FormLabel>
                   <FormControl>
-                    <Input placeholder="可留空" {...field} value={field.value ?? ''} />
+                    <SocialInput type="wechat" {...field} value={field.value ?? ''} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -208,12 +237,11 @@ export function LeadForm({ initialData, isEdit = false, onSuccess, tenantId }: L
                 <FormItem>
                   <FormLabel>预估金额 (元)</FormLabel>
                   <FormControl>
-                    <Input
-                      type="number"
-                      placeholder="数值"
-                      {...field}
-                      value={field.value ?? ''}
-                      onChange={(e) => field.onChange(e.target.valueAsNumber)}
+                    <CurrencyInput
+                      placeholder="输入预估订单金额"
+                      onValueChange={(values) => field.onChange(values.floatValue)}
+                      value={field.value}
+                      onBlur={field.onBlur}
                     />
                   </FormControl>
                   <FormMessage />
@@ -227,9 +255,14 @@ export function LeadForm({ initialData, isEdit = false, onSuccess, tenantId }: L
             name="address"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>详细地址</FormLabel>
+                <FormLabel>联系地址</FormLabel>
                 <FormControl>
-                  <Input placeholder="街道、门牌号" {...field} value={field.value ?? ''} />
+                  <AddressInput
+                    value={field.value ?? ''}
+                    onChange={field.onChange}
+                    defaultRegion={tenant?.region}
+                    placeholder="街道、门牌号"
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>

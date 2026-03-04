@@ -7,7 +7,7 @@ import { NextRequest } from 'next/server';
 import { db } from '@/shared/api/db';
 import { installTasks, measureTasks } from '@/shared/api/schema';
 import { eq, and, sql, gte, lte } from 'drizzle-orm';
-import { apiSuccess, apiError } from '@/shared/lib/api-response';
+import { apiSuccess, apiServerError } from '@/shared/lib/api-response';
 import { authenticateMobile, requireWorker } from '@/shared/middleware/mobile-auth';
 import { createLogger } from '@/shared/lib/logger';
 
@@ -118,6 +118,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     log.error('收入统计查询错误', {}, error);
-    return apiError('查询收入统计失败', 500);
+    return apiServerError('查询收入统计失败');
   }
 }

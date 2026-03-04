@@ -10,7 +10,7 @@ import { z } from 'zod';
 import { db } from '@/shared/api/db';
 import { measureTasks, installTasks } from '@/shared/api/schema';
 import { eq, and } from 'drizzle-orm';
-import { apiSuccess, apiError, apiNotFound } from '@/shared/lib/api-response';
+import { apiSuccess, apiNotFound, apiBadRequest } from '@/shared/lib/api-response';
 import { authenticateMobile, requireWorker } from '@/shared/middleware/mobile-auth';
 import { AuditService } from '@/shared/services/audit-service';
 
@@ -43,12 +43,12 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
   try {
     body = await request.json();
   } catch {
-    return apiError('请求体格式错误', 400);
+    return apiBadRequest('请求体格式错误');
   }
 
   const parseResult = negotiateSchema.safeParse(body);
   if (!parseResult.success) {
-    return apiError('参数校验失败', 400, parseResult.error.flatten().fieldErrors);
+    return apiBadRequest('参数校验失败', parseResult.error.flatten().fieldErrors);
   }
 
   const { proposedAmount, reason } = parseResult.data;

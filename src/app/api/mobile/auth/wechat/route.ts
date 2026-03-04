@@ -9,7 +9,7 @@ import { NextRequest } from 'next/server';
 import { db } from '@/shared/api/db';
 import { customers } from '@/shared/api/schema';
 import { eq } from 'drizzle-orm';
-import { apiSuccess, apiError } from '@/shared/lib/api-response';
+import { apiSuccess, apiBadRequest, apiServerError } from '@/shared/lib/api-response';
 import { env } from '@/shared/config/env';
 import { generateAccessToken, generateRefreshToken } from '@/shared/lib/jwt';
 import { createLogger } from '@/shared/lib/logger';
@@ -43,18 +43,18 @@ export async function POST(request: NextRequest) {
   try {
     body = await request.json();
   } catch {
-    return apiError('请求体格式错误', 400);
+    return apiBadRequest('请求体格式错误');
   }
 
   const { code, phone } = body;
 
   if (!code) {
-    return apiError('缺少 code 参数', 400);
+    return apiBadRequest('缺少 code 参数');
   }
 
   // 2. 检查微信配置
   if (!env.WX_APPID || !env.WX_APPSECRET) {
-    return apiError('微信小程序未配置', 500);
+    return apiServerError('微信小程序未配置');
   }
 
   try {
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
 
     if (wxData.errcode) {
       log.error('微信登录失败', {}, wxData);
-      return apiError(`微信登录失败: ${wxData.errmsg}`, 400);
+      return apiBadRequest(`微信登录失败: ${wxData.errmsg}`);
     }
 
     const { openid, unionid } = wxData;
@@ -172,6 +172,6 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     log.error('微信登录错误', {}, error);
-    return apiError('微信登录失败', 500);
+    return apiServerError('微信登录失败');
   }
 }

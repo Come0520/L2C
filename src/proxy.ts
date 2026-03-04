@@ -3,14 +3,21 @@ import type { NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import type { JWT } from 'next-auth/jwt';
 import { extractAndVerifyToken } from '@/shared/lib/jwt';
+import { createLogger } from '@/shared/lib/logger';
+
+/** 认证代理专用日志记录器，用于安全事件追溯 */
+const log = createLogger('proxy:auth');
 
 // ============================================================================
 // 常量配置
 // ============================================================================
 
 /**
- * 公开路由白名单（无需认证）
- * 这些路由将跳过 JWT 验证
+ * 公开路由白名单（无需 Web JWT 认证，直接放行）
+ *
+ * 注意：新 Matcher 采用排除法，覆盖所有路由（含 /api/miniprogram）。
+ * 小程序 API 使用独立的 withMiniprogramAuth 认证体系，
+ * 因此整个 /api/miniprogram 路由组在此处放行，不走 Web JWT 验证。
  */
 const PUBLIC_PATH_PREFIXES = [
   '/api/auth', // NextAuth.js 认证端点
@@ -18,6 +25,7 @@ const PUBLIC_PATH_PREFIXES = [
   '/api/health', // 健康检查
   '/api/public', // 公开 API
   '/api/mobile/auth/login', // 移动端登录
+  '/api/miniprogram', // 小程序 API（使用独立 withMiniprogramAuth 认证体系）
 ] as const;
 
 // 注：已移除「每日首次必看」Cookie 策略。
@@ -184,6 +192,11 @@ export default async function proxy(request: NextRequest): Promise<NextResponse>
   }
 
   if (!token) {
+    log.warn('[Auth] API 请求未携带有效 Token', {
+      pathname,
+      ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
+      userAgent: request.headers.get('user-agent') || 'unknown',
+    });
     return createUnauthorizedResponse('请先登录');
   }
 
@@ -215,6 +228,11 @@ export default async function proxy(request: NextRequest): Promise<NextResponse>
 
   // 常规用户验证租户绑定
   if (!tenantId || tenantId === UNBOUND_TENANT_ID) {
+    log.warn('[Auth] 用户未绑定企业，拒绝访问', {
+      userId: token.sub,
+      pathname,
+      tenantId: tenantId || 'null',
+    });
     return createForbiddenResponse('用户未绑定企业');
   }
 
@@ -233,45 +251,27 @@ export default async function proxy(request: NextRequest): Promise<NextResponse>
   });
 }
 
-// ============================================================================
-// Proxy 配置
-// ============================================================================
-
 /**
  * Proxy 路由匹配配置
  *
- * 注意：
- * - matcher 值必须是常量，不能使用动态变量
- * - 使用负向前瞻排除不需要处理的路径
+ * 策略：排除法（Exclusion Pattern）
+ * - 匹配所有路由，仅排除 Next.js 静态资源、图片优化路由和静态文件
+ * - 优势：新增任何业务页面/API 都自动纳入 proxy 保护范围，无需手动维护白名单
+ * - 代价：每个请求都会经过 proxy 判断（Edge Runtime 开销极小）
+ *
+ * 公开路由的放行逻辑已在 proxy 函数体内部通过 publicPagePaths / isPublicPath 实现。
  *
  * @see https://nextjs.org/docs/app/api-reference/file-conventions/proxy#matcher
  */
 export const config = {
   matcher: [
-    // 匹配根路径（用于落地页分流）
-    '/',
-    // 匹配所有 /api 路由（排除公开端点）
-    '/api/((?!auth|webhooks|health|public|miniprogram).*)',
-    // 匹配受保护的页面路由（未登录用户将被重定向到 Landing Page）
-    '/admin/:path*',
-    '/dashboard/:path*',
-    '/after-sales/:path*',
-    '/analytics/:path*',
-    '/channels/:path*',
-    '/customers/:path*',
-    '/finance/:path*',
-    '/leads/:path*',
-    '/notifications/:path*',
-    '/orders/:path*',
-    '/profile/:path*',
-    '/projects/:path*',
-    '/quote-bundles/:path*',
-    '/quotes/:path*',
-    '/service/:path*',
-    '/settings/:path*',
-    '/showroom/:path*',
-    '/supply-chain/:path*',
-    '/workbench/:path*',
-    '/workflow/:path*',
+    /*
+     * 匹配所有请求路径，但排除以下路径：
+     * - _next/static  静态文件（JS/CSS bundle）
+     * - _next/image   Image Optimization API
+     * - favicon.ico   网站图标
+     * - 常见静态资产后缀（svg / png / jpg / jpeg / gif / webp / ico）
+     */
+    '/((?!_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
   ],
 };

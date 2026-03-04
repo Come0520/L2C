@@ -7,7 +7,7 @@ import { NextRequest } from 'next/server';
 import { db } from '@/shared/api/db';
 import { purchaseOrders } from '@/shared/api/schema';
 import { eq, and, or } from 'drizzle-orm';
-import { apiSuccess, apiError } from '@/shared/lib/api-response';
+import { apiSuccess, apiServerError } from '@/shared/lib/api-response';
 import { authenticateMobile, requirePurchaser } from '@/shared/middleware/mobile-auth';
 import { createLogger } from '@/shared/lib/logger';
 
@@ -96,6 +96,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     log.error('待采购池查询错误', {}, error);
-    return apiError('查询待采购池失败', 500);
+    return apiServerError('查询待采购池失败');
   }
 }

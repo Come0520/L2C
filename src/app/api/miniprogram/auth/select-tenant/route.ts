@@ -8,7 +8,13 @@ import { NextRequest } from 'next/server';
 import { db } from '@/shared/api/db';
 import { users, tenantMembers } from '@/shared/api/schema';
 import { eq, and } from 'drizzle-orm';
-import { apiSuccess, apiError } from '@/shared/lib/api-response';
+import {
+  apiSuccess,
+  apiBadRequest,
+  apiServerError,
+  apiForbidden,
+  apiUnauthorized,
+} from '@/shared/lib/api-response';
 import { logger } from '@/shared/lib/logger';
 import { generateMiniprogramToken, verifyTempLoginToken } from '../../auth-utils';
 import { z } from 'zod';
@@ -25,7 +31,7 @@ export async function POST(request: NextRequest) {
 
     const parsed = SelectTenantSchema.safeParse(body);
     if (!parsed.success) {
-      return apiError(parsed.error.issues[0].message, 400);
+      return apiBadRequest(parsed.error.issues[0].message);
     }
 
     const { tempToken, tenantId } = parsed.data;
@@ -33,7 +39,7 @@ export async function POST(request: NextRequest) {
     // 1. 验证临时登录 Token
     const userId = await verifyTempLoginToken(tempToken);
     if (!userId) {
-      return apiError('登录已超时，请重新登录', 401);
+      return apiUnauthorized('登录已超时，请重新登录');
     }
 
     // 2. 查找用户
@@ -42,7 +48,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!user || (!user.isActive && !user.isPlatformAdmin)) {
-      return apiError('用户不存在或已失效', 403);
+      return apiForbidden('用户不存在或已失效');
     }
 
     // 3. 验证选择的租户是否合法
@@ -56,7 +62,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!membership) {
-      return apiError('您不是该企业的有效成员', 403);
+      return apiForbidden('您不是该企业的有效成员');
     }
 
     // 4. 更新上次活跃的租户
@@ -97,6 +103,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: unknown) {
     logger.error('[SelectTenant] 选择企业异常', { route: 'select-tenant', error });
-    return apiError('选择企业服务异常', 500);
+    return apiServerError('选择企业服务异常');
   }
 }

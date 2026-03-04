@@ -10,7 +10,7 @@ const log = createLogger('mobile:tasks:accept');
 import { db } from '@/shared/api/db';
 import { measureTasks, installTasks } from '@/shared/api/schema';
 import { eq, and } from 'drizzle-orm';
-import { apiSuccess, apiError, apiNotFound } from '@/shared/lib/api-response';
+import { apiSuccess, apiNotFound, apiBadRequest } from '@/shared/lib/api-response';
 import { authenticateMobile, requireWorker } from '@/shared/middleware/mobile-auth';
 import { AuditService } from '@/shared/services/audit-service';
 
@@ -32,13 +32,13 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
   try {
     body = await request.json();
   } catch {
-    return apiError('请求体格式错误', 400);
+    return apiBadRequest('请求体格式错误');
   }
 
   const { accept, reason } = body;
 
   if (typeof accept !== 'boolean') {
-    return apiError('缺少 accept 参数', 400);
+    return apiBadRequest('缺少 accept 参数');
   }
 
   // 4. 查找任务（先查测量任务，再查安装任务）
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
   const validStatus = ['DISPATCHING', 'PENDING_ACCEPT'];
   const currentStatus = taskStatus || '';
   if (!validStatus.includes(currentStatus)) {
-    return apiError(`当前状态 ${currentStatus} 不允许接单/拒单操作`, 400);
+    return apiBadRequest(`当前状态 ${currentStatus} 不允许接单/拒单操作`);
   }
 
   // 6. 更新任务状态

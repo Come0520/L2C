@@ -283,7 +283,12 @@ export function QuoteInlineAddRow({
           {/* 单位 */}
           {showUnit && (
             <TableCell className="p-2">
-              <Input className="h-8 w-12 bg-white/50 px-1 text-center" placeholder="-" disabled aria-label="单位" />
+              <Input
+                className="h-8 w-12 bg-white/50 px-1 text-center"
+                placeholder="-"
+                disabled
+                aria-label="单位"
+              />
             </TableCell>
           )}
 
@@ -306,7 +311,12 @@ export function QuoteInlineAddRow({
           {/* 备注 */}
           {showRemark && (
             <TableCell className="p-2">
-              <Input className="h-8 w-24 bg-white/50 px-2 text-xs" placeholder="备注" disabled aria-label="备注" />
+              <Input
+                className="h-8 w-24 bg-white/50 px-2 text-xs"
+                placeholder="备注"
+                disabled
+                aria-label="备注"
+              />
             </TableCell>
           )}
 

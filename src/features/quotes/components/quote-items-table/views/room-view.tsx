@@ -39,6 +39,8 @@ interface RoomViewProps extends ColumnVisibility {
   getRoomSubtotal: (roomId: string) => number;
   allowedCategories?: string[];
   onRowClick?: (item: QuoteItem) => void;
+  /** 高级配置按鈕回调（URL 驱动模式下传入） */
+  onAdvancedEdit?: (item: QuoteItem) => void;
 }
 
 export const RoomView = React.memo(function RoomView({
@@ -70,6 +72,7 @@ export const RoomView = React.memo(function RoomView({
   allowedCategories,
   onRowClick,
   getRoomSubtotal,
+  onAdvancedEdit,
 }: RoomViewProps) {
   /**
    * 将 itemsByRoom.mapping 转换为 useRowSpanCalc 所需的格式
@@ -135,6 +138,7 @@ export const RoomView = React.memo(function RoomView({
           onToggleExpand={() => handleToggleItem(item.id)}
           renderChildren={(children, childLevel) => renderRows(children, childLevel, roomName)}
           onRowClick={onRowClick}
+          onAdvancedEdit={onAdvancedEdit}
         />
       );
     });

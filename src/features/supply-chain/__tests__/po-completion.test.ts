@@ -13,12 +13,12 @@ vi.mock('@/shared/api/db', () => ({
     },
     update: vi.fn().mockReturnThis(),
     set: vi.fn().mockReturnThis(),
-    where: vi.fn().mockResolvedValue([]),
+    where: vi.fn().mockReturnValue({ returning: vi.fn().mockResolvedValue([{ id: 'mock-id' }]) }),
     execute: vi.fn().mockResolvedValue([]),
     select: vi.fn().mockReturnThis(),
     from: vi.fn().mockReturnThis(),
     insert: vi.fn().mockReturnThis(),
-    values: vi.fn().mockReturnThis(),
+    values: vi.fn().mockResolvedValue([{ id: 'insert-id' }]),
   },
 }));
 

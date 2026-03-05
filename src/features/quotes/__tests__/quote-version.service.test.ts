@@ -119,11 +119,9 @@ describe('报价单版本与生命周期服务 (Quote Version & Lifecycle Servic
             query: { quotes: { findFirst: vi.fn().mockResolvedValue(mockQuote) } },
             update: vi.fn().mockReturnValue({
               set: vi.fn().mockReturnValue({
-                where: vi
-                  .fn()
-                  .mockReturnValue({
-                    returning: vi.fn().mockResolvedValue([{ id: 'mock-quote-id' }]),
-                  }),
+                where: vi.fn().mockReturnValue({
+                  returning: vi.fn().mockResolvedValue([{ id: 'mock-quote-id' }]),
+                }),
               }),
             }),
           });

@@ -127,7 +127,14 @@ export async function assignMeasureWorker(taskId: string, workerId: string) {
     }
 
     // 3. 记录审计
-    await AuditService.record({ tenantId, userId: currentUserId, tableName: 'measure_tasks', recordId: taskId, action: 'UPDATE', changedFields: { assignedWorkerId: workerId, status: 'DISPATCHING' } });
+    await AuditService.record({
+      tenantId,
+      userId: currentUserId,
+      tableName: 'measure_tasks',
+      recordId: taskId,
+      action: 'UPDATE',
+      changedFields: { assignedWorkerId: workerId, status: 'DISPATCHING' },
+    });
 
     logger.info('[Dispatch] 测量工人指派成功', { taskId, workerId, tenantId });
     revalidatePath('/dispatch');
@@ -206,7 +213,14 @@ export async function updateMeasureTaskStatus(
       throw new Error('测量任务不存在或无权限修改');
     }
 
-    await AuditService.record({ tenantId, userId: currentUserId, tableName: 'measure_tasks', recordId: taskId, action: 'UPDATE', changedFields: { status } });
+    await AuditService.record({
+      tenantId,
+      userId: currentUserId,
+      tableName: 'measure_tasks',
+      recordId: taskId,
+      action: 'UPDATE',
+      changedFields: { status },
+    });
 
     // 如果是取消操作，记录额外日志
     if (status === 'CANCELLED') {
@@ -295,7 +309,14 @@ export async function assignInstallWorker(
       throw new Error('安装任务不存在或无权限修改');
     }
 
-    await AuditService.record({ tenantId, userId: currentUserId, tableName: 'install_tasks', recordId: taskId, action: 'UPDATE', changedFields: { installerId, status: 'DISPATCHING' } });
+    await AuditService.record({
+      tenantId,
+      userId: currentUserId,
+      tableName: 'install_tasks',
+      recordId: taskId,
+      action: 'UPDATE',
+      changedFields: { installerId, status: 'DISPATCHING' },
+    });
 
     logger.info('[Dispatch] 安装工人指派成功', { taskId, installerId, tenantId });
     revalidatePath('/dispatch');
@@ -370,7 +391,14 @@ export async function updateInstallTaskStatus(
       throw new Error('安装任务不存在或无权限修改');
     }
 
-    await AuditService.record({ tenantId, userId: currentUserId, tableName: 'install_tasks', recordId: taskId, action: 'UPDATE', changedFields: { status } });
+    await AuditService.record({
+      tenantId,
+      userId: currentUserId,
+      tableName: 'install_tasks',
+      recordId: taskId,
+      action: 'UPDATE',
+      changedFields: { status },
+    });
 
     logger.info('[Dispatch] 安装任务状态更新成功', { taskId, status, tenantId });
     revalidatePath('/dispatch');

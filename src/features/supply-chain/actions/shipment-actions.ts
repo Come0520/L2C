@@ -1,7 +1,6 @@
 'use server';
 import { logger } from '@/shared/lib/logger';
 
-
 import { z } from 'zod';
 import { requireAuth, requirePOManagePermission, requireViewPermission } from '../helpers';
 import { SUPPLY_CHAIN_PATHS, isValidPoTransition } from '../constants';
@@ -20,29 +19,32 @@ import { AuditService } from '@/shared/services/audit-service';
  */
 
 const createShipmentSchema = z.object({
-    /** 关联采购单 ID */
-    poId: z.string().uuid('请选择有效的采购单'),
-    /** 物流公司 */
-    logisticsCompany: z.string().max(100).optional(),
-    /** 物流单号 */
-    logisticsNo: z.string().max(100).optional(),
-    /** 物流追踪链接 */
-    trackingUrl: z.string().url().optional().or(z.literal('')),
-    /** 发货时间 */
-    shippedAt: z.string().refine((val) => !isNaN(Date.parse(val)), "无效的日期").optional(),
-    /** 备注 */
-    remark: z.string().max(500).optional(),
+  /** 关联采购单 ID */
+  poId: z.string().uuid('请选择有效的采购单'),
+  /** 物流公司 */
+  logisticsCompany: z.string().max(100).optional(),
+  /** 物流单号 */
+  logisticsNo: z.string().max(100).optional(),
+  /** 物流追踪链接 */
+  trackingUrl: z.string().url().optional().or(z.literal('')),
+  /** 发货时间 */
+  shippedAt: z
+    .string()
+    .refine((val) => !isNaN(Date.parse(val)), '无效的日期')
+    .optional(),
+  /** 备注 */
+  remark: z.string().max(500).optional(),
 });
 
 const updateShipmentSchema = z.object({
-    /** 物流公司 */
-    logisticsCompany: z.string().max(100).optional(),
-    /** 物流单号 */
-    logisticsNo: z.string().max(100).optional(),
-    /** 物流追踪链接 */
-    trackingUrl: z.string().url().optional().or(z.literal('')),
-    /** 备注 */
-    remark: z.string().max(500).optional(),
+  /** 物流公司 */
+  logisticsCompany: z.string().max(100).optional(),
+  /** 物流单号 */
+  logisticsNo: z.string().max(100).optional(),
+  /** 物流追踪链接 */
+  trackingUrl: z.string().url().optional().or(z.literal('')),
+  /** 备注 */
+  remark: z.string().max(500).optional(),
 });
 
 /**
@@ -60,89 +62,98 @@ const updateShipmentSchema = z.object({
  * @returns {Promise<{success: boolean, data?: {id: string}, error?: string}>} 返回创建成功的记录 ID
  */
 export async function createShipment(input: z.infer<typeof createShipmentSchema>) {
-    const authResult = await requireAuth();
-    if (!authResult.success) return { success: false, error: authResult.error };
-    const session = authResult.session;
+  const authResult = await requireAuth();
+  if (!authResult.success) return { success: false, error: authResult.error };
+  const session = authResult.session;
 
-    const permResult = await requirePOManagePermission(session);
-    if (!permResult.success) return { success: false, error: permResult.error };
+  const permResult = await requirePOManagePermission(session);
+  if (!permResult.success) return { success: false, error: permResult.error };
 
-    const validated = createShipmentSchema.safeParse(input);
-    if (!validated.success) {
-        logger.info('[supply-chain] createShipment 输入校验失败:', validated.error.issues);
-        return { success: false, error: validated.error.issues[0].message };
-    }
+  const validated = createShipmentSchema.safeParse(input);
+  if (!validated.success) {
+    logger.info('[supply-chain] createShipment 输入校验失败:', validated.error.issues);
+    return { success: false, error: validated.error.issues[0].message };
+  }
 
-    const data = validated.data;
+  const data = validated.data;
 
-    logger.info('[supply-chain] createShipment 开始创建:', { poId: data.poId });
-    try {
-        return await db.transaction(async (tx) => {
-            // 1. 验证采购单存在且属于当前租户
-            const po = await tx.query.purchaseOrders.findFirst({
-                where: and(
-                    eq(purchaseOrders.id, data.poId),
-                    eq(purchaseOrders.tenantId, session.user.tenantId)
-                ),
-                columns: { id: true, status: true },
-            });
+  logger.info('[supply-chain] createShipment 开始创建:', { poId: data.poId });
+  try {
+    return await db.transaction(async (tx) => {
+      // 1. 验证采购单存在且属于当前租户
+      const po = await tx.query.purchaseOrders.findFirst({
+        where: and(
+          eq(purchaseOrders.id, data.poId),
+          eq(purchaseOrders.tenantId, session.user.tenantId)
+        ),
+        columns: { id: true, status: true },
+      });
 
-            if (!po) {
-                logger.error('[supply-chain] createShipment 采购单不存在:', data.poId);
-                return { success: false, error: '采购单不存在' };
-            }
+      if (!po) {
+        logger.error('[supply-chain] createShipment 采购单不存在:', data.poId);
+        return { success: false, error: '采购单不存在' };
+      }
 
-            // 2. 使用状态转换矩阵校验是否允许发货
-            if (!isValidPoTransition(po.status!, 'SHIPPED')) {
-                logger.error('[supply-chain] createShipment 状态非法:', po.status);
-                return { success: false, error: `当前状态「${po.status}」不允许发货` };
-            }
+      // 2. 使用状态转换矩阵校验是否允许发货
+      if (!isValidPoTransition(po.status!, 'SHIPPED')) {
+        logger.error('[supply-chain] createShipment 状态非法:', po.status);
+        return { success: false, error: `当前状态「${po.status}」不允许发货` };
+      }
 
+      // 3. 插入物流记录到独立表
+      const [shipment] = await tx
+        .insert(poShipments)
+        .values({
+          tenantId: session.user.tenantId,
+          poId: data.poId,
+          logisticsCompany: data.logisticsCompany,
+          logisticsNo: data.logisticsNo,
+          trackingUrl: data.trackingUrl,
+          shippedAt: data.shippedAt ? new Date(data.shippedAt) : new Date(),
+          remark: data.remark,
+          createdBy: session.user.id,
+        })
+        .returning();
 
-            // 3. 插入物流记录到独立表
-            const [shipment] = await tx.insert(poShipments).values({
-                tenantId: session.user.tenantId,
-                poId: data.poId,
-                logisticsCompany: data.logisticsCompany,
-                logisticsNo: data.logisticsNo,
-                trackingUrl: data.trackingUrl,
-                shippedAt: data.shippedAt ? new Date(data.shippedAt) : new Date(),
-                remark: data.remark,
-                createdBy: session.user.id,
-            }).returning();
+      // 4. 更新采购单状态为 SHIPPED
+      await tx
+        .update(purchaseOrders)
+        .set({
+          status: 'SHIPPED',
+          shippedAt: data.shippedAt ? new Date(data.shippedAt) : new Date(),
+          updatedAt: new Date(),
+        })
+        .where(
+          and(eq(purchaseOrders.id, data.poId), eq(purchaseOrders.tenantId, session.user.tenantId))
+        );
 
-            // 4. 更新采购单状态为 SHIPPED
-            await tx.update(purchaseOrders)
-                .set({
-                    status: 'SHIPPED',
-                    shippedAt: data.shippedAt ? new Date(data.shippedAt) : new Date(),
-                    updatedAt: new Date(),
-                })
-                .where(and(
-                    eq(purchaseOrders.id, data.poId),
-                    eq(purchaseOrders.tenantId, session.user.tenantId)
-                ));
+      logger.info(`[supply-chain] createShipment 采购单 ${data.poId} 状态已流转至: SHIPPED`);
 
-            logger.info(`[supply-chain] createShipment 采购单 ${data.poId} 状态已流转至: SHIPPED`);
+      // 5. 记录审计日志
+      await AuditService.recordFromSession(
+        session,
+        'poShipments',
+        shipment.id,
+        'CREATE',
+        {
+          new: {
+            poId: data.poId,
+            logisticsCompany: data.logisticsCompany,
+            logisticsNo: data.logisticsNo,
+            status: 'SHIPPED',
+          },
+        },
+        tx
+      );
 
-            // 5. 记录审计日志
-            await AuditService.recordFromSession(session, 'poShipments', shipment.id, 'CREATE', {
-                new: {
-                    poId: data.poId,
-                    logisticsCompany: data.logisticsCompany,
-                    logisticsNo: data.logisticsNo,
-                    status: 'SHIPPED'
-                }
-            }, tx);
-
-            logger.info('[supply-chain] createShipment 创建发货记录成功:', shipment.id);
-            revalidatePath(SUPPLY_CHAIN_PATHS.PURCHASE_ORDERS);
-            return { success: true, data: { id: shipment.id }, message: '发货信息已录入' };
-        });
-    } catch (error) {
-        logger.error('[supply-chain] createShipment 内部错误:', error);
-        return { success: false, error: error instanceof Error ? error.message : '创建发货记录失败' };
-    }
+      logger.info('[supply-chain] createShipment 创建发货记录成功:', shipment.id);
+      revalidatePath(SUPPLY_CHAIN_PATHS.PURCHASE_ORDERS);
+      return { success: true, data: { id: shipment.id }, message: '发货信息已录入' };
+    });
+  } catch (error) {
+    logger.error('[supply-chain] createShipment 内部错误:', error);
+    return { success: false, error: error instanceof Error ? error.message : '创建发货记录失败' };
+  }
 }
 
 /**
@@ -153,70 +164,66 @@ export async function createShipment(input: z.infer<typeof createShipmentSchema>
  * @param input 符合 updateShipmentSchema 的更新内容数据
  * @returns {Promise<{success: boolean, error?: string}>} 执行结果状态
  */
-export async function updateShipment(shipmentId: string, input: z.infer<typeof updateShipmentSchema>) {
-    const authResult = await requireAuth();
-    if (!authResult.success) return { success: false, error: authResult.error };
-    const session = authResult.session;
+export async function updateShipment(
+  shipmentId: string,
+  input: z.infer<typeof updateShipmentSchema>
+) {
+  const authResult = await requireAuth();
+  if (!authResult.success) return { success: false, error: authResult.error };
+  const session = authResult.session;
 
-    const permResult = await requirePOManagePermission(session);
-    if (!permResult.success) return { success: false, error: permResult.error };
+  const permResult = await requirePOManagePermission(session);
+  if (!permResult.success) return { success: false, error: permResult.error };
 
-    const validated = updateShipmentSchema.safeParse(input);
-    if (!validated.success) {
-        logger.info('[supply-chain] updateShipment 输入校验失败:', validated.error.issues);
-        return { success: false, error: validated.error.issues[0].message };
+  const validated = updateShipmentSchema.safeParse(input);
+  if (!validated.success) {
+    logger.info('[supply-chain] updateShipment 输入校验失败:', validated.error.issues);
+    return { success: false, error: validated.error.issues[0].message };
+  }
+
+  const data = validated.data;
+
+  logger.info('[supply-chain] updateShipment 开始更新:', { shipmentId });
+
+  try {
+    // ... (保持原有逻辑)
+    // 验证记录存在且属于当前租户
+    const existing = await db.query.poShipments.findFirst({
+      where: and(eq(poShipments.id, shipmentId), eq(poShipments.tenantId, session.user.tenantId)),
+    });
+
+    if (!existing) {
+      logger.error('[supply-chain] updateShipment 记录不存在:', shipmentId);
+      return { success: false, error: '物流记录不存在' };
     }
 
-    const data = validated.data;
+    await db
+      .update(poShipments)
+      .set({
+        logisticsCompany: data.logisticsCompany,
+        logisticsNo: data.logisticsNo,
+        trackingUrl: data.trackingUrl,
+        remark: data.remark,
+      })
+      .where(and(eq(poShipments.id, shipmentId), eq(poShipments.tenantId, session.user.tenantId)));
 
-    logger.info('[supply-chain] updateShipment 开始更新:', { shipmentId });
+    // 记录审计日志
+    await AuditService.recordFromSession(session, 'poShipments', shipmentId, 'UPDATE', {
+      old: {
+        logisticsCompany: existing.logisticsCompany,
+        logisticsNo: existing.logisticsNo,
+      },
+      new: data,
+    });
 
-    try {
-        // ... (保持原有逻辑)
-        // 验证记录存在且属于当前租户
-        const existing = await db.query.poShipments.findFirst({
-            where: and(
-                eq(poShipments.id, shipmentId),
-                eq(poShipments.tenantId, session.user.tenantId)
-            ),
-        });
+    logger.info('[supply-chain] updateShipment 更新成功');
 
-        if (!existing) {
-            logger.error('[supply-chain] updateShipment 记录不存在:', shipmentId);
-            return { success: false, error: '物流记录不存在' };
-        }
-
-
-        await db.update(poShipments)
-            .set({
-                logisticsCompany: data.logisticsCompany,
-                logisticsNo: data.logisticsNo,
-                trackingUrl: data.trackingUrl,
-                remark: data.remark,
-            })
-            .where(and(
-                eq(poShipments.id, shipmentId),
-                eq(poShipments.tenantId, session.user.tenantId)
-            ));
-
-        // 记录审计日志
-        await AuditService.recordFromSession(session, 'poShipments', shipmentId, 'UPDATE', {
-            old: {
-                logisticsCompany: existing.logisticsCompany,
-                logisticsNo: existing.logisticsNo
-            },
-            new: data
-        });
-
-        logger.info('[supply-chain] updateShipment 更新成功');
-
-        revalidatePath(SUPPLY_CHAIN_PATHS.PURCHASE_ORDERS);
-        return { success: true };
-    } catch (error) {
-        logger.error('[supply-chain] updateShipment 更新失败:', error);
-        return { success: false, error: '更新发货记录失败' };
-    }
-
+    revalidatePath(SUPPLY_CHAIN_PATHS.PURCHASE_ORDERS);
+    return { success: true };
+  } catch (error) {
+    logger.error('[supply-chain] updateShipment 更新失败:', error);
+    return { success: false, error: '更新发货记录失败' };
+  }
 }
 
 /**
@@ -227,37 +234,31 @@ export async function updateShipment(shipmentId: string, input: z.infer<typeof u
  * @returns {Promise<{success: boolean, data: (typeof poShipments.$inferSelect)[], error?: string}>} 返回包含发货详情的数组包装结果
  */
 export async function getShipments(params: { poId: string }) {
-    logger.info('[supply-chain] getShipments 查询参数:', params);
-    const authResult = await requireAuth();
-    // ... (保持原有逻辑)
-    if (!authResult.success) return { success: false, error: authResult.error, data: [] };
-    const session = authResult.session;
+  logger.info('[supply-chain] getShipments 查询参数:', params);
+  const authResult = await requireAuth();
+  // ... (保持原有逻辑)
+  if (!authResult.success) return { success: false, error: authResult.error, data: [] };
+  const session = authResult.session;
 
-    const permResult = await requireViewPermission(session);
-    if (!permResult.success) return { success: false, error: permResult.error, data: [] };
+  const permResult = await requireViewPermission(session);
+  if (!permResult.success) return { success: false, error: permResult.error, data: [] };
 
-    const { poId } = params;
-    if (!poId) return { success: true, data: [] };
+  const { poId } = params;
+  if (!poId) return { success: true, data: [] };
 
-    // 先验证采购单属于当前租户
-    const po = await db.query.purchaseOrders.findFirst({
-        where: and(
-            eq(purchaseOrders.id, poId),
-            eq(purchaseOrders.tenantId, session.user.tenantId)
-        ),
-        columns: { id: true },
-    });
+  // 先验证采购单属于当前租户
+  const po = await db.query.purchaseOrders.findFirst({
+    where: and(eq(purchaseOrders.id, poId), eq(purchaseOrders.tenantId, session.user.tenantId)),
+    columns: { id: true },
+  });
 
-    if (!po) return { success: true, data: [] };
+  if (!po) return { success: true, data: [] };
 
-    // 从独立表查询物流记录
-    const shipments = await db.query.poShipments.findMany({
-        where: and(
-            eq(poShipments.poId, poId),
-            eq(poShipments.tenantId, session.user.tenantId)
-        ),
-        orderBy: [desc(poShipments.createdAt)],
-    });
+  // 从独立表查询物流记录
+  const shipments = await db.query.poShipments.findMany({
+    where: and(eq(poShipments.poId, poId), eq(poShipments.tenantId, session.user.tenantId)),
+    orderBy: [desc(poShipments.createdAt)],
+  });
 
-    return { success: true, data: shipments };
+  return { success: true, data: shipments };
 }

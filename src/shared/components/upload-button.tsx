@@ -10,85 +10,97 @@ import { cn } from '@/shared/lib/utils';
  * 上传按钮组件属性接口
  */
 interface Props {
-    /** 上传成功后的回调函数，参数为文件的访问 URL */
-    onUploadComplete: (url: string) => void;
-    /** 自定义样式类名 */
-    className?: string;
-    /** 按钮显示的文本标签，默认为 "上传图片" */
-    label?: string;
-    /** 组件显示风格：全量文字 (default) 或是紧凑模式 (compact) */
-    variant?: "default" | "compact";
+  /** 上传成功后的回调函数，参数为文件的访问 URL */
+  onUploadComplete: (url: string) => void;
+  /** 自定义样式类名 */
+  className?: string;
+  /** 按钮显示的文本标签，默认为 "上传图片" */
+  label?: string;
+  /** 组件显示风格：全量文字 (default) 或是紧凑模式 (compact) */
+  variant?: 'default' | 'compact';
 }
 
 /**
  * 通用文件上传按钮组件
- * 
+ *
  * @description
  * 提供一个带有拖拽交互特征的上传区域。支持图片预设过滤。
  * 包含上传状态反馈（加载动画）和基于 sonner 的消息提示。
- * 
+ *
  * @example
  * ```tsx
  * <UploadButton onUploadComplete={(url) => console.log(url)} label="上传凭证" />
  * ```
  */
-export function UploadButton({ onUploadComplete, className, label = "上传图片", variant = "default" }: Props) {
-    const [uploading, setUploading] = useState(false);
+export function UploadButton({
+  onUploadComplete,
+  className,
+  label = '上传图片',
+  variant = 'default',
+}: Props) {
+  const [uploading, setUploading] = useState(false);
 
-    /**
-     * 处理文件选择变更
-     * @param e 邮件变更事件
-     */
-    async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-        const file = e.target.files?.[0];
-        if (!file) return;
+  /**
+   * 处理文件选择变更
+   * @param e 邮件变更事件
+   */
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-        setUploading(true);
-        const formData = new FormData();
-        formData.append('file', file);
+    setUploading(true);
+    const formData = new FormData();
+    formData.append('file', file);
 
-        try {
-            const res = await uploadFileAction(formData);
-            if (res.success && res.url) {
-                onUploadComplete(res.url);
-                toast.success('上传成功');
-            } else {
-                toast.error(res.error || '上传失败');
-            }
-        } catch {
-            toast.error('网络连接错误');
-        } finally {
-            setUploading(false);
-            // 重置 input 以允许再次选择同一文件
-            e.target.value = '';
-        }
+    try {
+      const res = await uploadFileAction(formData);
+      if (res.success && res.url) {
+        onUploadComplete(res.url);
+        toast.success('上传成功');
+      } else {
+        toast.error(res.error || '上传失败');
+      }
+    } catch {
+      toast.error('网络连接错误');
+    } finally {
+      setUploading(false);
+      // 重置 input 以允许再次选择同一文件
+      e.target.value = '';
     }
+  }
 
-    return (
-        <div className={cn("relative flex flex-col items-center justify-center border-2 border-dashed rounded-lg bg-muted/10 hover:bg-muted/20 transition-colors cursor-pointer", className)}>
-            <input
-                type="file"
-                accept="image/*"
-                onChange={handleFileChange}
-                className="absolute inset-0 opacity-0 cursor-pointer z-10"
-                disabled={uploading}
-            />
-            {uploading ? (
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            ) : (
-                <div className="flex flex-col items-center gap-2 text-muted-foreground p-4 text-center">
-                    <UploadCloud className={variant === "compact" ? "h-6 w-6" : "h-8 w-8"} />
-                    <div className="flex flex-col items-center">
-                        <span className="text-sm font-medium">{label}</span>
-                        {variant === "default" && (
-                            <>
-                                <span className="text-xs text-muted-foreground mt-1">点击或拖拽文件到此区域</span>
-                                <span className="text-[10px] text-muted-foreground/60 mt-0.5 max-w-[200px]">支持 JPG, PNG, GIF, WebP (最大 10MB)</span>
-                            </>
-                        )}
-                    </div>
-                </div>
+  return (
+    <div
+      className={cn(
+        'bg-muted/10 hover:bg-muted/20 relative flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed transition-colors',
+        className
+      )}
+    >
+      <input
+        type="file"
+        accept="image/*"
+        onChange={handleFileChange}
+        className="absolute inset-0 z-10 cursor-pointer opacity-0"
+        disabled={uploading}
+      />
+      {uploading ? (
+        <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
+      ) : (
+        <div className="text-muted-foreground flex flex-col items-center gap-2 p-4 text-center">
+          <UploadCloud className={variant === 'compact' ? 'h-6 w-6' : 'h-8 w-8'} />
+          <div className="flex flex-col items-center">
+            <span className="text-sm font-medium">{label}</span>
+            {variant === 'default' && (
+              <>
+                <span className="text-muted-foreground mt-1 text-xs">点击或拖拽文件到此区域</span>
+                <span className="text-muted-foreground/60 mt-0.5 max-w-[200px] text-[10px]">
+                  支持 JPG, PNG, GIF, WebP (最大 10MB)
+                </span>
+              </>
             )}
+          </div>
         </div>
-    );
+      )}
+    </div>
+  );
 }

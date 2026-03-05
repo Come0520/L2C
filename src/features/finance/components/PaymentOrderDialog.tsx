@@ -74,9 +74,18 @@ export function PaymentOrderDialog({
   const [accounts, setAccounts] = useState<FinanceAccount[]>([]);
 
   useEffect(() => {
-    if (open) {
-      getFinanceAccounts().then(setAccounts).catch(logger.error);
-    }
+    if (!open) return;
+
+    let isActive = true;
+    getFinanceAccounts()
+      .then((data) => {
+        if (isActive) setAccounts(data);
+      })
+      .catch(logger.error);
+
+    return () => {
+      isActive = false;
+    };
   }, [open]);
 
   const form = useForm<FormValues>({

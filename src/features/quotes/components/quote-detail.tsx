@@ -2,97 +2,40 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Button } from '@/shared/ui/button';
-import { Input } from '@/shared/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/shared/ui/dialog';
-
-import { QuoteItemsTable, type QuoteItem } from './quote-items-table/index';
-import { VersionQuote } from '../types';
-
-import { QuoteVersionDropdown } from './quote-version-dropdown';
-import { QuoteToOrderButton } from './quote-to-order-button';
-import {
-  updateQuote,
-  submitQuote,
-  approveQuote,
-  rejectQuote,
-  createRoom,
-  copyQuote,
-} from '@/features/quotes/actions/mutations';
-import { Badge } from '@/shared/ui/badge';
-import AlertTriangle from 'lucide-react/dist/esm/icons/alert-triangle';
+import { useQueryState, parseAsString } from 'nuqs';
 import { toast } from 'sonner';
-import Ruler from 'lucide-react/dist/esm/icons/ruler';
-import Save from 'lucide-react/dist/esm/icons/save';
-import X from 'lucide-react/dist/esm/icons/x';
-import ArrowLeft from 'lucide-react/dist/esm/icons/arrow-left';
-import Send from 'lucide-react/dist/esm/icons/send';
-import XCircle from 'lucide-react/dist/esm/icons/x-circle';
-import { SendToCustomerDialog } from '@/shared/components/send-to-customer-dialog';
-import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
 import { cn } from '@/shared/lib/utils';
-import { checkDiscountRisk, RiskCheckResult } from '@/features/quotes/logic/risk-control';
+import dynamic from 'next/dynamic';
+import X from 'lucide-react/dist/esm/icons/x';
+import AlertTriangle from 'lucide-react/dist/esm/icons/alert-triangle';
+import { Button } from '@/shared/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert';
-const QuoteVersionCompare = dynamic(
-  () => import('./quote-version-compare').then((mod) => mod.QuoteVersionCompare),
-  { ssr: false, loading: () => <div className="bg-muted h-96 w-full animate-pulse rounded-lg" /> }
-);
-
-import { QuoteConfig } from '@/services/quote-config.service';
-import { QuoteConfigDialog } from './quote-config-dialog';
 
 import { getQuote, getQuoteVersions } from '@/features/quotes/actions/queries';
+import { createRoom } from '@/features/quotes/actions/mutations';
+import { QuoteConfig } from '@/services/quote-config.service';
+import { checkDiscountRisk, RiskCheckResult } from '@/features/quotes/logic/risk-control';
+import { useQuoteDetail } from '../hooks/use-quote-detail';
 
-import { QuoteBottomSummaryBar, CategoryBreakdown } from './quote-bottom-summary-bar';
-import {
-  QuoteCategoryTabs,
-  QuoteCategory,
-  ViewMode,
-  CATEGORY_TO_PRODUCT_CATEGORIES,
-  getCategoryLabel,
-} from './quote-category-tabs';
-import { QuoteSummaryTab } from './quote-summary-tab';
-import { QuoteExportMenu } from './quote-export-menu';
-import Layout from 'lucide-react/dist/esm/icons/layout';
-import dynamic from 'next/dynamic';
-
+import { QuoteDetailHeader } from './quote-detail-sections/QuoteDetailHeader';
+import { QuoteDetailDialogs } from './quote-detail-sections/QuoteDetailDialogs';
+import { QuoteDetailContent } from './quote-detail-sections/QuoteDetailContent';
 import { QuoteExpirationBanner } from './quote-expiration-banner';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/shared/ui/alert-dialog';
+import { type QuoteItem } from './quote-items-table/index';
+import { type QuoteCategory, type ViewMode } from './quote-category-tabs';
 
-const MeasureDataImportDialog = dynamic(
-  () => import('./measure-data-import-dialog').then((mod) => mod.MeasureDataImportDialog),
-  { ssr: false }
-);
-const QuoteExcelImportDialog = dynamic(
-  () => import('./quote-excel-import-dialog').then((mod) => mod.QuoteExcelImportDialog),
-  { ssr: false }
-);
-const SaveAsTemplateDialog = dynamic(
-  () => import('./save-as-template-dialog').then((mod) => mod.SaveAsTemplateDialog),
-  { ssr: false }
-);
-const RejectQuoteDialog = dynamic(
-  () => import('./reject-quote-dialog').then((mod) => mod.RejectQuoteDialog),
-  { ssr: false }
-);
-const CustomerInfoDrawer = dynamic(
-  () => import('./customer-info-drawer').then((mod) => mod.CustomerInfoDrawer),
-  { ssr: false }
-);
+// 懒加载价格参考面板（体积较大，仅按需加载）
 const PriceReferencePanel = dynamic(
   () =>
     import('@/features/pricing/components/price-reference-panel').then(
       (mod) => mod.PriceReferencePanel
     ),
+  { ssr: false }
+);
+
+// 懒加载高级配置抖尉（仅需要时加载）
+const QuoteItemAdvancedDrawer = dynamic(
+  () => import('./quote-item-advanced-drawer').then((mod) => mod.QuoteItemAdvancedDrawer),
   { ssr: false }
 );
 
@@ -105,114 +48,88 @@ interface QuoteDetailProps {
   initialConfig?: QuoteConfig;
 }
 
+/**
+ * 报价单详情页 - 调度器组件（Orchestrator）
+ *
+ * @description 只负责：
+ * 1. 状态管理（dialog URL 状态、视图模式、选中商品）
+ * 2. 调用 `useQuoteDetail` 获取所有计算结果
+ * 3. 组合三个子组件（Header、Dialogs、Content）
+ *
+ * 纯数据计算逻辑已下沉至 `useQuoteDetail` Hook，
+ * UI 渲染已分解至 quote-detail-sections/ 目录下的子组件。
+ */
 export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetailProps) {
   const router = useRouter();
-  const [config, _setConfig] = useState<QuoteConfig | undefined>(initialConfig);
-  const [importDialogOpen, setImportDialogOpen] = useState(false);
-  const [excelImportOpen, setExcelImportOpen] = useState(false);
-  // 品类和视图模式状态
+
+  // URL 驱动的 Dialog 状态（通过 nuqs 管理）
+  const [activeDialog, setActiveDialog] = useQueryState('dialog', parseAsString);
+
+  // URL 驱动的高级配置抖尉状态（通过 nuqs 管理）
+  const [editItemId, setEditItemId] = useQueryState('editItem', parseAsString);
+
+  // 本地 UI 状态
+  const [config] = useState<QuoteConfig | undefined>(initialConfig);
   const [activeCategory, setActiveCategory] = useState<QuoteCategory>('SUMMARY');
   const [viewMode, setViewMode] = useState<ViewMode>('category');
-  const mode = config?.mode || 'simple';
-  // 只有 DRAFT（草稿）状态才允许编辑；其他状态（待审批、已接受、已拒绝、已过期）均为只读
-  // 注意：isActive 是版本管理字段，表示是否为最新版本，与编辑权限无关，不应用于此处
-  const isReadOnly = quote.status !== 'DRAFT';
-
-  // 添加空间对话框状态
-  // Create Room Dialog State
-  const [addRoomOpen, setAddRoomOpen] = useState(false);
   const [newRoomName, setNewRoomName] = useState('新空间');
-  // Save as Template Dialog State
-  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
-
-  // Smart Pricing Engine State
   const [selectedItemForPricing, setSelectedItemForPricing] = useState<QuoteItem | null>(null);
 
-  // Dialog State
-  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
-  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
-  const [actionLoading, setActionLoading] = useState(false);
+  // 只有草稿状态可编辑
+  const isReadOnly = quote.status !== 'DRAFT';
 
-  // Real-time Risk Control
+  // 委托 Hook 处理所有纯数据计算（allRawItems / categoryBreakdown / summaryItems 等）
+  const {
+    allRawItems,
+    categoryBreakdown,
+    summaryItems,
+    summaryRooms,
+    roomViewItems,
+    categoryViewItems,
+  } = useQuoteDetail({
+    quote: {
+      id: quote.id,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      items: quote.items as any,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      rooms: quote.rooms as any,
+    },
+    activeCategory,
+    viewMode,
+  });
+
+  // 风控检查（依赖聚合后的 allRawItems）
   const riskResult = useMemo<RiskCheckResult | null>(() => {
     if (!quote) return null;
-
-    const allItems = [...(quote.items || []), ...(quote.rooms || []).flatMap((r) => r.items || [])];
-
     return checkDiscountRisk(
-      allItems as Parameters<typeof checkDiscountRisk>[0],
+      allRawItems as Parameters<typeof checkDiscountRisk>[0],
       Number(quote.finalAmount) || 0,
       Number(quote.totalAmount) || 0,
       {
         quoteConfig: {
           minDiscountRate: config?.discountControl?.minDiscountRate,
-          minProfitMargin: 0.15, // Default as it's not in QuoteConfigService yet
+          minProfitMargin: 0.15,
         },
       }
     );
-  }, [quote, config]);
+  }, [allRawItems, quote, config]);
 
-  // 创建空间处理函数
-  const handleCreateRoom = async () => {
-    if (!newRoomName.trim()) {
-      toast.error('请输入空间名称');
-      return;
-    }
-    setAddRoomOpen(false);
-    toast.promise(
-      createRoom({ quoteId: quote.id, name: newRoomName.trim() }).then((res) => {
-        if (res.error) throw new Error(res.error);
-        return res.data;
-      }),
-      {
-        loading: '创建空间中...',
-        success: () => {
-          setNewRoomName('新空间');
-          router.refresh();
-          return '空间创建成功';
-        },
-        error: (err) => err.message || '创建失败',
-      }
-    );
-  };
+  // 通过 editItemId URL 参数查找当前需要高级编辑的 item
+  const editingItem = useMemo(() => {
+    if (!editItemId) return null;
+    return (allRawItems as unknown as QuoteItem[]).find((item) => item.id === editItemId) ?? null;
+  }, [editItemId, allRawItems]);
 
-  // 计算品类汇总
-  const categoryBreakdown = useMemo<CategoryBreakdown[]>(() => {
-    const allItems = [
-      ...(quote.items || []),
-      ...(quote.rooms || []).flatMap((r) => r.items || []),
-    ].filter((item) => !item.parentId); // 只计算主商品，不计算附件
+  // =============================================
+  // 回调函数（使用 useCallback 保持引用稳定）
+  // =============================================
 
-    const categoryMap = new Map<string, { label: string; count: number; subtotal: number }>();
+  const handleSave = useCallback(() => toast.success('已保存'), []);
 
-    allItems.forEach((item) => {
-      const cat = item.category || 'OTHER';
-      const existing = categoryMap.get(cat);
-      if (existing) {
-        existing.count += 1;
-        existing.subtotal += Number(item.subtotal || 0);
-      } else {
-        categoryMap.set(cat, {
-          label: getCategoryLabel(cat),
-          count: 1,
-          subtotal: Number(item.subtotal || 0),
-        });
-      }
-    });
+  const handleItemUpdate = useCallback(() => router.refresh(), [router]);
 
-    return Array.from(categoryMap.entries()).map(([category, data]) => ({
-      category,
-      label: data.label,
-      itemCount: data.count,
-      subtotal: data.subtotal,
-    }));
-  }, [quote.items, quote.rooms]);
-
-  const handleItemUpdate = useCallback(() => {
-    router.refresh();
-  }, [router]);
-
-  const handleAddRoomEvent = useCallback(
+  /** 从 QuoteItemsTable 内部触发添加空间（传入名称） */
+  const handleAddRoom = useCallback(
     (name: string) => {
       toast.promise(
         createRoom({ quoteId: quote.id, name }).then((res) => {
@@ -232,87 +149,40 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
     [quote.id, router]
   );
 
-  const allRawItems = useMemo(
-    () => [...(quote.items || []), ...(quote.rooms || []).flatMap((r) => r.items || [])],
-    [quote.items, quote.rooms]
-  );
-
-  const summaryItems = useMemo(
-    () =>
-      allRawItems.map((item) => ({
-        id: item.id,
-        category: item.category,
-        roomId: item.roomId,
-        parentId: item.parentId,
-        subtotal: item.subtotal,
-        productName: item.productName,
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        unit: item.unit ?? undefined,
-        width: item.width ?? undefined,
-        height: item.height ?? undefined,
-        foldRatio: item.foldRatio ?? undefined,
-        processFee: item.processFee ?? undefined,
-        remark: item.remark ?? undefined,
-      })),
-    [allRawItems]
-  );
-
-  const summaryRooms = useMemo(
-    () => (quote.rooms || []).map((r) => ({ id: r.id, name: r.name })),
-    [quote.rooms]
-  );
-
-  const categoryViewItems = useMemo(() => {
-    if (activeCategory === 'SUMMARY') return [];
-    const cat = activeCategory as Exclude<QuoteCategory, 'SUMMARY'>;
-    const allowedCategories = CATEGORY_TO_PRODUCT_CATEGORIES[cat];
-    return allRawItems
-      .filter((item) => allowedCategories.includes(item.category))
-      .map((item) => ({
-        ...item,
-        productId: item.productId || '',
-        width: item.width || 0,
-        height: item.height || 0,
-        foldRatio: item.foldRatio ?? undefined,
-        processFee: item.processFee ?? undefined,
-        remark: item.remark ?? undefined,
-        roomId: item.roomId || null,
-        parentId: item.parentId || null,
-        unit: item.unit || undefined,
-        attributes: (item.attributes as NonNullable<QuoteItem['attributes']>) ?? undefined,
-      })) as QuoteItem[];
-  }, [allRawItems, activeCategory]);
-
-  const roomViewItems = useMemo(() => {
-    return allRawItems.map((item) => ({
-      ...item,
-      productId: item.productId || '',
-      width: item.width || 0,
-      height: item.height || 0,
-      foldRatio: item.foldRatio ?? undefined,
-      processFee: item.processFee ?? undefined,
-      remark: item.remark ?? undefined,
-      roomId: item.roomId || null,
-      parentId: item.parentId || null,
-      unit: item.unit || undefined,
-      attributes: (item.attributes as NonNullable<QuoteItem['attributes']>) ?? undefined,
-    })) as QuoteItem[];
-  }, [allRawItems]);
-
-  // Mode toggle logic removed - mode is now derived from config on line 72
-
-  const handleSave = () => toast.success('Saved');
+  /** 从添加空间 Dialog 内部触发创建空间（使用 newRoomName state） */
+  const handleCreateRoom = useCallback(async () => {
+    if (!newRoomName.trim()) {
+      toast.error('请输入空间名称');
+      return;
+    }
+    setActiveDialog(null);
+    toast.promise(
+      createRoom({ quoteId: quote.id, name: newRoomName.trim() }).then((res) => {
+        if (res.error) throw new Error(res.error);
+        return res.data;
+      }),
+      {
+        loading: '创建空间中...',
+        success: () => {
+          setNewRoomName('新空间');
+          router.refresh();
+          return '空间创建成功';
+        },
+        error: (err) => err.message || '创建失败',
+      }
+    );
+  }, [newRoomName, quote.id, router, setActiveDialog]);
 
   return (
     <div className="bg-muted/5 relative flex min-h-screen">
+      {/* 主内容区（价格参考面板展开时向左缩进） */}
       <div
         className={cn(
           'min-w-0 flex-1 space-y-6 p-8 transition-all duration-300',
           selectedItemForPricing && 'mr-80'
         )}
       >
-        {/* Risk Alert Bar */}
+        {/* 风险提示栏 */}
         {riskResult?.isRisk && (
           <Alert
             variant={riskResult.hardStop ? 'destructive' : 'default'}
@@ -334,173 +204,18 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
             </AlertDescription>
           </Alert>
         )}
-        {/* Simple Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <Button variant="ghost" size="icon" onClick={() => router.push('/quotes')}>
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-2xl font-bold tracking-tight">报价单详情: {quote.quoteNo}</h2>
-                <QuoteVersionDropdown
-                  currentQuoteId={quote.id}
-                  currentVersion={quote.version || 1}
-                  versions={versions.map((v) => ({
-                    ...v,
-                    status: v.status || 'DRAFT',
-                    createdAt: v.createdAt ? new Date(v.createdAt) : new Date(),
-                    totalAmount: (v as { totalAmount?: number | string }).totalAmount,
-                    finalAmount: (v as { finalAmount?: number | string }).finalAmount,
-                  }))}
-                  onCopy={async () => {
-                    toast.promise(
-                      (async () => {
-                        const res = await copyQuote({ quoteId: quote.id });
-                        if (res?.error) throw new Error(res.error);
-                        if (res?.data?.id) {
-                          router.push(`/quotes/${res.data.id}`);
-                        }
-                      })(),
-                      {
-                        loading: '正在复制报价单...',
-                        success: '复制成功！',
-                        error: (err) => err.message || '复制失败',
-                      }
-                    );
-                  }}
-                />
-              </div>
-              <div className="mt-1 flex items-center gap-2">
-                <span className="text-muted-foreground text-sm">{quote.customer?.name}</span>
-                <Badge
-                  variant={
-                    quote.status === 'ACCEPTED'
-                      ? 'success'
-                      : quote.status === 'REJECTED'
-                        ? 'destructive' // 'error' -> 'destructive' usually in shadcn
-                        : quote.status === 'PENDING_APPROVAL'
-                          ? 'secondary' // warning -> secondary
-                          : 'secondary'
-                  }
-                >
-                  {quote.status === 'DRAFT' && '草稿'}
-                  {quote.status === 'PENDING_APPROVAL' && '待审批'}
-                  {quote.status === 'PENDING_CUSTOMER' && '待客户确认'}
-                  {quote.status === 'ACCEPTED' && '已接受'}
-                  {quote.status === 'REJECTED' && '已拒绝'}
-                  {quote.status === 'EXPIRED' && '已过期'}
-                </Badge>
-              </div>
-              {quote.approvalRequired && quote.status === 'PENDING_APPROVAL' && (
-                <div className="mt-1 flex items-center text-xs text-amber-600">
-                  <AlertTriangle className="mr-1 h-3 w-3" />
-                  风险控制: 需要审批 (毛利过低或折扣过高)
-                </div>
-              )}
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2">
-              {versions.length > 1 && (
-                <QuoteVersionCompare
-                  currentQuote={{
-                    id: quote.id,
-                    version: quote.version,
-                    totalAmount: quote.totalAmount || 0,
-                    discountAmount: quote.discountAmount || 0,
-                    finalAmount: quote.finalAmount || 0,
-                    items: quote.items as VersionQuote['items'], // Structural match but explicit for safety
-                    rooms: quote.rooms as VersionQuote['rooms'],
-                  }}
-                  versions={versions.map((v) => ({
-                    id: v.id,
-                    version: v.version,
-                    status: v.status || 'DRAFT',
-                    createdAt: v.createdAt ? new Date(v.createdAt) : new Date(),
-                  }))}
-                />
-              )}
-              {quote.status === 'DRAFT' && (
-                <>
-                  <Button variant="outline" size="sm" onClick={() => setImportDialogOpen(true)}>
-                    <Ruler className="mr-2 h-4 w-4" /> 导入测量
-                  </Button>
 
-                  <Button variant="outline" size="sm" onClick={() => setTemplateDialogOpen(true)}>
-                    <Layout className="mr-2 h-4 w-4" /> 保存为模板
-                  </Button>
+        {/* 顶部标题 + 操作按钮区 */}
+        <QuoteDetailHeader
+          quote={quote}
+          versions={versions}
+          config={config}
+          riskResult={riskResult}
+          setActiveDialog={setActiveDialog}
+          onSave={handleSave}
+        />
 
-                  <Button
-                    variant="default"
-                    size="sm"
-                    disabled={riskResult?.hardStop}
-                    title={riskResult?.hardStop ? '存在严重风险，无法提交' : '提交审核'}
-                    className={riskResult?.hardStop ? 'cursor-not-allowed opacity-50' : ''}
-                    onClick={async () => {
-                      if (riskResult?.hardStop) {
-                        toast.error('报价单存在严重风险，请修正后再提交');
-                        return;
-                      }
-                      toast.promise(
-                        submitQuote({ id: quote.id }).then((res) => {
-                          if (res.error) throw new Error(res.error);
-                          return res.data;
-                        }),
-                        {
-                          loading: '提交中...',
-                          success: '报价单已提交',
-                          error: (err) => `提交失败: ${err.message}`,
-                        }
-                      );
-                    }}
-                  >
-                    <Send className="mr-2 h-4 w-4" /> 提交审核
-                  </Button>
-                </>
-              )}
-
-              {/* ... other buttons ... */}
-
-              <QuoteExportMenu quote={quote} />
-
-              {quote.status === 'PENDING_APPROVAL' && (
-                <>
-                  <Button variant="outline" size="sm" onClick={() => setRejectDialogOpen(true)}>
-                    <XCircle className="mr-2 h-4 w-4" /> 驳回
-                  </Button>
-                  <Button variant="default" size="sm" onClick={() => setApproveDialogOpen(true)}>
-                    <CheckCircle className="mr-2 h-4 w-4" /> 批准
-                  </Button>
-                </>
-              )}
-
-              {/* 审批通过或待客户确认：显示发送给客户确认按钮 */}
-              {(quote.status === 'APPROVED' || quote.status === 'PENDING_CUSTOMER') && (
-                <SendToCustomerDialog
-                  type="quote"
-                  id={quote.id}
-                  description={`将报价单 ${quote.quoteNo} 发送给客户，客户点击链接可在小程序中签字确认。`}
-                />
-              )}
-
-              {/* Actions */}
-              <div className="flex items-center gap-2">
-                <QuoteToOrderButton
-                  quoteId={quote.id}
-                  customerId={quote.customerId}
-                  defaultAmount={quote.finalAmount || undefined}
-                />
-              </div>
-
-              <Button variant="outline" size="sm" onClick={handleSave}>
-                <Save className="mr-2 h-4 w-4" /> 保存
-              </Button>
-              <QuoteConfigDialog currentConfig={config} />
-            </div>
-          </div>
-        </div>
-
+        {/* 过期提示条 */}
         <QuoteExpirationBanner
           quoteId={quote.id}
           status={quote.status || ''}
@@ -508,187 +223,48 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
           isReadOnly={isReadOnly}
         />
 
-        <MeasureDataImportDialog
-          open={importDialogOpen}
-          onOpenChange={setImportDialogOpen}
+        {/* 所有 Dialogs 集中管理（不占布局空间） */}
+        <QuoteDetailDialogs
           quoteId={quote.id}
-          onSuccess={() => router.refresh()}
+          activeDialog={activeDialog}
+          onClose={() => setActiveDialog(null)}
+          newRoomName={newRoomName}
+          onRoomNameChange={setNewRoomName}
+          onCreateRoom={handleCreateRoom}
         />
 
-        <QuoteExcelImportDialog
-          open={excelImportOpen}
-          onOpenChange={setExcelImportOpen}
-          quoteId={quote.id}
-          onSuccess={() => router.refresh()}
-        />
-
-        <RejectQuoteDialog
-          open={rejectDialogOpen}
-          onOpenChange={setRejectDialogOpen}
-          loading={actionLoading}
-          onConfirm={async (reason) => {
-            try {
-              setActionLoading(true);
-              const res = await rejectQuote({ id: quote.id, rejectReason: reason });
-              if (res?.error) throw new Error(res.error);
-              toast.success('报价单已驳回');
-              setRejectDialogOpen(false);
-            } catch (error) {
-              toast.error(error instanceof Error ? error.message : '操作失败');
-            } finally {
-              setActionLoading(false);
-            }
-          }}
-        />
-
-        <AlertDialog open={approveDialogOpen} onOpenChange={setApproveDialogOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>确认批准</AlertDialogTitle>
-              <AlertDialogDescription>
-                批准后，报价单将标记为已批准，且不可再修改。是否继续？
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel disabled={actionLoading}>取消</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={async (e) => {
-                  e.preventDefault();
-                  try {
-                    setActionLoading(true);
-                    const res = await approveQuote({ id: quote.id });
-                    if (res?.error) throw new Error(res.error);
-                    toast.success('报价单已批准');
-                    setApproveDialogOpen(false);
-                  } catch (error) {
-                    toast.error(error instanceof Error ? error.message : '操作失败');
-                  } finally {
-                    setActionLoading(false);
-                  }
-                }}
-                disabled={actionLoading}
-              >
-                {actionLoading ? '批准中...' : '确认批准'}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-
-        {/* 客户信息抽屉（默认收起） */}
-        <CustomerInfoDrawer
-          customer={{
-            id: quote.customer?.id || '',
-            name: quote.customer?.name || '未知客户',
-            phone: quote.customer?.phone || undefined,
-            address: undefined, // 暂无法从 quote.customer 直接获取地址
-          }}
-          className="mb-6"
-        />
-
-        {/* 备注 */}
-        <div className="mb-6">
-          <Input
-            defaultValue={quote.notes || ''}
-            placeholder="添加备注信息（可选）"
-            className="max-w-md"
-            onBlur={(e) => updateQuote({ id: quote.id, notes: e.target.value })}
-          />
-        </div>
-
-        {/* 品类 Tabs 导航 */}
-        <QuoteCategoryTabs
+        {/* 主体内容区（客户信息、备注、Tab 导航、视图内容、汇总栏） */}
+        <QuoteDetailContent
+          quote={quote}
+          isReadOnly={isReadOnly}
+          config={config}
+          categoryBreakdown={categoryBreakdown}
           activeCategory={activeCategory}
           onCategoryChange={setActiveCategory}
           viewMode={viewMode}
           onViewModeChange={setViewMode}
-          className="mb-4"
+          categoryViewItems={categoryViewItems}
+          roomViewItems={roomViewItems}
+          summaryItems={summaryItems}
+          summaryRooms={summaryRooms}
+          onItemUpdate={handleItemUpdate}
+          onAddRoom={handleAddRoom}
+          onRowClick={setSelectedItemForPricing}
+          onAdvancedEdit={(item) => setEditItemId(item.id)}
         />
 
-        {/* 报价内容区 */}
-        <div className="pb-24">
-          {activeCategory === 'SUMMARY' ? (
-            // 汇总视图
-            <QuoteSummaryTab items={summaryItems} rooms={summaryRooms} />
-          ) : viewMode === 'category' ? (
-            // 品类优先视图：当前品类下的所有空间
-            <QuoteItemsTable
-              viewMode="category"
-              quoteId={quote.id}
-              rooms={quote.rooms || []}
-              items={categoryViewItems}
-              mode={mode}
-              visibleFields={config?.visibleFields}
-              readOnly={isReadOnly}
-              onItemUpdate={handleItemUpdate}
-              dimensionLimits={config?.dimensionLimits}
-              allowedCategories={
-                CATEGORY_TO_PRODUCT_CATEGORIES[activeCategory as Exclude<QuoteCategory, 'SUMMARY'>]
-              }
-              activeCategory={activeCategory}
-              onRowClick={setSelectedItemForPricing}
-              onAddRoom={handleAddRoomEvent}
-            />
-          ) : (
-            // 空间优先视图：按空间组织，每个空间内包含不同品类
-            <QuoteItemsTable
-              viewMode="room"
-              quoteId={quote.id}
-              rooms={quote.rooms || []}
-              items={roomViewItems}
-              mode={mode}
-              visibleFields={config?.visibleFields}
-              readOnly={isReadOnly}
-              onItemUpdate={handleItemUpdate}
-              dimensionLimits={config?.dimensionLimits}
-              onRowClick={setSelectedItemForPricing}
-              onAddRoom={handleAddRoomEvent}
-            />
-          )}
-        </div>
-
-        {/* 底部吸底汇总栏 */}
-        <QuoteBottomSummaryBar
-          totalAmount={quote.totalAmount || 0}
-          discountAmount={quote.discountAmount || 0}
-          finalAmount={quote.finalAmount || 0}
-          categoryBreakdown={categoryBreakdown}
-        />
-
-        {/* 添加空间对话框 */}
-        <Dialog open={addRoomOpen} onOpenChange={setAddRoomOpen}>
-          <DialogContent className="sm:max-w-[400px]">
-            <DialogHeader>
-              <DialogTitle>添加空间</DialogTitle>
-            </DialogHeader>
-            <div className="py-4">
-              <Input
-                placeholder="输入空间名称"
-                value={newRoomName}
-                onChange={(e) => setNewRoomName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleCreateRoom();
-                }}
-                autoFocus
-              />
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setAddRoomOpen(false)}>
-                取消
-              </Button>
-              <Button onClick={handleCreateRoom}>确定</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        <SaveAsTemplateDialog
-          quoteId={quote.id}
-          open={templateDialogOpen}
-          onOpenChange={setTemplateDialogOpen}
-          onSuccess={() => router.refresh()}
+        {/* URL 驱动的高级配置 Drawer（通过 ?editItem=<id> 控制开关） */}
+        <QuoteItemAdvancedDrawer
+          open={!!editItemId}
+          onOpenChange={(open) => {
+            if (!open) setEditItemId(null);
+          }}
+          item={editingItem}
+          onSuccess={handleItemUpdate}
         />
       </div>
 
-      {/* Price Reference Panel Sidebar */}
+      {/* 右侧滑出式价格参考面板 */}
       <div
         className={cn(
           'bg-background fixed top-[64px] right-0 bottom-0 z-20 w-80 transform border-l shadow-xl transition-transform duration-300 ease-in-out',
@@ -705,7 +281,7 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
           <div className="-mx-4 flex-1 overflow-y-auto px-4">
             <PriceReferencePanel
               productId={selectedItemForPricing?.productId || undefined}
-              sku={selectedItemForPricing?.productSku || undefined} // Fallback to SKU if productId missing
+              sku={selectedItemForPricing?.productSku || undefined}
               periodDays={180}
               className="border-none p-0 shadow-none"
             />

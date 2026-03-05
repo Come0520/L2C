@@ -167,11 +167,9 @@ describe('Distribution Engine', () => {
       const mockTx = {
         select: selectMock,
         query: { tenants: { findFirst: vi.fn() } },
-        update: vi
-          .fn()
-          .mockReturnValue({
-            set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue({}) }),
-          }),
+        update: vi.fn().mockReturnValue({
+          set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue({}) }),
+        }),
         insert: vi.fn().mockReturnValue({ values: vi.fn().mockResolvedValue({}) }),
       };
       mockDb.transaction.mockImplementation(async (cb) => cb(mockTx));
@@ -218,11 +216,9 @@ describe('Distribution Engine', () => {
 
       const mockTx = {
         select: selectMock,
-        update: vi
-          .fn()
-          .mockReturnValue({
-            set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue({}) }),
-          }),
+        update: vi.fn().mockReturnValue({
+          set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue({}) }),
+        }),
         insert: vi.fn().mockReturnValue({ values: vi.fn().mockResolvedValue({}) }),
       };
       mockDb.transaction.mockImplementation(async (cb) => cb(mockTx));
@@ -268,11 +264,9 @@ describe('Distribution Engine', () => {
 
       const mockTx = {
         select: selectMock,
-        update: vi
-          .fn()
-          .mockReturnValue({
-            set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue({}) }),
-          }),
+        update: vi.fn().mockReturnValue({
+          set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue({}) }),
+        }),
         insert: vi.fn().mockReturnValue({ values: vi.fn().mockResolvedValue({}) }),
       };
       mockDb.transaction.mockImplementation(async (cb) => cb(mockTx));
@@ -316,11 +310,9 @@ describe('Distribution Engine', () => {
 
       const mockTx = {
         select: selectMock,
-        update: vi
-          .fn()
-          .mockReturnValue({
-            set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue({}) }),
-          }),
+        update: vi.fn().mockReturnValue({
+          set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue({}) }),
+        }),
         insert: vi.fn().mockReturnValue({ values: vi.fn().mockResolvedValue({}) }),
       };
       mockDb.transaction.mockImplementation(async (cb) => cb(mockTx));

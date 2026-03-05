@@ -15,11 +15,9 @@ vi.mock('@/shared/api/db', () => {
     db: {
       select: vi.fn().mockReturnValue(mockChain),
       insert: vi.fn().mockReturnValue({ values: vi.fn().mockReturnValue(mockChain) }),
-      update: vi
-        .fn()
-        .mockReturnValue({
-          set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue([]) }),
-        }),
+      update: vi.fn().mockReturnValue({
+        set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue([]) }),
+      }),
       delete: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue([]) }),
       query: {
         splitRouteRules: {

@@ -6,23 +6,23 @@
 const loginAttempts = new Map<string, { count: number; resetAt: number }>();
 
 export function checkLoginRateLimit(username: string): { allowed: boolean; retryAfter?: number } {
-    const now = Date.now();
-    const key = `pc-login:${username}`;
-    const record = loginAttempts.get(key);
+  const now = Date.now();
+  const key = `pc-login:${username}`;
+  const record = loginAttempts.get(key);
 
-    if (!record || now > record.resetAt) {
-        loginAttempts.set(key, { count: 1, resetAt: now + 5 * 60 * 1000 });
-        return { allowed: true };
-    }
-
-    if (record.count >= 10) {
-        return { allowed: false, retryAfter: Math.ceil((record.resetAt - now) / 1000) };
-    }
-
-    record.count++;
+  if (!record || now > record.resetAt) {
+    loginAttempts.set(key, { count: 1, resetAt: now + 5 * 60 * 1000 });
     return { allowed: true };
+  }
+
+  if (record.count >= 10) {
+    return { allowed: false, retryAfter: Math.ceil((record.resetAt - now) / 1000) };
+  }
+
+  record.count++;
+  return { allowed: true };
 }
 
 export function resetLoginRateLimit(username: string) {
-    loginAttempts.delete(`pc-login:${username}`);
+  loginAttempts.delete(`pc-login:${username}`);
 }

@@ -2,7 +2,7 @@
   "cookies": [
     {
       "name": "__Host-authjs.csrf-token",
-      "value": "8c4fe0099f8954e1e29253e490884a48f7565e8ed781e4ffee630b6a3774190a%7C732236ca933a0bd668f6ad27d3a33536a0ba12bdda19f54bb4543df9556cc5fe",
+      "value": "fdd63f82a8bc4d2b61d898b4503b94dd2d0895bd017c2bc25fa502dff5b28dcb%7C2cf276b5854d19fdf775bfd6094142f49f68da817e73cdc30ab857499452146a",
       "domain": "localhost",
       "path": "/",
       "expires": -1,
@@ -22,10 +22,10 @@
     },
     {
       "name": "__Secure-authjs.session-token",
-      "value": "eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2Q0JDLUhTNTEyIiwia2lkIjoiMEpSZWRMLWVEV2VkMXZLRm1OcmRVczIyZHMtcHZpcXp1UVFIZDZwUUkwRHc0YWY2ZU9tbE5qOG0tcVlVUEQ0RVd6bVE2cHFsUzJEZGV3bVVTUDN0bXcifQ..BULOPqXdF8Wn1HPRzaTurw._hvvq6YZQfOm6CbveE8jvJScpEWtfw8SRtTd8rr7zC-aVidV-TiHhkKZtFq2nM1eF4-YPLf4maAV4q0KLvyGFPLfwogoJ_dxMyV6HfKQjF0_dnVulsoCr4qNQ-uQTJ8wn9f0VAbtjGW50IzMhdri4TOGeX9Hi4_ADX5Sfy8PUOmUQXFjnLe3S0FsNYjiFxpNkdog4gDHL57e0AZi99lm1dNU2nvJqknLg5mnHrfh1sZIC4ZvvWAaOjPzZDIPW4ndjpHtJjqtudmgRpG-kNhIGWKMUIqXDFjgViHlmY62YcgQE6aGGsnm30NQ3OuTVHGqbnzI0wAuNXHrDDuY3z7O5pf0syXRcMgZVWWLMUf0XRL5EdpXDl2qDfmZnug29n-AMyJEYHKEKm5aXrKaqoewbQ.6mQ7sF6MKfZmMLr85zpErG2o6SujnHEAOM2bM4E0e7g",
+      "value": "eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2Q0JDLUhTNTEyIiwia2lkIjoiMEpSZWRMLWVEV2VkMXZLRm1OcmRVczIyZHMtcHZpcXp1UVFIZDZwUUkwRHc0YWY2ZU9tbE5qOG0tcVlVUEQ0RVd6bVE2cHFsUzJEZGV3bVVTUDN0bXcifQ..Bs1hHQKHlJgLtmIoIGMn3Q.opldNpzig4XhuH7CBfIgdJQDFWZP79rKoyvVckE-fZA_rh8AyXYFaTCiD18oKjGgv99BlwwmvvG7v7wEoYb-RESFNSs93k98hSbOTrSR3SFDThFfuoFlTLl7yPQ6Eg-w0OSC1pY-Bw5FlnyH6Ax8tRQuVNFWJm2qkXuofWOKFgglBRpH-7zt0amtjNqCXGAMwamb73LtSwWDCKKfRVugo4Ty4wk0lbQSOCrwe0Q8OlgsdWOhvG2KeK1HSaJURgodSKwHnZv2gIrSU6OJm55B-mggZxmiE27kStbQsqyAdCwgh52CxbBq1GiPQWNa7BqWQG4GHA-dtVKCuKvK4Y5slgs3A6bqC4ZiUpkbsgfStdhppJi9LlcfmnhQaCSL2Tjj5DArVwI0mQQoH0orqwu34g.GIlSzexr8JLCjLVIebXUTc0goKUq8ka14CpQ0N1c_HE",
       "domain": "localhost",
       "path": "/",
-      "expires": 1775282897.359772,
+      "expires": 1775293175.151729,
       "httpOnly": true,
       "secure": true,
       "sameSite": "Lax"
@@ -33,7 +33,7 @@
   ],
   "origins": [
     {
-      "origin": "http://localhost:3000",
+      "origin": "http://localhost:3004",
       "localStorage": [
         {
           "name": "l2c-ui-style",

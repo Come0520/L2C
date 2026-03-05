@@ -18,11 +18,11 @@ interface PhotoUploadProps {
 
 /**
  * 多图上传预览组件
- * 
+ *
  * @description
  * 支持多张照片的上传、预览、删除及自动客户端压缩。
  * 结合了 UploadButton 进行底层文件传输。
- * 
+ *
  * @example
  * ```tsx
  * <PhotoUpload value={images} onChange={setImages} maxFiles={10} />
@@ -85,13 +85,13 @@ export function PhotoUpload({ value = [], onChange, maxFiles = 5 }: PhotoUploadP
 
 /**
  * 客户端图片压缩函数 (L5 性能优化)
- * 
+ *
  * @description
  * 使用 Canvas 进行客户端压缩：
  * 1. 限制最大宽度为 1920px
  * 2. 压缩质量设为 0.8
  * 3. 自动识别 JPEG/WebP 进行有损压缩，其他格式保持原样或转为 PNG
- * 
+ *
  * @param file 原始文件对象
  * @returns 压缩后的 Blob 对象（若压缩失败则返回原文件）
  */
@@ -126,7 +126,8 @@ export async function compressImage(file: File): Promise<Blob> {
         ctx.drawImage(img, 0, 0, width, height);
 
         // 针对 JPEG 和 WebP 进行质量压缩
-        const mimeType = file.type === 'image/jpeg' || file.type === 'image/webp' ? file.type : 'image/png';
+        const mimeType =
+          file.type === 'image/jpeg' || file.type === 'image/webp' ? file.type : 'image/png';
         canvas.toBlob(
           (blob) => {
             resolve(blob || file);

@@ -45,23 +45,32 @@ export function ShareManagementDialog() {
   const [isPending, startTransition] = useTransition();
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  const loadShares = async () => {
+  const loadShares = async (signal?: AbortSignal) => {
     setLoading(true);
     try {
       const data = await getMyShareLinks();
+      if (signal?.aborted) return;
       setShares(data as ShareLink[]);
     } catch (error) {
+      if (signal?.aborted) return;
       toast.error('加载分享列表失败');
       console.error(error);
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) {
+        setLoading(false);
+      }
     }
   };
 
   useEffect(() => {
-    if (open) {
-      loadShares();
-    }
+    if (!open) return;
+
+    const controller = new AbortController();
+    loadShares(controller.signal);
+
+    return () => {
+      controller.abort();
+    };
   }, [open]);
 
   const handleDeactivate = async (id: string) => {

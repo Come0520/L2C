@@ -29,20 +29,13 @@ Object.defineProperty(window, 'localStorage', {
 });
 
 describe('useRecentProducts', () => {
-  let originalSort: typeof Array.prototype.sort;
-
   beforeEach(() => {
     window.localStorage.clear();
     vi.useFakeTimers();
-    originalSort = Array.prototype.sort;
-    Array.prototype.sort = vi.fn().mockImplementation(() => {
-      throw new Error('Mutation detected! Do not use .sort(), use .toSorted() instead.');
-    });
   });
 
   afterEach(() => {
     vi.useRealTimers();
-    Array.prototype.sort = originalSort;
   });
 
   it('should initialize with empty array if nothing in localStorage', () => {

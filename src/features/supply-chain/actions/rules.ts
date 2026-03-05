@@ -11,13 +11,11 @@ import { logger } from '@/shared/lib/logger';
 import { requireAuth, requireManagePermission, requireViewPermission } from '../helpers';
 import { SUPPLY_CHAIN_PATHS } from '../constants';
 
-
-
 // 移除本地 requireUser，使用 helpers.ts 中的 requireAuth
 
 /**
  * 获取当前租户的所有拆单规则清单
- * 
+ *
  * @description 按优先级降序排列规则。
  * @returns {Promise<SplitRouteRule[]>}
  */
@@ -41,7 +39,7 @@ export async function getSplitRules() {
 
 /**
  * 创建新的拆单规则
- * 
+ *
  * @description 包含 Zod 验证和审计日志。
  * @param input 符合 SplitRuleInput 结构的数据
  * @returns {Promise<{success: true}>}
@@ -55,7 +53,10 @@ export async function createSplitRule(input: SplitRuleInput) {
   if (!permResult.success) throw new Error(permResult.error);
 
   const validated = splitRuleSchema.parse(input);
-  logger.info('[supply-chain] createSplitRule 开始执行:', { name: validated.name, priority: validated.priority });
+  logger.info('[supply-chain] createSplitRule 开始执行:', {
+    name: validated.name,
+    priority: validated.priority,
+  });
 
   await db.insert(splitRouteRules).values({
     tenantId: session.user.tenantId,
@@ -70,7 +71,7 @@ export async function createSplitRule(input: SplitRuleInput) {
 
   // 记录审计日志
   await AuditService.recordFromSession(session, 'splitRouteRules', 'new', 'CREATE', {
-    new: validated
+    new: validated,
   });
 
   revalidatePath(SUPPLY_CHAIN_PATHS.RULES);
@@ -79,7 +80,7 @@ export async function createSplitRule(input: SplitRuleInput) {
 
 /**
  * 更新指定的拆单规则
- * 
+ *
  * @description 包含租户归属权安全检查和审计日志。
  * @param id 规则 ID
  * @param input 待更新的规则数据
@@ -119,7 +120,7 @@ export async function updateSplitRule(id: string, input: SplitRuleInput) {
 
   // 记录审计日志
   await AuditService.recordFromSession(session, 'splitRouteRules', id, 'UPDATE', {
-    new: validated
+    new: validated,
   });
 
   revalidatePath(SUPPLY_CHAIN_PATHS.RULES);
@@ -128,7 +129,7 @@ export async function updateSplitRule(id: string, input: SplitRuleInput) {
 
 /**
  * 删除指定的拆单规则
- * 
+ *
  * @description 包含租户归属权安全检查。
  * @param id 规则 ID
  * @returns {Promise<{success: true}>}
@@ -162,7 +163,7 @@ export async function deleteSplitRule(id: string) {
 
 /**
  * 获取租户下的所有供应商列表 (简单清单)
- * 
+ *
  * @description 用于在规则配置界面展示供应商下拉选择。
  * @returns {Promise<Array<{id: string, name: string, supplierNo: string}>>}
  */

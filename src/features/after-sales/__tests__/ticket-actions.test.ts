@@ -16,6 +16,7 @@ vi.mock('@/shared/api/db', () => ({
     query: {
       afterSalesTickets: { findFirst: vi.fn(), findMany: vi.fn() },
       orders: { findFirst: vi.fn() },
+      liabilityNotices: { findMany: vi.fn().mockResolvedValue([]) },
     },
     select: vi.fn(() => ({
       from: vi.fn(() => ({
@@ -103,13 +104,11 @@ describe('After-Sales Ticket Actions', () => {
         const tx = {
           query: {
             orders: {
-              findFirst: vi
-                .fn()
-                .mockResolvedValue({
-                  id: VALID_ORDER_ID,
-                  tenantId: VALID_TENANT_ID,
-                  customerId: 'customer-1',
-                }),
+              findFirst: vi.fn().mockResolvedValue({
+                id: VALID_ORDER_ID,
+                tenantId: VALID_TENANT_ID,
+                customerId: 'customer-1',
+              }),
             },
           },
           insert: vi.fn(() => ({

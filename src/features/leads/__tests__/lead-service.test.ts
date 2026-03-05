@@ -93,19 +93,15 @@ describe('LeadService', () => {
           leads: { findFirst: vi.fn().mockResolvedValue(null) },
           customers: { findFirst: vi.fn().mockResolvedValue(null) },
         },
-        insert: vi
-          .fn()
-          .mockReturnValue({
-            values: vi
+        insert: vi.fn().mockReturnValue({
+          values: vi.fn().mockReturnValue({
+            returning: vi
               .fn()
-              .mockReturnValue({
-                returning: vi
-                  .fn()
-                  .mockResolvedValue([
-                    { id: mockLeadId, ...input, score: 50, status: 'PENDING_FOLLOWUP' },
-                  ]),
-              }),
+              .mockResolvedValue([
+                { id: mockLeadId, ...input, score: 50, status: 'PENDING_FOLLOWUP' },
+              ]),
           }),
+        }),
         update: vi.fn(() => ({
           set: vi.fn().mockReturnThis(),
           where: vi.fn().mockReturnThis(),
@@ -191,32 +187,22 @@ describe('LeadService', () => {
         status: 'PENDING_ASSIGNMENT',
       };
       const mockTx = {
-        select: vi
-          .fn()
-          .mockReturnValue({
-            from: vi
-              .fn()
-              .mockReturnValue({
-                where: vi.fn().mockReturnValue({ for: vi.fn().mockResolvedValue([mockLead]) }),
-              }),
+        select: vi.fn().mockReturnValue({
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue({ for: vi.fn().mockResolvedValue([mockLead]) }),
           }),
-        update: vi
-          .fn()
-          .mockReturnValue({
-            set: vi
-              .fn()
-              .mockReturnValue({
-                where: vi
-                  .fn()
-                  .mockReturnValue({
-                    returning: vi
-                      .fn()
-                      .mockResolvedValue([
-                        { ...mockLead, assignedSalesId: mockUserId, status: 'PENDING_FOLLOWUP' },
-                      ]),
-                  }),
-              }),
+        }),
+        update: vi.fn().mockReturnValue({
+          set: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue({
+              returning: vi
+                .fn()
+                .mockResolvedValue([
+                  { ...mockLead, assignedSalesId: mockUserId, status: 'PENDING_FOLLOWUP' },
+                ]),
+            }),
           }),
+        }),
         insert: vi.fn().mockReturnValue({ values: vi.fn() }),
       };
       vi.mocked(db.transaction).mockImplementation(async (cb) => cb(mockTx as never));
@@ -229,15 +215,11 @@ describe('LeadService', () => {
     it('should throw if already assigned', async () => {
       const mockLead = { id: mockLeadId, tenantId: mockTenantId, assignedSalesId: 'other-sales' };
       const mockTx = {
-        select: vi
-          .fn()
-          .mockReturnValue({
-            from: vi
-              .fn()
-              .mockReturnValue({
-                where: vi.fn().mockReturnValue({ for: vi.fn().mockResolvedValue([mockLead]) }),
-              }),
+        select: vi.fn().mockReturnValue({
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue({ for: vi.fn().mockResolvedValue([mockLead]) }),
           }),
+        }),
       };
       vi.mocked(db.transaction).mockImplementation(async (cb) => cb(mockTx as never));
 
@@ -255,41 +237,29 @@ describe('LeadService', () => {
             findFirst: vi.fn().mockResolvedValue({ id: mockLeadId, tenantId: mockTenantId }),
           },
         },
-        select: vi
-          .fn()
-          .mockReturnValue({
-            from: vi
-              .fn()
-              .mockReturnValue({
-                where: vi
-                  .fn()
-                  .mockReturnValue({
-                    for: vi
-                      .fn()
-                      .mockResolvedValue([
-                        {
-                          id: mockLeadId,
-                          tenantId: mockTenantId,
-                          customerName: 'Test',
-                          customerPhone: '138',
-                          assignedSalesId: 'sales-1',
-                          status: 'FOLLOWING_UP',
-                          estimatedAmount: '0',
-                          channelId: null,
-                        },
-                      ]),
-                  }),
-              }),
+        select: vi.fn().mockReturnValue({
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue({
+              for: vi.fn().mockResolvedValue([
+                {
+                  id: mockLeadId,
+                  tenantId: mockTenantId,
+                  customerName: 'Test',
+                  customerPhone: '138',
+                  assignedSalesId: 'sales-1',
+                  status: 'FOLLOWING_UP',
+                  estimatedAmount: '0',
+                  channelId: null,
+                },
+              ]),
+            }),
           }),
-        insert: vi
-          .fn()
-          .mockReturnValue({
-            values: vi
-              .fn()
-              .mockReturnValue({
-                returning: vi.fn().mockResolvedValue([{ id: 'new-customer-id' }]),
-              }),
+        }),
+        insert: vi.fn().mockReturnValue({
+          values: vi.fn().mockReturnValue({
+            returning: vi.fn().mockResolvedValue([{ id: 'new-customer-id' }]),
           }),
+        }),
         update: vi.fn().mockReturnValue({ set: vi.fn().mockReturnValue({ where: vi.fn() }) }),
       };
       vi.mocked(db.transaction).mockImplementation(async (cb) => cb(mockTx as never));

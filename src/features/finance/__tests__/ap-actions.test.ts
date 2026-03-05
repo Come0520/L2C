@@ -286,23 +286,19 @@ describe('AP Actions', () => {
   describe('generateLaborSettlement', () => {
     it('should combine tasks and deductions correctly', async () => {
       const mockTx = {
-        select: vi
-          .fn()
-          .mockReturnValue({
-            from: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue([]) }),
-          }),
+        select: vi.fn().mockReturnValue({
+          from: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue([]) }),
+        }),
         query: {
           installTasks: {
-            findMany: vi
-              .fn()
-              .mockResolvedValue([
-                {
-                  id: 't1',
-                  installerId: 'w1',
-                  actualLaborFee: '1000',
-                  installer: { name: 'Worker' },
-                },
-              ]),
+            findMany: vi.fn().mockResolvedValue([
+              {
+                id: 't1',
+                installerId: 'w1',
+                actualLaborFee: '1000',
+                installer: { name: 'Worker' },
+              },
+            ]),
           },
           liabilityNotices: {
             findMany: vi

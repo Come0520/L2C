@@ -88,14 +88,16 @@ export default defineConfig({
         },
     ],
 
-    /* 在测试前自动启动 production server */
+    /* 在测试前自动启动 standalone server */
     webServer: {
-        command: 'pnpm start -- -p 3004',
+        command: 'node .next/standalone/server.js',
         port: 3004,
         reuseExistingServer: !process.env.CI,
         timeout: 300 * 1000,
         stdout: 'pipe',
         env: {
+            PORT: '3004',
+            HOSTNAME: 'localhost',
             AUTH_TRUST_HOST: 'true',
             AUTH_URL: process.env.BASE_URL || 'http://localhost:3004',
             NEXTAUTH_URL: process.env.BASE_URL || 'http://localhost:3004',

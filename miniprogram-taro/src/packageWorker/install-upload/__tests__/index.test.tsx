@@ -4,6 +4,11 @@ import InstallUploadPage from '../index'
 import { taskService } from '@/services/task-service'
 import { engineerService } from '@/services/engineer-service'
 
+// Mock upload-helper（因 takePhoto 已改用 chooseAndUploadImages）
+jest.mock('@/utils/upload-helper', () => ({
+    chooseAndUploadImages: jest.fn(),
+}))
+
 // Mock Services
 jest.mock('@/services/task-service', () => ({
     taskService: {
@@ -17,6 +22,8 @@ jest.mock('@/services/engineer-service', () => ({
     }
 }))
 
+import { chooseAndUploadImages } from '@/utils/upload-helper'
+
 let capturedUseLoadCallback: any = null
 
 describe('InstallUploadPage - 安装提报', () => {
@@ -27,11 +34,14 @@ describe('InstallUploadPage - 安装提报', () => {
         Taro.showLoading = jest.fn()
         Taro.hideLoading = jest.fn()
         Taro.showToast = jest.fn()
+        Taro.getLocation = jest.fn().mockResolvedValue({ latitude: 31.23, longitude: 121.47 })
         Taro.navigateBack = jest.fn()
-        Taro.chooseMedia = jest.fn().mockImplementation(({ success }) => {
-            success({
-                tempFiles: [{ tempFilePath: 'mock_uploaded_img.jpg' }]
-            })
+
+            // takePhoto 已改用 chooseAndUploadImages，返回 OSS URL
+            ;
+        (chooseAndUploadImages as jest.Mock).mockResolvedValue({
+            urls: ['https://oss.example.com/mock_uploaded_img.jpg'],
+            failedPaths: [],
         })
 
             // Mock Taro hooks
@@ -79,7 +89,12 @@ describe('InstallUploadPage - 安装提报', () => {
             fireEvent.click(photoBtns[1]) // click the after photo button
         })
 
-        expect(Taro.chooseMedia).toHaveBeenCalled()
+        // 等待异步上传完成（takePhoto 已是 async）
+        await act(async () => {
+            await new Promise(r => setTimeout(r, 100))
+        })
+
+        expect(chooseAndUploadImages).toHaveBeenCalled()
 
         // 3. 填写备注
         // The input is a Textarea
@@ -96,13 +111,34 @@ describe('InstallUploadPage - 安装提报', () => {
         })
 
         await act(async () => {
-            await new Promise(r => setTimeout(r, 10))
+            await new Promise(r => setTimeout(r, 1600))
         })
 
         expect(engineerService.completeTask).toHaveBeenCalledWith('task-888', expect.objectContaining({
-            photos: expect.arrayContaining(['mock_uploaded_img.jpg']),
+            photos: expect.arrayContaining(['https://oss.example.com/mock_uploaded_img.jpg']),
             notes: '安装非常顺利'
         }))
         expect(Taro.navigateBack).toHaveBeenCalled()
+    })
+
+    it('should get current location and call checkIn API with coordinates when check-in button is clicked', async () => {
+        await renderAndLoad()
+        const checkInBtn = screen.getByText('实地打卡')
+
+        await act(async () => {
+            fireEvent.click(checkInBtn)
+        })
+
+        // Wait for promises to resolve
+        await act(async () => {
+            await new Promise(r => setTimeout(r, 10))
+        })
+
+        expect(Taro.getLocation).toHaveBeenCalled()
+        expect(taskService.checkIn).toHaveBeenCalledWith('task-888', expect.objectContaining({
+            latitude: 31.23,
+            longitude: 121.47
+        }))
+        expect(screen.getByText('已打卡')).toBeTruthy()
     })
 })

@@ -1,79 +1,81 @@
-"use client";
-import { cn } from "@/shared/lib/utils";
-import React from "react";
-import { motion, useAnimate, HTMLMotionProps } from "framer-motion";
+'use client';
+import { cn } from '@/shared/lib/utils';
+import React from 'react';
+import { motion, useAnimate, HTMLMotionProps } from 'framer-motion';
 
-interface StatefulButtonProps extends Omit<HTMLMotionProps<"button">, "children"> {
+interface StatefulButtonProps extends Omit<HTMLMotionProps<'button'>, 'children'> {
   className?: string;
   children: React.ReactNode;
   action?: () => Promise<unknown>;
-  variant?: "primary" | "secondary" | "danger" | "outline" | "ghost";
+  variant?: 'primary' | 'secondary' | 'danger' | 'outline' | 'ghost';
 }
 
-export const StatefulButton = ({ className, children, action, variant = "primary", ...props }: StatefulButtonProps) => {
+export const StatefulButton = ({
+  className,
+  children,
+  action,
+  variant = 'primary',
+  ...props
+}: StatefulButtonProps) => {
   const [scope, animate] = useAnimate();
   const { onClick, ...buttonProps } = props;
 
   const animateLoading = async () => {
     await animate(
-      ".loader",
+      '.loader',
       {
-        width: "20px",
+        width: '20px',
         scale: 1,
-        display: "block",
+        display: 'block',
       },
       {
         duration: 0.2,
-      },
+      }
     );
   };
 
   const animateSuccess = async () => {
     await animate(
-      ".loader",
+      '.loader',
       {
-        width: "0px",
+        width: '0px',
         scale: 0,
-        display: "none",
+        display: 'none',
       },
       {
         duration: 0.2,
-      },
+      }
     );
     await animate(
-      ".check",
+      '.check',
       {
-        width: "20px",
+        width: '20px',
         scale: 1,
-        display: "block",
+        display: 'block',
       },
       {
         duration: 0.2,
-      },
+      }
     );
 
     await animate(
-      ".check",
+      '.check',
       {
-        width: "0px",
+        width: '0px',
         scale: 0,
-        display: "none",
+        display: 'none',
       },
       {
         delay: 2,
         duration: 0.2,
-      },
+      }
     );
   };
 
   const animateError = async () => {
-    await animate(
-      ".loader",
-      { width: "0px", scale: 0, display: "none" },
-      { duration: 0.2 }
-    );
+    await animate('.loader', { width: '0px', scale: 0, display: 'none' }, { duration: 0.2 });
     // Optional: Shake animation or error icon? For now just reset.
-  }
+  };
 
   const handleClick = async (event: React.MouseEvent<HTMLButtonElement>) => {
     if (props.disabled) return;
@@ -88,7 +90,13 @@ export const StatefulButton = ({ className, children, action, variant = "primary
         const result = await action();
         // Check if result implies success or failure if needed, but usually action throws or returns false if failed.
         // Assumption: action returns truthy {success: true} or void for success.
-        if (result && typeof result === 'object' && result !== null && 'success' in result && !(result as { success: boolean }).success) {
+        if (
+          result &&
+          typeof result === 'object' &&
+          result !== null &&
+          'success' in result &&
+          !(result as { success: boolean }).success
+        ) {
           await animateError();
         } else {
           await animateSuccess();
@@ -102,11 +110,16 @@ export const StatefulButton = ({ className, children, action, variant = "primary
 
   const getVariantClasses = () => {
     switch (variant) {
-      case "danger": return "bg-red-500 hover:ring-red-500";
-      case "secondary": return "bg-gray-500 hover:ring-gray-500";
-      case "outline": return "bg-transparent border border-gray-300 text-gray-700 hover:ring-gray-300";
-      case "ghost": return "bg-transparent text-gray-700 hover:bg-gray-100 ring-0 hover:ring-0";
-      default: return "bg-green-500 hover:ring-green-500"; // Primary default
+      case 'danger':
+        return 'bg-red-500 hover:ring-red-500';
+      case 'secondary':
+        return 'bg-gray-500 hover:ring-gray-500';
+      case 'outline':
+        return 'bg-transparent border border-gray-300 text-gray-700 hover:ring-gray-300';
+      case 'ghost':
+        return 'bg-transparent text-gray-700 hover:bg-gray-100 ring-0 hover:ring-0';
+      default:
+        return 'bg-green-500 hover:ring-green-500'; // Primary default
     }
   };
 
@@ -118,9 +131,9 @@ export const StatefulButton = ({ className, children, action, variant = "primary
       layoutId="button"
       ref={scope}
       className={cn(
-        "flex min-w-[120px] cursor-pointer items-center justify-center gap-2 rounded-full px-4 py-2 font-medium text-white ring-offset-2 transition duration-200 hover:ring-2 dark:ring-offset-black disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-gray-400 disabled:hover:ring-0",
+        'flex min-w-[120px] cursor-pointer items-center justify-center gap-2 rounded-full px-4 py-2 font-medium text-white ring-offset-2 transition duration-200 hover:ring-2 disabled:cursor-not-allowed disabled:bg-gray-400 disabled:opacity-50 disabled:hover:ring-0 dark:ring-offset-black',
         variantClass,
-        className,
+        className
       )}
       {...buttonProps}
       onClick={handleClick}
@@ -143,16 +156,16 @@ const Loader = () => {
       initial={{
         scale: 0,
         width: 0,
-        display: "none",
+        display: 'none',
       }}
       style={{
         scale: 0.5,
-        display: "none",
+        display: 'none',
       }}
       transition={{
         duration: 0.3,
         repeat: Infinity,
-        ease: "linear",
+        ease: 'linear',
       }}
       xmlns="http://www.w3.org/2000/svg"
       width="24"
@@ -177,11 +190,11 @@ const CheckIcon = () => {
       initial={{
         scale: 0,
         width: 0,
-        display: "none",
+        display: 'none',
       }}
       style={{
         scale: 0.5,
-        display: "none",
+        display: 'none',
       }}
       xmlns="http://www.w3.org/2000/svg"
       width="24"

@@ -13,16 +13,14 @@ const { mockInsert, mockUpdate, mockQueryFindFirst } = vi.hoisted(() => {
   });
   const fnInsert = vi.fn().mockReturnValue({
     values: vi.fn().mockReturnValue({
-      returning: vi
-        .fn()
-        .mockResolvedValue([
-          {
-            id: '880e8400-e29b-41d4-a716-446655440001',
-            tenantId: '880e8400-e29b-41d4-a716-446655440000',
-            category: 'PHYSICAL',
-            templateSchema: [],
-          },
-        ]),
+      returning: vi.fn().mockResolvedValue([
+        {
+          id: '880e8400-e29b-41d4-a716-446655440001',
+          tenantId: '880e8400-e29b-41d4-a716-446655440000',
+          category: 'PHYSICAL',
+          templateSchema: [],
+        },
+      ]),
     }),
   });
   return {

@@ -2,7 +2,7 @@ import { View, Text, ScrollView } from '@tarojs/components'
 import Taro, { useLoad } from '@tarojs/taro'
 import { useState } from 'react'
 import { engineerService } from '@/services/engineer-service'
-import type { EarningsSummary, EarningsRecord } from '@/types/business'
+import type { EarningsRecord } from '@/types/business'
 import './index.scss'
 
 export default function SettlementPage() {

@@ -11,6 +11,9 @@ import './globals.css';
 import '@/lib/zod-i18n';
 
 const Toaster = dynamic(() => import('@/shared/ui/sonner').then((m) => m.Toaster));
+const GlobalConfirmProvider = dynamic(() =>
+  import('@/shared/components/global-confirm-provider').then((m) => m.GlobalConfirmProvider)
+);
 const VersionLogger = dynamic(() =>
   import('@/shared/components/version-logger').then((m) => m.VersionLogger)
 );
@@ -47,6 +50,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 </QueryProvider>
               </ProgressBarProvider>
               <Toaster />
+              <GlobalConfirmProvider />
             </ThemeProvider>
           </StyleProvider>
         </AuthProvider>

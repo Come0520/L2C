@@ -393,6 +393,30 @@ export interface VersionRecord {
 
 export const versionHistory: VersionRecord[] = [
   {
+    id: 'v1.3.5',
+    version: 'v1.3.5',
+    date: '2026-03-05',
+    title: '全链路质量门禁落地与生产构建修复',
+    description:
+      '顺利通过包含 7 道关卡的全链路质量门禁 (Quality Gates)。修复前置测试环境遗留的数据库事务环境不一致问题，解决了报价模块中的生产构建缺陷，标志着 L2C 正式进入规范化高质量交付阶段。',
+    contributors: ['长城（开发者）'],
+    updates: [
+      {
+        type: 'feature',
+        content: '上线完整 7 阶自动化质量门禁体系 (Quality Gates 0.1 ~ 0.7)',
+      },
+      {
+        type: 'fix',
+        content: '修复了报价商品明细表中的 TypeScript 严格模式构建错误',
+      },
+      {
+        type: 'optimize',
+        content:
+          '重构并完善了全站自动化单元测试与依赖模块安全审计，彻底解决由于依赖项导致的高危安全漏洞 (CVE)',
+      },
+    ],
+  },
+  {
     id: 'v1.3.4',
     version: 'v1.3.4',
     date: '2026-03-04',

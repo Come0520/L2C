@@ -44,7 +44,9 @@ vi.mock('@/shared/api/db', () => ({
     }),
     update: vi.fn().mockReturnValue({
       set: vi.fn().mockReturnValue({
-        where: vi.fn().mockResolvedValue([{ id: 'updated-po-id' }]),
+        where: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue([{ id: 'updated-po-id' }]),
+        }),
       }),
     }),
     transaction: vi.fn().mockImplementation(async (callback) => {
@@ -67,7 +69,9 @@ vi.mock('@/shared/api/db', () => ({
         }),
         update: vi.fn().mockReturnValue({
           set: vi.fn().mockReturnValue({
-            where: vi.fn().mockResolvedValue([{ id: 'updated-po-id' }]),
+            where: vi.fn().mockReturnValue({
+              returning: vi.fn().mockResolvedValue([{ id: 'updated-po-id' }]),
+            }),
           }),
         }),
       };

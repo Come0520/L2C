@@ -69,13 +69,22 @@ export function PaymentBillDialog({
   const [isPending, startTransition] = useTransition();
 
   const [accounts, setAccounts] = useState<
-    { id: string; accountName: string; balance: string | number; [key: string]: unknown }[]
+    { id: string; accountName: string; balance: string | number;[key: string]: unknown }[]
   >([]);
 
   useEffect(() => {
-    if (open) {
-      getFinanceAccounts().then(setAccounts).catch(logger.error);
-    }
+    if (!open) return;
+
+    let isActive = true;
+    getFinanceAccounts()
+      .then((data) => {
+        if (isActive) setAccounts(data);
+      })
+      .catch(logger.error);
+
+    return () => {
+      isActive = false;
+    };
   }, [open]);
 
   const form = useForm<FormValues>({

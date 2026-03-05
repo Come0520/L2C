@@ -8,6 +8,15 @@ vi.mock('@/shared/api/db', () => ({
   db: {},
 }));
 
+vi.mock('@/shared/lib/auth', () => ({
+  auth: vi.fn(),
+  checkPermission: vi.fn(),
+}));
+
+vi.mock('@/shared/providers/tenant-provider', () => ({
+  useTenant: () => ({ currentTenant: { id: 'test-tenant' } }),
+}));
+
 describe('SupplierForm', () => {
   it('should render form fields', () => {
     render(<SupplierForm onSubmit={vi.fn()} />);

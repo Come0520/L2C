@@ -8,24 +8,24 @@ import { Font } from '@react-pdf/renderer';
  * 这里我们优先尝试使用 Google Fonts 的 CDN 链接，避免直接存储大型字体文件
  */
 export function registerFonts() {
-    try {
-        Font.register({
-            family: 'Noto Sans SC',
-            fonts: [
-                {
-                    src: 'https://fonts.gstatic.com/s/notosanssc/v26/k3kXo84MPvpLmixcA63oeALhLIi_2I7E1srZzS3gg8_W.ttf',
-                    fontWeight: 'normal',
-                },
-                {
-                    src: 'https://fonts.gstatic.com/s/notosanssc/v26/k3kVo84MPvpLmixcA63oeALhLIi_2I7-987dyi_Bms_XfGle.ttf',
-                    fontWeight: 'bold',
-                },
-            ],
-        });
-        // 字体注册成功，静默处理
-    } catch (_error) {
-        // 字体注册失败时静默处理，不影响页面渲染
-    }
+  try {
+    Font.register({
+      family: 'Noto Sans SC',
+      fonts: [
+        {
+          src: 'https://fonts.gstatic.com/s/notosanssc/v26/k3kXo84MPvpLmixcA63oeALhLIi_2I7E1srZzS3gg8_W.ttf',
+          fontWeight: 'normal',
+        },
+        {
+          src: 'https://fonts.gstatic.com/s/notosanssc/v26/k3kVo84MPvpLmixcA63oeALhLIi_2I7-987dyi_Bms_XfGle.ttf',
+          fontWeight: 'bold',
+        },
+      ],
+    });
+    // 字体注册成功，静默处理
+  } catch (_error) {
+    // 字体注册失败时静默处理，不影响页面渲染
+  }
 }
 
 // 默认导出注册函数，以便在根组件或生成 PDF 前调用

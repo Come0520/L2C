@@ -1,12 +1,8 @@
 /**
- * S-03 lead-actions 操作按钮测试
+ * S-03 lead-actions 操作按钮绑定
  *
- * @description 验证线索操作页面的三个核心操作：
- * 1. 退回公海（release） — 确认后调用 leadService.releaseLead()
- * 2. 作废线索（void）   — 确认后调用 leadService.voidLead()
- * 3. 转交线索           — 目前弹提示（功能即将上线）
- *
- * 策略：Mock Taro.showModal 自动确认，验证 service 方法被调用。
+ * @description 测试"放弃"按钮（退回公海）以及作废等操作是否调用了正确的 API，
+ * 并能正确处理页面的返回栈。
  */
 import { render, screen, act, fireEvent } from '@testing-library/react'
 import Taro, { useLoad } from '@tarojs/taro'
@@ -22,7 +18,7 @@ jest.mock('@/services/lead-service', () => ({
 
 let capturedUseLoadCallback: ((params: any) => void) | null = null
 
-describe('LeadActionsPage — 线索操作页', () => {
+describe('LeadActionsPage - 线索操作', () => {
     beforeEach(() => {
         jest.clearAllMocks()
         capturedUseLoadCallback = null
@@ -31,74 +27,75 @@ describe('LeadActionsPage — 线索操作页', () => {
                 capturedUseLoadCallback = cb
             })
 
-            // showModal 默认自动确认
+            // showModal 默认点击"确定"
             ; (Taro.showModal as jest.Mock).mockImplementation(({ success }) => {
                 if (success) success({ confirm: true, cancel: false })
                 return Promise.resolve({ confirm: true, cancel: false })
             })
 
+            ; (Taro.showLoading as jest.Mock).mockClear()
+            ; (Taro.hideLoading as jest.Mock).mockClear()
+            ; (Taro.showToast as jest.Mock).mockClear()
+            ; (Taro.navigateBack as jest.Mock).mockClear()
             ; (leadService.releaseLead as jest.Mock).mockResolvedValue({ success: true })
             ; (leadService.voidLead as jest.Mock).mockResolvedValue({ success: true })
     })
 
-    async function renderAndLoad(id = 'lead-100') {
+    async function renderAndLoad(id = 'lead-001') {
         render(<LeadActionsPage />)
         if (capturedUseLoadCallback) {
             await act(async () => {
-                capturedUseLoadCallback!({ id })
+                await capturedUseLoadCallback!({ id })
             })
         }
     }
 
-    test('页面应渲染三个操作卡片', async () => {
+    test('点击"退回公海 (放弃)"并确认，应调用 releaseLead 并返回两层', async () => {
+        jest.useFakeTimers()
         await renderAndLoad()
 
-        expect(screen.getByText('分配/转交线索')).toBeTruthy()
-        expect(screen.getByText('退回公海 (放弃)')).toBeTruthy()
-        expect(screen.getByText('作废线索')).toBeTruthy()
+        const abandonBtn = screen.getByText('退回公海 (放弃)')
+        await act(async () => {
+            fireEvent.click(abandonBtn)
+        })
+
+        // 等待所有微任务执行完毕 (Mock 的网络请求)
+        await act(async () => {
+            await Promise.resolve()
+        })
+
+        expect(Taro.showModal).toHaveBeenCalled()
+        expect(leadService.releaseLead).toHaveBeenCalledWith('lead-001')
+        expect(Taro.showToast).toHaveBeenCalledWith(expect.objectContaining({ title: '已退回' }))
+
+        act(() => {
+            jest.runAllTimers()
+        })
+        expect(Taro.navigateBack).toHaveBeenCalledWith({ delta: 2 })
+        jest.useRealTimers()
     })
 
-    test('点击"退回公海"确认后应调用 leadService.releaseLead()', async () => {
-        await renderAndLoad('lead-200')
-
-        const abandonCard = screen.getByText('退回公海 (放弃)').closest('.action-card')!
-        await act(async () => {
-            fireEvent.click(abandonCard)
-        })
-
-        // 等待异步操作完成
-        await act(async () => {
-            await new Promise(r => setTimeout(r, 10))
-        })
-
-        expect(leadService.releaseLead).toHaveBeenCalledWith('lead-200')
-    })
-
-    test('点击"作废线索"确认后应调用 leadService.voidLead()', async () => {
-        await renderAndLoad('lead-300')
-
-        const voidCard = screen.getByText('作废线索').closest('.action-card')!
-        await act(async () => {
-            fireEvent.click(voidCard)
-        })
-
-        await act(async () => {
-            await new Promise(r => setTimeout(r, 10))
-        })
-
-        expect(leadService.voidLead).toHaveBeenCalledWith('lead-300', '小程序端手动操作作废')
-    })
-
-    test('点击"转交线索"应弹 Toast 提示', async () => {
+    test('点击"作废线索"并确认，应调用 voidLead 并返回两层', async () => {
+        jest.useFakeTimers()
         await renderAndLoad()
 
-        const transferCard = screen.getByText('分配/转交线索').closest('.action-card')!
+        const voidBtn = screen.getByText('作废线索')
         await act(async () => {
-            fireEvent.click(transferCard)
+            fireEvent.click(voidBtn)
         })
 
-        expect(Taro.showToast).toHaveBeenCalledWith(
-            expect.objectContaining({ title: '转交功能即将上线' })
-        )
+        await act(async () => {
+            await Promise.resolve()
+        })
+
+        expect(Taro.showModal).toHaveBeenCalled()
+        expect(leadService.voidLead).toHaveBeenCalledWith('lead-001', '小程序端手动操作作废')
+        expect(Taro.showToast).toHaveBeenCalledWith(expect.objectContaining({ title: '已作废' }))
+
+        act(() => {
+            jest.runAllTimers()
+        })
+        expect(Taro.navigateBack).toHaveBeenCalledWith({ delta: 2 })
+        jest.useRealTimers()
     })
 })

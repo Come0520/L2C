@@ -88,6 +88,8 @@ interface QuoteItemsTableProps {
   viewMode?: ViewMode;
   activeCategory?: string;
   onRowClick?: (item: QuoteItem) => void;
+  /** 高级配置按钮回调，传入后将替代内部 Drawer 逻辑（URL 驱动模式） */
+  onAdvancedEdit?: (item: QuoteItem) => void;
 }
 
 export const QuoteItemsTable = React.memo(function QuoteItemsTable({
@@ -102,6 +104,7 @@ export const QuoteItemsTable = React.memo(function QuoteItemsTable({
   allowedCategories,
   viewMode = 'room',
   onRowClick,
+  onAdvancedEdit,
 }: QuoteItemsTableProps) {
   const isFieldVisible = (field: string) => {
     if (visibleFields && visibleFields.length > 0) {
@@ -127,6 +130,7 @@ export const QuoteItemsTable = React.memo(function QuoteItemsTable({
     warningDialog,
     expandedRoomIds,
     expandedItemIds,
+    handleAdvancedEdit,
     setAdvancedDrawerOpen,
     setWarningDialog,
     handleToggleItem,
@@ -369,6 +373,7 @@ export const QuoteItemsTable = React.memo(function QuoteItemsTable({
           expandedRoomIds={expandedRoomIds}
           onAddRoom={onAddRoom}
           onRowClick={onRowClick}
+          onAdvancedEdit={onAdvancedEdit ?? handleAdvancedEdit}
         />
       )}
 
@@ -395,15 +400,19 @@ export const QuoteItemsTable = React.memo(function QuoteItemsTable({
           getRoomSubtotal={getRoomSubtotal}
           allowedCategories={allowedCategories}
           onRowClick={onRowClick}
+          onAdvancedEdit={onAdvancedEdit ?? handleAdvancedEdit}
         />
       )}
 
-      <QuoteItemAdvancedDrawer
-        open={advancedDrawerOpen}
-        onOpenChange={setAdvancedDrawerOpen}
-        item={editingItem}
-        onSuccess={onItemUpdate}
-      />
+      {/* 内部 Drawer（外部未传 onAdvancedEdit 时使用） */}
+      {!onAdvancedEdit && (
+        <QuoteItemAdvancedDrawer
+          open={advancedDrawerOpen}
+          onOpenChange={setAdvancedDrawerOpen}
+          item={editingItem}
+          onSuccess={onItemUpdate}
+        />
+      )}
 
       <Dialog
         open={warningDialog.open}

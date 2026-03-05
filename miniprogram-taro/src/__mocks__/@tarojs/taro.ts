@@ -32,6 +32,14 @@ const showLoading = jest.fn(() => Promise.resolve())
 const hideLoading = jest.fn(() => Promise.resolve())
 const showModal = jest.fn(() => Promise.resolve({ confirm: true, cancel: false }))
 
+// ---------- 媒体 API ----------
+const chooseMedia = jest.fn(() => Promise.resolve({ tempFiles: [] }))
+const uploadFile = jest.fn(() => Promise.resolve({ statusCode: 200, data: '{}' }))
+
+// ---------- 分享 API ----------
+const shareAppMessage = jest.fn(() => Promise.resolve())
+const showActionSheet = jest.fn(() => Promise.resolve({ tapIndex: 0 }))
+
 // ---------- 网络请求 API ----------
 const request = jest.fn(() => Promise.resolve({ statusCode: 200, data: {} }))
 
@@ -84,6 +92,10 @@ const Taro = {
     usePullDownRefresh,
     useReachBottom,
     useRouter,
+    chooseMedia,
+    uploadFile,
+    shareAppMessage,
+    showActionSheet,
 }
 
 export {
@@ -111,6 +123,10 @@ export {
     usePullDownRefresh,
     useReachBottom,
     useRouter,
+    chooseMedia,
+    uploadFile,
+    shareAppMessage,
+    showActionSheet,
 }
 
 export default Taro

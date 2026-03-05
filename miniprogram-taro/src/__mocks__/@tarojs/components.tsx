@@ -50,7 +50,19 @@ export function Textarea({ className, value, onInput, placeholder, ...rest }: an
     })
 }
 
-export const Picker = createMockComponent('select')
+export function Picker({ className, value, onChange, range, rangeKey, children, mode, ...rest }: any) {
+    return React.createElement('div', {
+        className,
+        'data-testid': 'mock-picker',
+        'data-picker-mode': mode || 'selector',
+        onClick: (e: any) => {
+            // 支持通过 data-mock-value 属性注入值，否则默认为选择器的第 0 项
+            const mockVal = e.currentTarget?.getAttribute?.('data-mock-value')
+            onChange?.({ detail: { value: mockVal !== null && mockVal !== undefined ? mockVal : 0 } })
+        },
+        ...rest,
+    }, children)
+}
 export const Switch = createMockComponent('input')
 export const Checkbox = createMockComponent('input')
 export const Radio = createMockComponent('input')

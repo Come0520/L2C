@@ -296,7 +296,11 @@ export const updateQuote = createSafeAction(updateQuoteSchema, async (data, cont
   revalidatePath(`/quotes/${id}`);
   revalidatePath('/quotes');
   updateTag('quotes');
-  logger.info(`[${traceId}] [quotes] 报价单更新成功`, { quoteId: id, traceId, tenantId: userTenantId });
+  logger.info(`[${traceId}] [quotes] 报价单更新成功`, {
+    quoteId: id,
+    traceId,
+    tenantId: userTenantId,
+  });
   return { success: true };
 });
 

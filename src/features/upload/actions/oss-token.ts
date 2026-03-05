@@ -5,34 +5,35 @@ import { unstable_cache } from 'next/cache';
 import { logger } from '@/shared/lib/logger';
 // import { env } from '@/shared/config/env'; // OSS 功能暂时禁用
 
-
 /**
  * 阿里云 OSS STS 临时凭证响应数据结构
  *
  * @remarks 用于客户端直传 OSS 时的身份验证，凭证由服务端通过 STS AssumeRole 获取
  */
 interface OSSTokenData {
-    /** STS 临时 AccessKey ID */
-    AccessKeyId: string;
-    /** STS 临时 AccessKey Secret */
-    AccessKeySecret: string;
-    /** STS 安全令牌 (Security Token) */
-    SecurityToken: string;
-    /** 凭证过期时间（ISO 8601 格式） */
-    Expiration: string;
-    /** OSS Bucket 名称 */
-    bucket: string;
-    /** OSS 地域标识（如 'oss-cn-hangzhou'） */
-    region: string;
+  /** STS 临时 AccessKey ID */
+  AccessKeyId: string;
+  /** STS 临时 AccessKey Secret */
+  AccessKeySecret: string;
+  /** STS 安全令牌 (Security Token) */
+  SecurityToken: string;
+  /** 凭证过期时间（ISO 8601 格式） */
+  Expiration: string;
+  /** OSS Bucket 名称 */
+  bucket: string;
+  /** OSS 地域标识（如 'oss-cn-hangzhou'） */
+  region: string;
 }
 
 /**
  * 【内部】获取阿里云 OSS STS 临时授权 Token（未缓存版本）
  */
-async function getOSSTokenBase(): Promise<{ success: true; data: OSSTokenData } | { success: false; error: string }> {
-    logger.info('[Upload:OSS] 请求 STS Token (当前功能维护中已禁用)');
-    return { success: false, error: 'OSS Upload temporarily disabled for update' };
-    /*
+async function getOSSTokenBase(): Promise<
+  { success: true; data: OSSTokenData } | { success: false; error: string }
+> {
+  logger.info('[Upload:OSS] 请求 STS Token (当前功能维护中已禁用)');
+  return { success: false, error: 'OSS Upload temporarily disabled for update' };
+  /*
     try {
         if (!env.OSS_ACCESS_KEY_ID || !env.OSS_ACCESS_KEY_SECRET || !env.OSS_ROLE_ARN) {
             logger.error('Missing Aliyun configuration');
@@ -95,11 +96,7 @@ async function getOSSTokenBase(): Promise<{ success: true; data: OSSTokenData } 
  * }
  * ```
  */
-export const getOSSToken = unstable_cache(
-    async () => getOSSTokenBase(),
-    ['oss-sts-token'],
-    {
-        revalidate: 840, // 缓存 14 分钟 (OSS 凭证有效 15分，提前 1分钟刷新)
-        tags: ['oss-sts'],
-    }
-);
+export const getOSSToken = unstable_cache(async () => getOSSTokenBase(), ['oss-sts-token'], {
+  revalidate: 840, // 缓存 14 分钟 (OSS 凭证有效 15分，提前 1分钟刷新)
+  tags: ['oss-sts'],
+});

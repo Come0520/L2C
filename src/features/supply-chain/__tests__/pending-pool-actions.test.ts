@@ -31,18 +31,20 @@ vi.mock('@/shared/services/audit-service', () => ({
 
 const { mockTx, mockDb } = vi.hoisted(() => {
   const tx = {
-    insert: vi
-      .fn()
-      .mockReturnValue({
-        values: vi
+    insert: vi.fn().mockReturnValue({
+      values: vi
+        .fn()
+        .mockReturnValue({ returning: vi.fn().mockResolvedValue([{ id: 'mock-id' }]) }),
+    }),
+    update: vi.fn().mockReturnValue({
+      set: vi.fn().mockReturnValue({
+        where: vi
           .fn()
-          .mockReturnValue({ returning: vi.fn().mockResolvedValue([{ id: 'mock-id' }]) }),
+          .mockReturnValue({
+            returning: vi.fn().mockResolvedValue([{ id: 'mock-id-1' }, { id: 'mock-id-2' }]),
+          }),
       }),
-    update: vi
-      .fn()
-      .mockReturnValue({
-        set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(true) }),
-      }),
+    }),
     select: vi
       .fn()
       .mockReturnValue({ from: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue([]) }) }),
@@ -79,11 +81,9 @@ const { mockTx, mockDb } = vi.hoisted(() => {
       query: {
         suppliers: { findFirst: vi.fn() },
       },
-      update: vi
-        .fn()
-        .mockReturnValue({
-          set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(true) }),
-        }),
+      update: vi.fn().mockReturnValue({
+        set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(true) }),
+      }),
       transaction: vi.fn(async (cb: any) => cb(tx)),
     },
   };

@@ -25,13 +25,11 @@ vi.mock('next/cache', () => ({
 vi.mock('@/shared/api/db', () => ({
   db: {
     delete: vi.fn().mockReturnValue({}),
-    insert: vi
-      .fn()
-      .mockReturnValue({
-        values: vi
-          .fn()
-          .mockReturnValue({ returning: vi.fn().mockResolvedValue([{ id: 'mocked-id' }]) }),
-      }),
+    insert: vi.fn().mockReturnValue({
+      values: vi
+        .fn()
+        .mockReturnValue({ returning: vi.fn().mockResolvedValue([{ id: 'mocked-id' }]) }),
+    }),
     update: vi
       .fn()
       .mockReturnValue({ set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue({}) }) }),
@@ -48,18 +46,14 @@ vi.mock('@/shared/api/db', () => ({
     transaction: vi.fn(async (callback) => {
       // Mock transaction just executes the callback
       const tx = {
-        insert: vi
-          .fn()
-          .mockReturnValue({
-            values: vi
-              .fn()
-              .mockReturnValue({ returning: vi.fn().mockResolvedValue([{ id: 'mocked-id' }]) }),
-          }),
-        update: vi
-          .fn()
-          .mockReturnValue({
-            set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue({}) }),
-          }),
+        insert: vi.fn().mockReturnValue({
+          values: vi
+            .fn()
+            .mockReturnValue({ returning: vi.fn().mockResolvedValue([{ id: 'mocked-id' }]) }),
+        }),
+        update: vi.fn().mockReturnValue({
+          set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue({}) }),
+        }),
       };
       return callback(tx);
     }),

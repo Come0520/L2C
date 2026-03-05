@@ -38,11 +38,9 @@ vi.mock('@/shared/api/db', () => ({
         insert: vi
           .fn()
           .mockReturnValue({ values: vi.fn().mockResolvedValue([{ id: 'tx-mock-id' }]) }),
-        update: vi
-          .fn()
-          .mockReturnValue({
-            set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue({}) }),
-          }),
+        update: vi.fn().mockReturnValue({
+          set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue({}) }),
+        }),
       };
       return cb(tx);
     }),
@@ -71,19 +69,17 @@ describe('Installation Flow Integration Test', () => {
       vi.mocked(auth).mockResolvedValueOnce({
         user: { id: adminId, tenantId, roles: ['admin'] },
       } as any);
-      db.query.installTasks.findMany = vi
-        .fn()
-        .mockResolvedValueOnce([
-          {
-            id: taskId,
-            tenantId,
-            taskNo: 'INS-TEST-001',
-            orderId: 'order-1',
-            customerId: 'cust-1',
-            category: 'CURTAIN',
-            status: 'PENDING_DISPATCH',
-          },
-        ]);
+      db.query.installTasks.findMany = vi.fn().mockResolvedValueOnce([
+        {
+          id: taskId,
+          tenantId,
+          taskNo: 'INS-TEST-001',
+          orderId: 'order-1',
+          customerId: 'cust-1',
+          category: 'CURTAIN',
+          status: 'PENDING_DISPATCH',
+        },
+      ]);
       const result = await getInstallTasks();
       expect(result.success).toBe(true);
       expect(result.data?.length).toBe(1);
@@ -104,19 +100,17 @@ describe('Installation Flow Integration Test', () => {
       vi.mocked(auth).mockResolvedValueOnce({
         user: { id: adminId, tenantId, roles: ['admin'] },
       } as any);
-      db.query.installTasks.findMany = vi
-        .fn()
-        .mockResolvedValueOnce([
-          {
-            id: taskId,
-            tenantId,
-            taskNo: 'INS-TEST-001',
-            orderId: 'order-1',
-            customerId: 'cust-1',
-            category: 'CURTAIN',
-            status: 'PENDING_DISPATCH',
-          },
-        ]);
+      db.query.installTasks.findMany = vi.fn().mockResolvedValueOnce([
+        {
+          id: taskId,
+          tenantId,
+          taskNo: 'INS-TEST-001',
+          orderId: 'order-1',
+          customerId: 'cust-1',
+          category: 'CURTAIN',
+          status: 'PENDING_DISPATCH',
+        },
+      ]);
       const result = await getInstallTasks({ search: 'TEST-001' });
       expect(result.success).toBe(true);
       expect(result.data?.length).toBe(1);
@@ -169,14 +163,12 @@ describe('Installation Flow Integration Test', () => {
       vi.mocked(auth).mockResolvedValueOnce({
         user: { id: adminId, tenantId, roles: ['admin'] },
       } as any);
-      db.query.users.findFirst = vi
-        .fn()
-        .mockResolvedValueOnce({
-          id: installerId,
-          tenantId,
-          name: 'Installer Worker',
-          role: 'INSTALLER',
-        });
+      db.query.users.findFirst = vi.fn().mockResolvedValueOnce({
+        id: installerId,
+        tenantId,
+        name: 'Installer Worker',
+        role: 'INSTALLER',
+      });
 
       // Mock transaction and subsequent query for assertions
       const mockUpdatedTask = {

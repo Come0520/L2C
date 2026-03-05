@@ -3,7 +3,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { ProductGrid } from '@/features/products/components/product-grid';
 import { ProductFilter } from '@/features/products/components/product-filter';
-import { ProductDialog } from '@/features/products/components/product-dialog';
+import { useConfirm } from '@/shared/hooks/use-confirm';
+import dynamic from 'next/dynamic';
+const ProductDialog = dynamic(
+  () => import('@/features/products/components/product-dialog').then((mod) => mod.ProductDialog),
+  { ssr: false }
+);
 import { getProducts } from '@/features/products/actions/queries';
 import { activateProduct, deleteProduct } from '@/features/products/actions/mutations';
 import RefreshCw from 'lucide-react/dist/esm/icons/refresh-cw';
@@ -81,8 +86,15 @@ export function ProductsClient({ initialData }: { initialData: Product[] }) {
     }
   };
 
+  const confirm = useConfirm();
+
   const handleDelete = async (id: string) => {
-    if (!confirm('确定要删除该产品吗？')) return;
+    const isConfirmed = await confirm({
+      title: '删除产品',
+      description: '确定要删除该产品吗？该操作不可逆转。',
+      variant: 'destructive',
+    });
+    if (!isConfirmed) return;
     try {
       const result = await deleteProduct({ id });
       if (result.error) {
@@ -166,18 +178,20 @@ export function ProductsClient({ initialData }: { initialData: Product[] }) {
         </div>
       )}
 
-      <ProductDialog
-        open={isDialogOpen}
-        onOpenChange={setIsDialogOpen}
-        initialData={
-          editingProduct
-            ? (editingProduct as unknown as React.ComponentProps<
-                typeof ProductDialog
-              >['initialData'])
-            : undefined
-        }
-        onSuccess={fetchData}
-      />
+      {isDialogOpen && (
+        <ProductDialog
+          open={isDialogOpen}
+          onOpenChange={setIsDialogOpen}
+          initialData={
+            editingProduct
+              ? (editingProduct as unknown as React.ComponentProps<
+                  typeof ProductDialog
+                >['initialData'])
+              : undefined
+          }
+          onSuccess={fetchData}
+        />
+      )}
     </div>
   );
 }

@@ -19,7 +19,9 @@ vi.mock('@/shared/lib/auth', () => ({
 const mockTx = {
   update: vi.fn().mockReturnValue({
     set: vi.fn().mockReturnValue({
-      where: vi.fn().mockResolvedValue([{ id: 'inv-1', quantity: 90 }]),
+      where: vi
+        .fn()
+        .mockReturnValue({ returning: vi.fn().mockResolvedValue([{ id: 'inv-1', quantity: 90 }]) }),
     }),
   }),
   insert: vi.fn().mockReturnValue({

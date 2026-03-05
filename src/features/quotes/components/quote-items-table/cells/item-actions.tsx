@@ -8,6 +8,7 @@ import Trash2 from 'lucide-react/dist/esm/icons/trash';
 import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down';
 import ChevronUp from 'lucide-react/dist/esm/icons/chevron-up';
 import Plus from 'lucide-react/dist/esm/icons/plus';
+import Settings2 from 'lucide-react/dist/esm/icons/settings-2';
 import { cn } from '@/shared/lib/utils';
 
 interface ItemActionsCellProps {
@@ -19,6 +20,8 @@ interface ItemActionsCellProps {
   onAddAccessory: () => void;
   onDelete: () => void;
   rowSpan?: number;
+  /** 高级配置按钮回调（URL 驱动模式下传入，点击后通过 URL 参数打开 Drawer） */
+  onAdvancedEdit?: () => void;
 }
 
 export const ItemActionsCell = memo(function ItemActionsCell({
@@ -30,6 +33,7 @@ export const ItemActionsCell = memo(function ItemActionsCell({
   onAddAccessory,
   onDelete,
   rowSpan,
+  onAdvancedEdit,
 }: ItemActionsCellProps) {
   if (readOnly) return null;
 
@@ -48,22 +52,40 @@ export const ItemActionsCell = memo(function ItemActionsCell({
             >
               <Plus className="h-4 w-4" aria-hidden="true" />
             </Button>
-            <Button
-              size="icon"
-              variant="ghost"
-              className={cn(
-                'h-7 w-7',
-                isExpanded
-                  ? 'text-primary bg-primary/10'
-                  : 'text-muted-foreground hover:text-primary'
-              )}
-              onClick={onToggleExpand}
-              title={isExpanded ? '收起高级配置' : '展开高级配置'}
-              aria-expanded={isExpanded}
-              aria-label={isExpanded ? '收起' : '展开'}
-            >
-              {isExpanded ? <ChevronUp className="h-4 w-4" aria-hidden="true" /> : <ChevronDown className="h-4 w-4" aria-hidden="true" />}
-            </Button>
+            {/* 如果有外部 URL 驱动的高级配置回调，显示设置图标；否则回退到内联展开 */}
+            {onAdvancedEdit ? (
+              <Button
+                size="icon"
+                variant="ghost"
+                className="text-muted-foreground hover:text-primary h-7 w-7"
+                onClick={onAdvancedEdit}
+                title="高级配置"
+                aria-label="高级配置"
+              >
+                <Settings2 className="h-4 w-4" aria-hidden="true" />
+              </Button>
+            ) : (
+              <Button
+                size="icon"
+                variant="ghost"
+                className={cn(
+                  'h-7 w-7',
+                  isExpanded
+                    ? 'text-primary bg-primary/10'
+                    : 'text-muted-foreground hover:text-primary'
+                )}
+                onClick={onToggleExpand}
+                title={isExpanded ? '收起高级配置' : '展开高级配置'}
+                aria-expanded={isExpanded}
+                aria-label={isExpanded ? '收起' : '展开'}
+              >
+                {isExpanded ? (
+                  <ChevronUp className="h-4 w-4" aria-hidden="true" />
+                ) : (
+                  <ChevronDown className="h-4 w-4" aria-hidden="true" />
+                )}
+              </Button>
+            )}
           </>
         )}
         <Button

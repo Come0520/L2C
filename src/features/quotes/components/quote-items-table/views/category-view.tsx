@@ -35,6 +35,8 @@ interface CategoryViewProps extends ColumnVisibility {
   expandedRoomIds: Set<string>;
   onAddRoom?: (name: string) => void;
   onRowClick?: (item: QuoteItem) => void;
+  /** 高级配置按鈕回调（URL 驱动模式下传入） */
+  onAdvancedEdit?: (item: QuoteItem) => void;
 }
 
 export const CategoryView = React.memo(function CategoryView({
@@ -65,6 +67,7 @@ export const CategoryView = React.memo(function CategoryView({
   expandedRoomIds,
   onAddRoom,
   onRowClick,
+  onAdvancedEdit,
 }: CategoryViewProps) {
   /**
    * 按空间分组：将扁平 items 列表按 roomId 归入对应空间
@@ -145,6 +148,7 @@ export const CategoryView = React.memo(function CategoryView({
           onToggleExpand={() => handleToggleItem(item.id)}
           renderChildren={(children, childLevel) => renderRows(children, childLevel, roomName)}
           onRowClick={onRowClick}
+          onAdvancedEdit={onAdvancedEdit}
         />
       );
     });

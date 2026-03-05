@@ -14,185 +14,44 @@ import FileDown from 'lucide-react/dist/esm/icons/file-down';
 import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle';
 import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
 import Loader2 from 'lucide-react/dist/esm/icons/loader';
-// import * as XLSX from 'xlsx'; // Dynamically imported - Removed
-import { toast } from 'sonner';
-import { importLeads } from '../actions';
 import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert';
 import { ScrollArea } from '@/shared/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table';
+
+import { useExcelImport } from '../hooks/use-excel-import';
+import { LEAD_TEMPLATE_HEADER } from '../services/excel-mapping';
 
 interface ExcelImportDialogProps {
   onSuccess?: () => void;
 }
 
-const TEMPLATE_HEADER = ['客户姓名', '手机号', '微信号', '楼盘', '地址', '预估金额', '备注'];
-const FIELD_MAPPING: Record<string, string> = {
-  客户姓名: 'customerName',
-  手机号: 'customerPhone',
-  微信号: 'customerWechat',
-  楼盘: 'community',
-  地址: 'address',
-  预估金额: 'estimatedAmount',
-  备注: 'remark',
-};
-
-interface ImportedLead {
-  customerName: string;
-  customerPhone: string;
-  customerWechat?: string;
-  community?: string;
-  address?: string;
-  estimatedAmount?: number;
-  remark?: string;
-}
-
-/** 排除掉非字符串类型的字段 */
-type StringFieldKey = Exclude<keyof ImportedLead, 'estimatedAmount'>;
-
-/**
- * 将 Excel 的一行原始数据映射为线索对象
- * 消除 any 赋值，确保类型安全
- */
-function mapExcelRowToLead(row: Record<string, unknown>): ImportedLead {
-  const newRow: Partial<ImportedLead> = {};
-  Object.keys(row).forEach((key) => {
-    const fieldName = FIELD_MAPPING[key] as keyof ImportedLead | undefined;
-    if (fieldName) {
-      const rawValue = row[key];
-      if (fieldName === 'estimatedAmount') {
-        newRow[fieldName] = rawValue ? Number(rawValue) : undefined;
-      } else {
-        // 类型安全赋值：fieldName 已确定不是 estimatedAmount，故必为 StringFieldKey
-        const stringKey = fieldName as StringFieldKey;
-        newRow[stringKey] = String(rawValue || '').trim();
-      }
-    }
-  });
-  return newRow as ImportedLead;
-}
-
-interface ImportError {
-  row: number;
-  error: string;
-}
-
-interface ImportResult {
-  successCount: number;
-  errors: ImportError[];
-}
-
 export function ExcelImportDialog({ onSuccess }: ExcelImportDialogProps) {
   const [open, setOpen] = useState(false);
-  const [file, setFile] = useState<File | null>(null);
-  const [previewData, setPreviewData] = useState<ImportedLead[]>([]);
-  const [stats, setStats] = useState<{ total: number; valid: number } | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [importResult, setImportResult] = useState<ImportResult | null>(null);
 
-  const downloadTemplate = async () => {
-    const { Workbook } = await import('exceljs');
-    const { saveAs } = await import('file-saver');
+  const {
+    file,
+    previewData,
+    stats,
+    isUploading,
+    importResult,
+    handleDownloadTemplate,
+    handleFileChange,
+    handleImport,
+    resetState,
+  } = useExcelImport({
+    onSuccess,
+  });
 
-    const workbook = new Workbook();
-    const ws = workbook.addWorksheet('线索导入模版');
-    ws.addRow(TEMPLATE_HEADER);
-    ws.addRow(['张三', '13800138000', 'wx123', '万科城', '1栋101', '50000', '老客户推荐']);
-
-    const buffer = await workbook.xlsx.writeBuffer();
-    saveAs(new Blob([buffer], { type: 'application/octet-stream' }), '线索导入模版.xlsx');
-  };
-
-  const parseExcelArrayBuffer = async (buffer: ArrayBuffer): Promise<Record<string, unknown>[]> => {
-    const { Workbook } = await import('exceljs');
-    const workbook = new Workbook();
-    await workbook.xlsx.load(buffer);
-    const ws = workbook.worksheets[0];
-
-    const jsonData: Record<string, unknown>[] = [];
-    if (ws) {
-      const headers: string[] = [];
-      ws.getRow(1).eachCell((cell, colNumber) => {
-        headers[colNumber] = cell.value ? String(cell.value) : `Column${colNumber}`;
-      });
-
-      ws.eachRow((row, rowNumber) => {
-        if (rowNumber === 1) return;
-        const rowData: Record<string, unknown> = {};
-        row.eachCell((cell, colNumber) => {
-          const header = headers[colNumber];
-          if (header) {
-            rowData[header] = cell.value;
-          }
-        });
-        jsonData.push(rowData);
-      });
+  const handleOpenChange = (newOpen: boolean) => {
+    setOpen(newOpen);
+    if (!newOpen) {
+      // 延迟重置状态，等待关闭动画结束
+      setTimeout(resetState, 300);
     }
-    return jsonData;
-  };
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (!selectedFile) return;
-
-    setFile(selectedFile);
-    setImportResult(null);
-
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      try {
-        const buffer = e.target?.result as ArrayBuffer;
-        const jsonData = await parseExcelArrayBuffer(buffer);
-
-        // 映射字段（统一使用工具函数）
-        const mappedData = jsonData.map(mapExcelRowToLead);
-
-        setPreviewData(mappedData.slice(0, 5)); // 预览前 5 条
-        setStats({ total: mappedData.length, valid: mappedData.length }); // Simple stat
-      } catch (err) {
-        toast.error('解析文件失败');
-      }
-    };
-    reader.readAsArrayBuffer(selectedFile);
-  };
-
-  const handleImport = async () => {
-    if (!file) return;
-    setIsUploading(true);
-
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      try {
-        const buffer = e.target?.result as ArrayBuffer;
-        const jsonData = await parseExcelArrayBuffer(buffer);
-
-        // 映射字段（统一使用工具函数）
-        const mappedData = jsonData.map(mapExcelRowToLead);
-
-        const res = await importLeads(mappedData);
-
-        const result = res;
-        setImportResult(result);
-
-        if (result.successCount > 0) {
-          toast.success(`成功导入 ${result.successCount} 条线索`);
-          onSuccess?.();
-        }
-
-        if (result.errors.length > 0) {
-          toast.warning(`${result.errors.length} 条数据导入失败，请查看详情`);
-        }
-      } catch (err) {
-        const message = err instanceof Error ? err.message : '未知错误';
-        toast.error('导入失败: ' + message);
-      } finally {
-        setIsUploading(false);
-      }
-    };
-    reader.readAsArrayBuffer(file);
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button variant="outline">
           <Upload className="mr-2 h-4 w-4" />
@@ -207,7 +66,7 @@ export function ExcelImportDialog({ onSuccess }: ExcelImportDialogProps) {
         <div className="space-y-6">
           {/* Step 1: Download Template & Upload */}
           <div className="glass-empty-state flex items-center gap-4 rounded-lg border-dashed p-4">
-            <Button variant="outline" size="sm" onClick={downloadTemplate}>
+            <Button variant="outline" size="sm" onClick={handleDownloadTemplate}>
               <FileDown className="mr-2 h-4 w-4" />
               下载模版
             </Button>
@@ -231,7 +90,7 @@ export function ExcelImportDialog({ onSuccess }: ExcelImportDialogProps) {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      {TEMPLATE_HEADER.slice(0, 5).map((h) => (
+                      {LEAD_TEMPLATE_HEADER.slice(0, 5).map((h) => (
                         <TableHead key={h}>{h}</TableHead>
                       ))}
                     </TableRow>
@@ -281,8 +140,9 @@ export function ExcelImportDialog({ onSuccess }: ExcelImportDialogProps) {
             </div>
           )}
 
+          {/* Step 4: Actions */}
           <div className="flex justify-end gap-2">
-            <Button variant="ghost" onClick={() => setOpen(false)}>
+            <Button variant="ghost" onClick={() => handleOpenChange(false)}>
               关闭
             </Button>
             {!importResult && (

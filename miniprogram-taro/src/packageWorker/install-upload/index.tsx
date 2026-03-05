@@ -1,13 +1,14 @@
 import { View, Text, ScrollView, Button, Image, Textarea } from '@tarojs/components'
 import Taro, { useLoad } from '@tarojs/taro'
 import { useState } from 'react'
-import { taskService } from '@/services/task-service'
 import { engineerService } from '@/services/engineer-service'
+import { chooseAndUploadImages } from '@/utils/upload-helper'
+import { useCheckIn } from './use-check-in'
 import './index.scss'
 
 export default function InstallUploadPage() {
     const [_taskId, setTaskId] = useState('')
-    const [isCheckedIn, setIsCheckedIn] = useState(false)
+    const { isCheckedIn, handleCheckIn } = useCheckIn(_taskId)
 
     const [beforeImages, setBeforeImages] = useState<string[]>([])
     const [afterImages, setAfterImages] = useState<string[]>([])
@@ -17,34 +18,20 @@ export default function InstallUploadPage() {
         if (params.taskId) setTaskId(params.taskId)
     })
 
-    const handleCheckIn = async () => {
-        Taro.showLoading({ title: '定位中...' })
-        try {
-            await taskService.checkIn(_taskId, { latitude: 39.9, longitude: 116.4, address: '北京市朝阳区绿地云都会' })
-            Taro.hideLoading()
-            Taro.showToast({ title: '已到达现场', icon: 'success' })
-            setIsCheckedIn(true)
-        } catch (err: any) {
-            Taro.hideLoading()
-            Taro.showToast({ title: err.message || '打卡失败', icon: 'none' })
-        }
-    }
-
-    const takePhoto = (type: 'before' | 'after') => {
+    const takePhoto = async (type: 'before' | 'after') => {
         const currentList = type === 'before' ? beforeImages : afterImages
-        Taro.chooseMedia({
-            count: 9 - currentList.length,
-            mediaType: ['image'],
-            sourceType: ['camera', 'album'],
-            success: (res) => {
-                const newImgs = res.tempFiles.map(f => f.tempFilePath)
-                if (type === 'before') {
-                    setBeforeImages(prev => [...prev, ...newImgs].slice(0, 9))
-                } else {
-                    setAfterImages(prev => [...prev, ...newImgs].slice(0, 9))
-                }
-            }
+        const { urls, failedPaths } = await chooseAndUploadImages({
+            maxCount: 9 - currentList.length,
+            showLoading: true,
         })
+        if (failedPaths.length > 0) {
+            Taro.showToast({ title: `${failedPaths.length} 张上传失败`, icon: 'none' })
+        }
+        if (type === 'before') {
+            setBeforeImages(prev => [...prev, ...urls].slice(0, 9))
+        } else {
+            setAfterImages(prev => [...prev, ...urls].slice(0, 9))
+        }
     }
 
     const handleSubmit = async () => {

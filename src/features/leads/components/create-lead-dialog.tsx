@@ -9,8 +9,10 @@ import {
 } from '@/shared/ui/dialog';
 import { Button } from '@/shared/ui/button';
 import Plus from 'lucide-react/dist/esm/icons/plus';
-import { LeadForm } from './lead-form';
 import { useState } from 'react';
+import dynamic from 'next/dynamic';
+
+const LeadForm = dynamic(() => import('./lead-form').then((mod) => mod.LeadForm), { ssr: false });
 
 interface CreateLeadDialogProps {
   tenantId: string;
@@ -30,11 +32,11 @@ export function CreateLeadDialog({ tenantId, trigger }: CreateLeadDialogProps) {
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent resizable className="max-h-[90vh] overflow-y-auto sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>新建线索</DialogTitle>
         </DialogHeader>
-        <LeadForm onSuccess={() => setOpen(false)} tenantId={tenantId} />
+        {open && <LeadForm onSuccess={() => setOpen(false)} tenantId={tenantId} />}
       </DialogContent>
     </Dialog>
   );

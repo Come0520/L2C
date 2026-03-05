@@ -50,7 +50,7 @@ export function ProductDialog({ open, onOpenChange, initialData, onSuccess }: Pr
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
+      <DialogContent resizable className="max-h-[90vh] max-w-4xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{initialData ? '编辑产品' : '添加产品'}</DialogTitle>
         </DialogHeader>

@@ -22,14 +22,12 @@ const mockQueryBuilder = {
   from: vi.fn().mockReturnThis(),
   leftJoin: vi.fn().mockReturnThis(),
   where: vi.fn().mockReturnThis(),
-  orderBy: vi
-    .fn()
-    .mockResolvedValue([
-      {
-        ps: { id: 'ps-1', supplierId: 'sup-1', isDefault: true, purchasePrice: '100' },
-        supplier: { name: 'Vendor A' },
-      },
-    ]),
+  orderBy: vi.fn().mockResolvedValue([
+    {
+      ps: { id: 'ps-1', supplierId: 'sup-1', isDefault: true, purchasePrice: '100' },
+      supplier: { name: 'Vendor A' },
+    },
+  ]),
   limit: vi.fn().mockResolvedValue([]),
   then: function (resolve: any) {
     resolve([]);

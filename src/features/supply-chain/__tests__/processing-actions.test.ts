@@ -73,12 +73,10 @@ vi.mock('@/shared/api/db', () => ({
         findMany: vi.fn(),
       },
       suppliers: {
-        findFirst: vi
-          .fn()
-          .mockResolvedValue({
-            id: '123e4567-e89b-12d3-a456-426614174002',
-            name: 'Test Processor',
-          }),
+        findFirst: vi.fn().mockResolvedValue({
+          id: '123e4567-e89b-12d3-a456-426614174002',
+          name: 'Test Processor',
+        }),
       },
     },
     transaction: vi.fn().mockImplementation(async (callback) => {

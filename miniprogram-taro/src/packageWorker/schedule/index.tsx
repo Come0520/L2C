@@ -12,7 +12,7 @@ export default function WorkerSchedulePage() {
     // 生成当前周的日期数据 (简化版日历)
     const generateWeekDays = () => {
         const today = new Date(selectedDate)
-        const days = []
+        const days: any[] = []
         // 获取当前日期是周几 (0-6, 周日-周六)
         const currentDayIndex = today.getDay()
         // 获取本周一的日期
@@ -53,10 +53,10 @@ export default function WorkerSchedulePage() {
             const endDate = `${year}-${String(month).padStart(2, '0')}-31`
 
             const res = await engineerService.getSchedule(startDate, endDate)
-            if (res.success && res.data) {
+            if (res && res.tasks) {
                 // 根据日期进行 grouping
                 const newMap: Record<string, any[]> = {}
-                res.data.tasks.forEach(task => {
+                res.tasks.forEach(task => {
                     const dKey = task.date
                     if (!newMap[dKey]) newMap[dKey] = []
                     newMap[dKey].push(task)
@@ -85,7 +85,7 @@ export default function WorkerSchedulePage() {
         fetchSchedule()
     })
 
-    const handleConfirmChange = (id: string) => {
+    const handleConfirmChange = (_id: string) => {
         Taro.showModal({
             title: '确认时间变更',
             content: '客户申请将上门时间更改为 14:00 - 16:00，是否同意？',

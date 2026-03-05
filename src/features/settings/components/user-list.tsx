@@ -37,7 +37,13 @@ interface UserListProps {
  * 用户列表组件
  * 展示用户信息，支持编辑、禁用/启用、删除操作
  */
-export function UserList({ data, onEdit, onGenerateMagicLink, onToggleActive, onDelete }: UserListProps) {
+export function UserList({
+  data,
+  onEdit,
+  onGenerateMagicLink,
+  onToggleActive,
+  onDelete,
+}: UserListProps) {
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean;
     type: 'toggle' | 'delete';
@@ -132,7 +138,7 @@ export function UserList({ data, onEdit, onGenerateMagicLink, onToggleActive, on
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="text-blue-500 hover:text-blue-600 hover:bg-blue-50"
+                      className="text-blue-500 hover:bg-blue-50 hover:text-blue-600"
                       title="生成登录链接"
                       onClick={() => onGenerateMagicLink?.(item)}
                       disabled={!item.isActive}

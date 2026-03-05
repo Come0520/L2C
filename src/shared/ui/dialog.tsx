@@ -35,8 +35,9 @@ const DialogOverlay = React.forwardRef<
 DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 
 /** DialogContent 的扩展 Props */
-interface DialogContentProps
-  extends React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> {
+interface DialogContentProps extends React.ComponentPropsWithoutRef<
+  typeof DialogPrimitive.Content
+> {
   /** 是否支持拖拽调整大小（右侧、底部、右下角） */
   resizable?: boolean;
 }
@@ -153,17 +154,31 @@ const DialogContent = React.forwardRef<
             bottomRight: (
               <div className="flex h-full w-full items-end justify-end opacity-30 transition-opacity group-hover:opacity-70">
                 <svg width="10" height="10" viewBox="0 0 10 10" className="text-foreground">
-                  <line x1="9" y1="1" x2="1" y2="9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-                  <line x1="9" y1="5" x2="5" y2="9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+                  <line
+                    x1="9"
+                    y1="1"
+                    x2="1"
+                    y2="9"
+                    stroke="currentColor"
+                    strokeWidth="1.2"
+                    strokeLinecap="round"
+                  />
+                  <line
+                    x1="9"
+                    y1="5"
+                    x2="5"
+                    y2="9"
+                    stroke="currentColor"
+                    strokeWidth="1.2"
+                    strokeLinecap="round"
+                  />
                 </svg>
               </div>
             ),
           }}
           className="glass-liquid-ultra overflow-auto rounded-xl border p-6"
         >
-          <div className="mx-auto w-full max-w-[600px]">
-            {children}
-          </div>
+          <div className="mx-auto w-full max-w-[600px]">{children}</div>
         </Resizable>
         <DialogPrimitive.Close className="absolute top-4 right-4 z-10 rounded-sm opacity-70 ring-offset-white transition-opacity hover:opacity-100 focus:ring-2 focus:ring-gray-950 focus:ring-offset-2 focus:outline-none disabled:pointer-events-none data-[state=open]:bg-gray-100 data-[state=open]:text-gray-500">
           <X className="h-4 w-4" />

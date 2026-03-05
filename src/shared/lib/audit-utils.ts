@@ -7,12 +7,12 @@
  * 审计日志参数类型
  */
 interface AuditLogParams {
-    tenantId: string;
-    operatorId: string;
-    module: string;
-    action: string;
-    entityId: string;
-    details?: Record<string, unknown>;
+  tenantId: string;
+  operatorId: string;
+  module: string;
+  action: string;
+  entityId: string;
+  details?: Record<string, unknown>;
 }
 
 /**
@@ -20,16 +20,16 @@ interface AuditLogParams {
  * @param params - 审计日志参数
  */
 export async function logAudit(_params: AuditLogParams) {
-    // NOTE: 对接真实审计日志服务
-    return { success: true };
+  // NOTE: 对接真实审计日志服务
+  return { success: true };
 }
 
 /**
  * 变更记录类型
  */
 interface ChangeRecord {
-    old: unknown;
-    new: unknown;
+  old: unknown;
+  new: unknown;
 }
 
 /**
@@ -39,14 +39,14 @@ interface ChangeRecord {
  * @returns 变更记录
  */
 export function trackChanges(
-    oldValues: Record<string, unknown>,
-    newValues: Record<string, unknown>
+  oldValues: Record<string, unknown>,
+  newValues: Record<string, unknown>
 ): Record<string, ChangeRecord> {
-    const changes: Record<string, ChangeRecord> = {};
-    for (const key in newValues) {
-        if (JSON.stringify(oldValues[key]) !== JSON.stringify(newValues[key])) {
-            changes[key] = { old: oldValues[key], new: newValues[key] };
-        }
+  const changes: Record<string, ChangeRecord> = {};
+  for (const key in newValues) {
+    if (JSON.stringify(oldValues[key]) !== JSON.stringify(newValues[key])) {
+      changes[key] = { old: oldValues[key], new: newValues[key] };
     }
-    return changes;
+  }
+  return changes;
 }

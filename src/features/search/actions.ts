@@ -63,15 +63,15 @@ const globalSearchSchema = z.object({
 type SearchResultItem = {
   /** 结果类型，决定了 UI 上的图标和跳转链接 */
   type:
-  | 'customer'
-  | 'lead'
-  | 'order'
-  | 'quote'
-  | 'product'
-  | 'ticket'
-  | 'channel'
-  | 'finance'
-  | 'history';
+    | 'customer'
+    | 'lead'
+    | 'order'
+    | 'quote'
+    | 'product'
+    | 'ticket'
+    | 'channel'
+    | 'finance'
+    | 'history';
   /** 实体 ID 或历史记录 Key */
   id: string;
   /** 主要显示标题（如客户姓名、单号） */
@@ -354,7 +354,10 @@ const globalSearchActionInternal = createSafeAction(
 
       if (redis && query.trim()) {
         try {
-          logger.info('[Search] 正在更新用户搜索历史', { userId, query: query.trim().slice(0, 20) });
+          logger.info('[Search] 正在更新用户搜索历史', {
+            userId,
+            query: query.trim().slice(0, 20),
+          });
           await redis.lrem(historyKey, 0, query.trim());
           await redis.lpush(historyKey, query.trim());
           await redis.ltrim(historyKey, 0, 9);
@@ -531,7 +534,6 @@ const globalSearchActionInternal = createSafeAction(
       });
 
       return formattedResults;
-
     } catch (error) {
       logger.error('全局搜索失败:', {
         query,

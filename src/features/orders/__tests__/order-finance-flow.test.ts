@@ -64,11 +64,9 @@ vi.mock('@/shared/api/db', () => ({
         update: mockDbUpdate,
       });
     }),
-    select: vi
-      .fn()
-      .mockReturnValue({
-        from: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue([{ count: 0 }]) }),
-      }),
+    select: vi.fn().mockReturnValue({
+      from: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue([{ count: 0 }]) }),
+    }),
   },
 }));
 

@@ -13,7 +13,7 @@ export default function SupplyChainLayout({ children }: { children: React.ReactN
       </div>
       {/* 内容区域 */}
       <main className="flex-1 overflow-y-auto">
-        <div className="container max-w-7xl px-6 pt-2 pb-8">{children}</div>
+        <div className="px-6 pt-2 pb-8">{children}</div>
       </main>
     </div>
   );

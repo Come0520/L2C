@@ -1,4 +1,4 @@
-import { cn } from "@/shared/lib/utils";
+import { cn } from '@/shared/lib/utils';
 import {
   motion,
   useAnimationFrame,
@@ -7,9 +7,9 @@ import {
   useSpring,
   useTransform,
   MotionValue,
-} from "framer-motion";
-import { useEffect, useRef } from "react";
-import Image from "next/image";
+} from 'framer-motion';
+import { useEffect, useRef } from 'react';
+import Image from 'next/image';
 
 // Helper component for gradient layers
 function GradientLayer({
@@ -55,11 +55,7 @@ export const NoiseBackground = ({
   children,
   className,
   containerClassName,
-  gradientColors = [
-    "rgb(255, 100, 150)",
-    "rgb(100, 150, 255)",
-    "rgb(255, 200, 100)",
-  ],
+  gradientColors = ['rgb(255, 100, 150)', 'rgb(100, 150, 255)', 'rgb(255, 200, 100)'],
   noiseIntensity = 0.2,
   speed = 0.1,
   backdropBlur = false,
@@ -137,12 +133,7 @@ export const NoiseBackground = ({
 
     const padding = 20;
 
-    if (
-      newX < padding ||
-      newX > maxX - padding ||
-      newY < padding ||
-      newY > maxY - padding
-    ) {
+    if (newX < padding || newX > maxX - padding || newY < padding || newY > maxY - padding) {
       const angle = Math.random() * Math.PI * 2;
       const magnitude = speed * (0.5 + Math.random() * 0.5);
       velocityRef.current = {
@@ -162,16 +153,16 @@ export const NoiseBackground = ({
     <div
       ref={containerRef}
       className={cn(
-        "group relative overflow-hidden rounded-2xl bg-neutral-200 p-2 backdrop-blur-sm dark:bg-neutral-800",
-        "shadow-[0px_0.5px_1px_0px_var(--color-neutral-400)_inset,0px_1px_0px_0px_var(--color-neutral-100)]",
-        "dark:shadow-[0px_1px_0px_0px_var(--color-neutral-950)_inset,0px_1px_0px_0px_var(--color-neutral-800)]",
+        'group relative overflow-hidden rounded-2xl bg-neutral-200 p-2 backdrop-blur-sm dark:bg-neutral-800',
+        'shadow-[0px_0.5px_1px_0px_var(--color-neutral-400)_inset,0px_1px_0px_0px_var(--color-neutral-100)]',
+        'dark:shadow-[0px_1px_0px_0px_var(--color-neutral-950)_inset,0px_1px_0px_0px_var(--color-neutral-800)]',
         backdropBlur &&
-        "after:absolute after:inset-0 after:h-full after:w-full after:backdrop-blur-lg after:content-['']",
-        containerClassName,
+          "after:absolute after:inset-0 after:h-full after:w-full after:backdrop-blur-lg after:content-['']",
+        containerClassName
       )}
       style={
         {
-          "--noise-opacity": noiseIntensity,
+          '--noise-opacity': noiseIntensity,
         } as React.CSSProperties
       }
     >
@@ -202,7 +193,7 @@ export const NoiseBackground = ({
       <motion.div
         className="absolute inset-x-0 top-0 h-1 rounded-t-2xl opacity-80 blur-sm"
         style={{
-          background: `linear-gradient(to right, ${gradientColors.join(", ")})`,
+          background: `linear-gradient(to right, ${gradientColors.join(', ')})`,
           x: animating ? topGradientX : 0,
         }}
       />
@@ -216,12 +207,12 @@ export const NoiseBackground = ({
           fill
           sizes="(max-width: 1024px) 100vw, 800px"
           className="object-cover opacity-(--noise-opacity)"
-          style={{ mixBlendMode: "overlay" }}
+          style={{ mixBlendMode: 'overlay' }}
         />
       </div>
 
       {/* Content */}
-      <div className={cn("relative z-10", className)}>{children}</div>
+      <div className={cn('relative z-10', className)}>{children}</div>
     </div>
   );
 };

@@ -125,15 +125,13 @@ describe('After-Sales Integration Tests', () => {
       const tx = {
         query: {
           orders: {
-            findFirst: vi
-              .fn()
-              .mockResolvedValue({
-                id: VALID_ORDER_ID,
-                tenantId: VALID_TENANT_ID,
-                customerId: 'c1',
-                version: 1,
-                updatedAt: new Date(),
-              }),
+            findFirst: vi.fn().mockResolvedValue({
+              id: VALID_ORDER_ID,
+              tenantId: VALID_TENANT_ID,
+              customerId: 'c1',
+              version: 1,
+              updatedAt: new Date(),
+            }),
           },
         },
         insert: vi.fn(() => ({
@@ -209,13 +207,11 @@ describe('After-Sales Integration Tests', () => {
       const tx = {
         query: {
           afterSalesTickets: {
-            findFirst: vi
-              .fn()
-              .mockResolvedValue({
-                id: VALID_TICKET_ID,
-                tenantId: VALID_TENANT_ID,
-                status: 'PROCESSING',
-              }),
+            findFirst: vi.fn().mockResolvedValue({
+              id: VALID_TICKET_ID,
+              tenantId: VALID_TENANT_ID,
+              status: 'PROCESSING',
+            }),
           },
         },
         insert: vi.fn(() => ({
@@ -298,19 +294,17 @@ describe('After-Sales Integration Tests', () => {
       const tx = {
         query: {
           liabilityNotices: {
-            findFirst: vi
-              .fn()
-              .mockResolvedValue({
-                id: VALID_NOTICE_ID,
-                status: 'DRAFT',
-                tenantId: VALID_TENANT_ID,
-                afterSalesId: VALID_TICKET_ID,
-                amount: '100',
-                liablePartyType: 'FACTORY',
-                liablePartyId: VALID_PARTY_ID,
-                version: 1,
-                updatedAt: new Date(),
-              }),
+            findFirst: vi.fn().mockResolvedValue({
+              id: VALID_NOTICE_ID,
+              status: 'DRAFT',
+              tenantId: VALID_TENANT_ID,
+              afterSalesId: VALID_TICKET_ID,
+              amount: '100',
+              liablePartyType: 'FACTORY',
+              liablePartyId: VALID_PARTY_ID,
+              version: 1,
+              updatedAt: new Date(),
+            }),
           },
         },
         update: vi.fn(() => ({ set: vi.fn(() => ({ where: vi.fn().mockResolvedValue({}) })) })),

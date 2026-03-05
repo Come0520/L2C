@@ -21,12 +21,10 @@ const { mockSession } = vi.hoisted(() => ({
 // ============ 模拟依赖 ============
 
 vi.mock('../helpers', () => ({
-  requireAuth: vi
-    .fn()
-    .mockResolvedValue({
-      success: true,
-      session: { user: { id: 'user-1', tenantId: 'tenant-1' } },
-    }),
+  requireAuth: vi.fn().mockResolvedValue({
+    success: true,
+    session: { user: { id: 'user-1', tenantId: 'tenant-1' } },
+  }),
   requirePOManagePermission: vi.fn().mockResolvedValue({ success: true }),
   requireViewPermission: vi.fn().mockResolvedValue({ success: true }),
 }));

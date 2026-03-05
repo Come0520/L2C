@@ -3,7 +3,11 @@
 import { useState } from 'react';
 import { UserList } from './user-list';
 import { UserForm } from './user-form';
-import { toggleUserActive, deleteUser, generateUserMagicLink } from '@/features/settings/actions/user-actions';
+import {
+  toggleUserActive,
+  deleteUser,
+  generateUserMagicLink,
+} from '@/features/settings/actions/user-actions';
 import type { UserInfo } from '@/features/settings/actions/user-actions';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';

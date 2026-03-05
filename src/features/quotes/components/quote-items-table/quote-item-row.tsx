@@ -49,6 +49,8 @@ interface QuoteItemRowProps extends ColumnVisibility {
   onToggleExpand: () => void;
   renderChildren: (nodes: QuoteItem[], level: number) => React.ReactNode;
   onRowClick?: (item: QuoteItem) => void;
+  /** 高级配置按鈕回调（URL 驱动模式下传入） */
+  onAdvancedEdit?: (item: QuoteItem) => void;
 }
 
 export const QuoteItemRow = memo(function QuoteItemRow({
@@ -78,6 +80,7 @@ export const QuoteItemRow = memo(function QuoteItemRow({
   onToggleExpand,
   renderChildren,
   onRowClick,
+  onAdvancedEdit,
 }: QuoteItemRowProps) {
   const isCurtain = ['CURTAIN', 'CURTAIN_FABRIC', 'CURTAIN_SHEER'].includes(item.category);
   const isAccessory = item.category === 'CURTAIN_ACCESSORY';
@@ -266,6 +269,7 @@ export const QuoteItemRow = memo(function QuoteItemRow({
           onToggleExpand={onToggleExpand}
           onAddAccessory={() => handleAddAccessory(item.id, item.roomId)}
           onDelete={() => handleDelete(item.id)}
+          onAdvancedEdit={onAdvancedEdit ? () => onAdvancedEdit(item) : undefined}
           rowSpan={level === 0 && isExpanded ? parentRowSpan : 1} // 整体跨行包裹高级参数
         />
 

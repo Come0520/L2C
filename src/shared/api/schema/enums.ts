@@ -258,6 +258,23 @@ export const liabilityStatusEnum = pgEnum('liability_status', [
   'ARBITRATED',
 ]);
 
+// [NEW] 定损单状态枚举
+export const damageReportStatusEnum = pgEnum('damage_report_status', [
+  'DRAFT', // 草稿
+  'PENDING_SIGNATURES', // 待全员签字
+  'APPROVED', // 审核通过（全员签字完成）
+  'DISPUTED', // 争议中（有人拒签）
+  'ARBITRATED', // 已仲裁
+  'CANCELLED', // 已取消
+]);
+
+// [NEW] 签字状态枚举
+export const signatureStatusEnum = pgEnum('signature_status', [
+  'PENDING', // 待签字
+  'SIGNED', // 已签字
+  'REJECTED', // 已拒签
+]);
+
 export const liabilityReasonCategoryEnum = pgEnum('liability_reason_category', [
   'PRODUCTION_QUALITY',
   'CONSTRUCTION_ERROR',

@@ -203,7 +203,9 @@ describe('Pending Pool Actions', () => {
       // 事务中 tx.select...from...where 返回 DRAFT PO
       mockDb.where
         .mockResolvedValueOnce([{ id: 'po-1', status: 'DRAFT' }]) // select
-        .mockResolvedValueOnce(undefined); // update...set...where
+        .mockReturnValueOnce({
+          returning: vi.fn().mockResolvedValue([{ id: 'po-1' }]), // update...set...where...returning
+        });
 
       const { submitForApproval } = await import('../pending-pool-actions');
       const { AuditService } = await import('@/shared/services/audit-service');
@@ -215,6 +217,31 @@ describe('Pending Pool Actions', () => {
       expect(result.success).toBe(true);
       expect(result.submittedCount).toBe(1);
       expect(AuditService.recordFromSession).toHaveBeenCalled();
+    });
+
+    it('[TDD-RED] 并发提交同一批 DRAFT PO 时，第二次操作应因 CAS 校验为空而报错', async () => {
+      // 事务中 tx.select 返回了 DRAFT PO
+      mockDb.where.mockResolvedValueOnce([{ id: 'po-1', status: 'DRAFT' }]);
+
+      const originalUpdate = mockDb.update;
+      // 但实际 UPDATE 时因为第一个审批已将其状态改为 PENDING_CONFIRMATION，
+      // 而 CAS 条件 eq(status, DRAFT) 不匹配了 -> returning 为空
+      mockDb.update = vi.fn().mockReturnValue({
+        set: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            returning: vi.fn().mockReturnValue([]),
+          }),
+        }),
+      });
+
+      const { submitForApproval } = await import('../pending-pool-actions');
+      await expect(
+        submitForApproval({
+          poIds: ['a1b2c3d4-e5f6-1a2b-8c3d-4e5f6a7b8c9d'],
+        })
+      ).rejects.toThrow('状态已变更');
+
+      mockDb.update = originalUpdate;
     });
   });
 
@@ -262,8 +289,10 @@ describe('Pending Pool Actions', () => {
           status: 'PENDING',
         },
       ]);
-      // 事务中 insert...returning
+      // 事务中 insert PO returning
       mockDb.returning.mockResolvedValueOnce([{ id: 'po-new-1' }]);
+      // 事务中 update orderItems returning (CAS checks count)
+      mockDb.returning.mockResolvedValueOnce([{ id: 'item-1' }]);
 
       const { assignToSupplier } = await import('../pending-pool-actions');
       const { AuditService } = await import('@/shared/services/audit-service');
@@ -274,6 +303,46 @@ describe('Pending Pool Actions', () => {
       expect(result.createdPOIds).toContain('po-new-1');
       expect(result.assignedCount).toBe(1);
       expect(AuditService.recordFromSession).toHaveBeenCalled();
+    });
+
+    it('[TDD-RED] 并发分配同一批订单项时，第二个事务应因 CAS 校验失败而报错', async () => {
+      mockDb.query.suppliers.findFirst.mockResolvedValueOnce({ id: 's-1', name: '供应商A' });
+      // 事务外 select 中找到了待分配项（poId 为 null）
+      mockDb.where.mockResolvedValueOnce([
+        {
+          id: 'item-1',
+          orderId: 'order-1',
+          productId: 'p-1',
+          productName: '窗帘',
+          category: 'CURTAIN',
+          quantity: '10',
+          unitPrice: '100',
+          width: '1.5',
+          height: '2.5',
+          subtotal: '1000',
+          quoteItemId: null,
+          poId: null,
+          status: 'PENDING',
+        },
+      ]);
+      // 事务中 insert...returning PO 成功
+      mockDb.returning.mockResolvedValueOnce([{ id: 'po-new-1' }]);
+
+      const originalUpdate = mockDb.update;
+      // 但事务中 update orderItems 的 CAS 保护发现：该项已被其他人抢先关联了 PO
+      // -> returning 返回空数组！
+      mockDb.update = vi.fn().mockReturnValue({
+        set: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            returning: vi.fn().mockReturnValue([]),
+          }),
+        }),
+      });
+
+      const { assignToSupplier } = await import('../pending-pool-actions');
+      await expect(assignToSupplier(validInput)).rejects.toThrow('已被其他操作抢先分配');
+
+      mockDb.update = originalUpdate;
     });
   });
 
@@ -347,8 +416,10 @@ describe('Pending Pool Actions', () => {
       ]);
       // 事务中 tx.query.suppliers.findFirst
       mockDb.query.suppliers.findFirst.mockResolvedValueOnce({ name: '供应商A' });
-      // insert...returning
+      // insert PO returning
       mockDb.returning.mockResolvedValueOnce([{ id: 'merged-po-1' }]);
+      // update orderItems returning (CAS checks count)
+      mockDb.returning.mockResolvedValueOnce([{ id: 'a' }, { id: 'b' }]);
 
       const { mergeToPurchaseOrder } = await import('../pending-pool-actions');
       const result = await mergeToPurchaseOrder({
@@ -362,6 +433,53 @@ describe('Pending Pool Actions', () => {
       expect(result.success).toBe(true);
       expect(result.createdPOIds).toContain('merged-po-1');
       expect(result.poCount).toBe(1);
+    });
+
+    it('[TDD-RED] 并发合并采购同一批订单项时应因 CAS 校验通不过而回滚', async () => {
+      // items 查询（事务外）找到了 2 项
+      mockDb.where.mockResolvedValueOnce([
+        {
+          id: 'a',
+          orderId: 'o1',
+          productId: 'p1',
+          productName: '窗帘A',
+          category: 'CURTAIN',
+          quantity: '5',
+          unitPrice: '100',
+          width: null,
+          height: null,
+          subtotal: '500',
+          quoteItemId: null,
+          poId: null,
+          status: 'PENDING',
+          productType: 'FINISHED',
+          defaultSupplierId: 's1',
+        },
+      ]);
+      // 事务中 tx.query.suppliers.findFirst
+      mockDb.query.suppliers.findFirst.mockResolvedValueOnce({ name: '供应商A' });
+      // insert...returning PO 成功
+      mockDb.returning.mockResolvedValueOnce([{ id: 'merged-po-2' }]);
+
+      const originalUpdate = mockDb.update;
+      // 但 update orderItems 时 CAS 发现该项已被另一个合并操作抢先绑定了 PO
+      mockDb.update = vi.fn().mockReturnValue({
+        set: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            returning: vi.fn().mockReturnValue([]),
+          }),
+        }),
+      });
+
+      const { mergeToPurchaseOrder } = await import('../pending-pool-actions');
+      await expect(
+        mergeToPurchaseOrder({
+          orderItemIds: ['d4e5f6a7-b8c9-1d2e-9f3a-6b7c8d9e0f1a'],
+          supplierId: 'f6a7b8c9-d0e1-1f2a-9b3c-8d9e0f1a2b3c',
+        })
+      ).rejects.toThrow('已被其他操作抢先');
+
+      mockDb.update = originalUpdate;
     });
   });
 });

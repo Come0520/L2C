@@ -10,20 +10,7 @@ import Link from 'next/link';
 import { Button } from '@/shared/ui/button';
 import { ArrowLeft } from 'lucide-react';
 
-export const dynamic = 'force-dynamic';
-
-/**
- * 渠道选品池页面
- */
-export default async function ChannelProductsPage() {
-  const [channelProductsRes, availableProductsRes] = await Promise.all([
-    getChannelProducts(),
-    getAvailableProducts(),
-  ]);
-
-  const channelProducts = channelProductsRes.success ? channelProductsRes.data : [];
-  const availableProducts = availableProductsRes.success ? availableProductsRes.data : [];
-
+export default function ChannelProductsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
@@ -36,11 +23,22 @@ export default async function ChannelProductsPage() {
       </div>
 
       <Suspense fallback={<ListSkeleton />}>
-        <ChannelProductPool
-          channelProducts={channelProducts}
-          availableProducts={availableProducts}
-        />
+        <ChannelProductsDataWrapper />
       </Suspense>
     </div>
+  );
+}
+
+async function ChannelProductsDataWrapper() {
+  const [channelProductsRes, availableProductsRes] = await Promise.all([
+    getChannelProducts(),
+    getAvailableProducts(),
+  ]);
+
+  const channelProducts = channelProductsRes.success ? channelProductsRes.data : [];
+  const availableProducts = availableProductsRes.success ? availableProductsRes.data : [];
+
+  return (
+    <ChannelProductPool channelProducts={channelProducts} availableProducts={availableProducts} />
   );
 }

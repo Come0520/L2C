@@ -242,136 +242,137 @@ test.describe('定责异议与仲裁 (Liability Dispute)', () => {
             }
         } else {
             console.log('⚠️ 无可异议的定责单');
-        });
-});
-
-/**
- * 定责分摊计算准确性验证（补全审计缺口 #2）
- *
- * 关键验证点：
- * 1. 多责任方定责金额之和 = 总损失金额
- * 2. 定责确认后 AP 付款单自动生成
- * 3. 异议被采纳后可重新定责
- */
-test.describe('定责分摊计算准确性 (Liability Amount Accuracy)', () => {
-    test('P0-7: 定责金额应与工单扣款金额一致', async ({ page }) => {
-        // 拦截售后工单详情 API
-        let ticketData: Record<string, unknown> | null = null;
-        await page.route('**/api/**/after-sales/**', async (route) => {
-            const response = await route.fetch();
-            const json = await response.json();
-            if (json?.data?.liabilities || json?.liabilities) {
-                ticketData = json?.data || json;
-            }
-            await route.fulfill({ response });
-        });
-
-        await page.goto('/after-sales', { waitUntil: 'domcontentloaded', timeout: 60000 });
-
-        const table = page.locator('table');
-        await expect(table).toBeVisible({ timeout: 10000 }).catch(() => { });
-
-        const firstLink = table.locator('tbody tr a').first();
-        if (!(await firstLink.isVisible())) {
-            console.log('⚠️ 售后工单列表为空，跳过');
-            return;
         }
-        await firstLink.click();
-        await page.waitForLoadState('domcontentloaded');
-        await page.waitForTimeout(3000);
+    });
 
-        if (ticketData && Array.isArray((ticketData as Record<string, unknown>).liabilities)) {
-            const liabilities = (ticketData as Record<string, unknown>).liabilities as Array<{ amount: string | number; status: string }>;
-            const confirmedLiabilities = liabilities.filter(l => l.status === 'CONFIRMED' || l.status === 'APPROVED');
+    /**
+     * 定责分摊计算准确性验证（补全审计缺口 #2）
+     *
+     * 关键验证点：
+     * 1. 多责任方定责金额之和 = 总损失金额
+     * 2. 定责确认后 AP 付款单自动生成
+     * 3. 异议被采纳后可重新定责
+     */
+    test.describe('定责分摊计算准确性 (Liability Amount Accuracy)', () => {
+        test('P0-7: 定责金额应与工单扣款金额一致', async ({ page }) => {
+            // 拦截售后工单详情 API
+            let ticketData: Record<string, unknown> | null = null;
+            await page.route('**/api/**/after-sales/**', async (route) => {
+                const response = await route.fetch();
+                const json = await response.json();
+                if (json?.data?.liabilities || json?.liabilities) {
+                    ticketData = json?.data || json;
+                }
+                await route.fulfill({ response });
+            });
 
-            if (confirmedLiabilities.length > 0) {
-                const totalLiabilityAmount = confirmedLiabilities.reduce(
-                    (sum, l) => sum + Number(l.amount || 0), 0
-                );
+            await page.goto('/after-sales', { waitUntil: 'domcontentloaded', timeout: 60000 });
 
-                // 在 UI 中查找扣款金额
-                const deductionText = await page.locator('text=/扣款金额|扣款合计/').first().locator('..').textContent();
-                if (deductionText) {
-                    const uiDeduction = parseFloat(deductionText.replace(/[^0-9.]/g, ''));
-                    if (!isNaN(uiDeduction)) {
-                        expect(uiDeduction).toBeCloseTo(totalLiabilityAmount, 0);
-                        console.log(`✅ 定责金额与扣款一致：定责合计=${totalLiabilityAmount}，UI扣款=${uiDeduction}`);
+            const table = page.locator('table');
+            await expect(table).toBeVisible({ timeout: 10000 }).catch(() => { });
+
+            const firstLink = table.locator('tbody tr a').first();
+            if (!(await firstLink.isVisible())) {
+                console.log('⚠️ 售后工单列表为空，跳过');
+                return;
+            }
+            await firstLink.click();
+            await page.waitForLoadState('domcontentloaded');
+            await page.waitForTimeout(3000);
+
+            if (ticketData && Array.isArray((ticketData as Record<string, unknown>).liabilities)) {
+                const liabilities = (ticketData as Record<string, unknown>).liabilities as Array<{ amount: string | number; status: string }>;
+                const confirmedLiabilities = liabilities.filter(l => l.status === 'CONFIRMED' || l.status === 'APPROVED');
+
+                if (confirmedLiabilities.length > 0) {
+                    const totalLiabilityAmount = confirmedLiabilities.reduce(
+                        (sum, l) => sum + Number(l.amount || 0), 0
+                    );
+
+                    // 在 UI 中查找扣款金额
+                    const deductionText = await page.locator('text=/扣款金额|扣款合计/').first().locator('..').textContent();
+                    if (deductionText) {
+                        const uiDeduction = parseFloat(deductionText.replace(/[^0-9.]/g, ''));
+                        if (!isNaN(uiDeduction)) {
+                            expect(uiDeduction).toBeCloseTo(totalLiabilityAmount, 0);
+                            console.log(`✅ 定责金额与扣款一致：定责合计=${totalLiabilityAmount}，UI扣款=${uiDeduction}`);
+                        }
                     }
+                } else {
+                    console.log('⚠️ 无已确认的定责单，跳过金额验证');
                 }
             } else {
-                console.log('⚠️ 无已确认的定责单，跳过金额验证');
+                console.log('⚠️ 未捕获到售后定责 API 数据');
             }
-        } else {
-            console.log('⚠️ 未捕获到售后定责 API 数据');
-        }
+        });
+
+        test('P0-8: 定责确认后应生成关联 AP 单', async ({ page }) => {
+            await page.goto('/after-sales', { waitUntil: 'domcontentloaded', timeout: 60000 });
+
+            const table = page.locator('table');
+            await expect(table).toBeVisible({ timeout: 10000 }).catch(() => { });
+
+            // 找到已完成定责的工单
+            const completedRow = table.locator('tbody tr').filter({ hasText: /已定责|已完成|RESOLVED/ }).first();
+            if (!(await completedRow.isVisible({ timeout: 5000 }))) {
+                console.log('⚠️ 未找到已定责工单，跳过 AP 联动验证');
+                return;
+            }
+
+            await completedRow.locator('a').first().click();
+            await page.waitForLoadState('domcontentloaded');
+
+            // 查找 AP 付款单关联信息
+            const apSection = page.locator('text=/付款单|应付|AP/').first();
+            const apLink = page.locator('a').filter({ hasText: /AP-|PAY-|付款/ }).first();
+
+            if (await apSection.isVisible({ timeout: 5000 }) || await apLink.isVisible({ timeout: 5000 })) {
+                console.log('✅ 定责确认后已生成关联 AP 付款单');
+
+                // 进一步验证 AP 单状态
+                if (await apLink.isVisible()) {
+                    const apText = await apLink.textContent();
+                    console.log(`  AP 单号: ${apText}`);
+                }
+            } else {
+                console.log('⚠️ 未找到关联 AP 单（可能 AP 生成有延迟或未实现联动）');
+            }
+        });
     });
 
-    test('P0-8: 定责确认后应生成关联 AP 单', async ({ page }) => {
-        await page.goto('/after-sales', { waitUntil: 'domcontentloaded', timeout: 60000 });
+    /**
+     * 定责驳回与重审流程（补全审计缺口 #7）
+     */
+    test.describe('定责驳回→重新定责流程 (Liability Rejection & Re-assignment)', () => {
+        test('P1-1: 异议通过后应可重新发起定责', async ({ page }) => {
+            await page.goto('/after-sales', { waitUntil: 'domcontentloaded', timeout: 60000 });
 
-        const table = page.locator('table');
-        await expect(table).toBeVisible({ timeout: 10000 }).catch(() => { });
+            const table = page.locator('table');
+            await expect(table).toBeVisible({ timeout: 10000 }).catch(() => { });
 
-        // 找到已完成定责的工单
-        const completedRow = table.locator('tbody tr').filter({ hasText: /已定责|已完成|RESOLVED/ }).first();
-        if (!(await completedRow.isVisible({ timeout: 5000 }))) {
-            console.log('⚠️ 未找到已定责工单，跳过 AP 联动验证');
-            return;
-        }
-
-        await completedRow.locator('a').first().click();
-        await page.waitForLoadState('domcontentloaded');
-
-        // 查找 AP 付款单关联信息
-        const apSection = page.locator('text=/付款单|应付|AP/').first();
-        const apLink = page.locator('a').filter({ hasText: /AP-|PAY-|付款/ }).first();
-
-        if (await apSection.isVisible({ timeout: 5000 }) || await apLink.isVisible({ timeout: 5000 })) {
-            console.log('✅ 定责确认后已生成关联 AP 付款单');
-
-            // 进一步验证 AP 单状态
-            if (await apLink.isVisible()) {
-                const apText = await apLink.textContent();
-                console.log(`  AP 单号: ${apText}`);
+            // 寻找有异议记录的工单
+            const disputedRow = table.locator('tbody tr').filter({ hasText: /异议|争议|DISPUTED/ }).first();
+            if (!(await disputedRow.isVisible({ timeout: 5000 }))) {
+                console.log('⚠️ 未找到有异议的售后工单，跳过');
+                return;
             }
-        } else {
-            console.log('⚠️ 未找到关联 AP 单（可能 AP 生成有延迟或未实现联动）');
-        }
-    });
-});
 
-/**
- * 定责驳回与重审流程（补全审计缺口 #7）
- */
-test.describe('定责驳回→重新定责流程 (Liability Rejection & Re-assignment)', () => {
-    test('P1-1: 异议通过后应可重新发起定责', async ({ page }) => {
-        await page.goto('/after-sales', { waitUntil: 'domcontentloaded', timeout: 60000 });
+            await disputedRow.locator('a').first().click();
+            await page.waitForLoadState('domcontentloaded');
 
-        const table = page.locator('table');
-        await expect(table).toBeVisible({ timeout: 10000 }).catch(() => { });
+            // 验证可以重新定责
+            const reAssignBtn = page.getByRole('button', { name: /重新定责|再次定责|新建定责单/ });
+            if (await reAssignBtn.isVisible({ timeout: 5000 })) {
+                await reAssignBtn.click();
 
-        // 寻找有异议记录的工单
-        const disputedRow = table.locator('tbody tr').filter({ hasText: /异议|争议|DISPUTED/ }).first();
-        if (!(await disputedRow.isVisible({ timeout: 5000 }))) {
-            console.log('⚠️ 未找到有异议的售后工单，跳过');
-            return;
-        }
+                const dialog = page.getByRole('dialog').first();
+                await expect(dialog).toBeVisible({ timeout: 5000 });
+                console.log('✅ 异议通过后可重新发起定责');
 
-        await disputedRow.locator('a').first().click();
-        await page.waitForLoadState('domcontentloaded');
-
-        // 验证可以重新定责
-        const reAssignBtn = page.getByRole('button', { name: /重新定责|再次定责|新建定责单/ });
-        if (await reAssignBtn.isVisible({ timeout: 5000 })) {
-            await reAssignBtn.click();
-
-            const dialog = page.getByRole('dialog').first();
-            await expect(dialog).toBeVisible({ timeout: 5000 });
-            console.log('✅ 异议通过后可重新发起定责');
-
-            await page.keyboard.press('Escape');
-        } else {
-            console.log('⚠️ 未找到重新定责按钮（可能工单状态不支持）');
-        }
+                await page.keyboard.press('Escape');
+            } else {
+                console.log('⚠️ 未找到重新定责按钮（可能工单状态不支持）');
+            }
+        });
     });
 });

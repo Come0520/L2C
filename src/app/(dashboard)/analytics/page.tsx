@@ -22,7 +22,7 @@ import {
 } from '@/features/analytics/actions';
 import { startOfMonth, endOfMonth } from 'date-fns';
 
-export default async function AnalyticsPage() {
+async function AnalyticsDataWrapper() {
   const now = new Date();
   const startDate = startOfMonth(now);
   const endDate = endOfMonth(now);
@@ -82,6 +82,10 @@ export default async function AnalyticsPage() {
     annualProgressData: annualProgressRes?.success ? annualProgressRes.data : null,
   };
 
+  return <AnalyticsClient initialData={initialData} />;
+}
+
+export default function AnalyticsPage() {
   return (
     <Suspense
       fallback={
@@ -90,7 +94,7 @@ export default async function AnalyticsPage() {
         </div>
       }
     >
-      <AnalyticsClient initialData={initialData} />
+      <AnalyticsDataWrapper />
     </Suspense>
   );
 }

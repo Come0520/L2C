@@ -224,3 +224,91 @@ describe('ReceiptService (Finance TDD - Concurrency)', () => {
     );
   });
 });
+
+describe('ReceiptService - createReceiptBill (Validation)', () => {
+  const mockTenantId = 'tenant-1';
+  const mockUserId = 'user-1';
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('[RED] should throw error when totalAmount is zero or negative', async () => {
+    const data = {
+      customerName: 'Test Customer',
+      customerPhone: '13800138000',
+      totalAmount: '0.00',
+      type: 'NORMAL' as const,
+      paymentMethod: 'WECHAT_PAY',
+      proofUrl: 'http://example.com/proof.jpg',
+      receivedAt: new Date(),
+    };
+
+    await expect(ReceiptService.createReceiptBill(data, mockTenantId, mockUserId)).rejects.toThrow(
+      '收款总金额必须大于0'
+    );
+
+    data.totalAmount = '-100.00';
+    await expect(ReceiptService.createReceiptBill(data, mockTenantId, mockUserId)).rejects.toThrow(
+      '收款总金额必须大于0'
+    );
+  });
+
+  it('[RED] should throw error when items sum does not equal totalAmount for NORMAL type', async () => {
+    const data = {
+      customerName: 'Test Customer',
+      customerPhone: '13800138000',
+      totalAmount: '1000.00',
+      type: 'NORMAL' as const,
+      paymentMethod: 'WECHAT_PAY',
+      proofUrl: 'http://example.com/proof.jpg',
+      receivedAt: new Date(),
+      items: [
+        {
+          orderId: 'order-1',
+          orderNo: 'ORD-001',
+          amount: '500.00',
+        },
+        {
+          orderId: 'order-2',
+          orderNo: 'ORD-002',
+          amount: '300.00',
+        },
+      ],
+    };
+
+    // 500 + 300 = 800 != 1000
+    await expect(ReceiptService.createReceiptBill(data, mockTenantId, mockUserId)).rejects.toThrow(
+      '收款明细总额必须等于收款总金额'
+    );
+  });
+
+  it('[GREEN] should pass when items sum equals totalAmount for NORMAL type', async () => {
+    const data = {
+      customerName: 'Test Customer',
+      customerPhone: '13800138000',
+      totalAmount: '800.00',
+      type: 'NORMAL' as const,
+      paymentMethod: 'WECHAT_PAY',
+      proofUrl: 'http://example.com/proof.jpg',
+      receivedAt: new Date(),
+      items: [
+        {
+          orderId: 'order-1',
+          orderNo: 'ORD-001',
+          amount: '500.00',
+        },
+        {
+          orderId: 'order-2',
+          orderNo: 'ORD-002',
+          amount: '300.00',
+        },
+      ],
+    };
+
+    // Mocks should resolve without error
+    await expect(
+      ReceiptService.createReceiptBill(data, mockTenantId, mockUserId)
+    ).resolves.toBeDefined();
+  });
+});

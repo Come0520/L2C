@@ -129,6 +129,45 @@ describe('Tenant Info Actions', () => {
         expect(result.error).toBe('租户不存在');
       }
     });
+
+    /**
+     * TDD RED：验证 getTenantInfo 能返回 0039 迁移中新增的落地页字段
+     * 生产库因迁移未完全执行致这些列缺失，导致持续报 "获取租户信息失败"
+     */
+    it('应返回 slogan/region/detailAddress/contactWechat/landingCoverUrl 等落地页字段', async () => {
+      mocks.dbFindFirst.mockResolvedValue({
+        id: mockTenantId,
+        name: '测试租户',
+        code: 'TEST',
+        logoUrl: '/logo.png',
+        slogan: '专业窗帘定制专家',
+        region: '广东省深圳市',
+        detailAddress: '南山区科技园路1号',
+        contactWechat: 'wechat_id_123',
+        landingCoverUrl: '/uploads/covers/cover.jpg',
+        settings: { contact: { address: '123 St', phone: '133', email: 'a@b.com' } },
+      });
+
+      const result = await getTenantInfo();
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.slogan).toBe('专业窗帘定制专家');
+        expect(result.data.region).toBe('广东省深圳市');
+        expect(result.data.detailAddress).toBe('南山区科技园路1号');
+        expect(result.data.contactWechat).toBe('wechat_id_123');
+        expect(result.data.landingCoverUrl).toBe('/uploads/covers/cover.jpg');
+      }
+    });
+
+    it('当 DB 查询抛出异常时应返回 success:false 而非崩溃', async () => {
+      // 模拟数据库异常（如列不存在：生产库迁移未应用时的表现）
+      mocks.dbFindFirst.mockRejectedValue(new Error('column tenants.slogan does not exist'));
+      const result = await getTenantInfo();
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error).toBe('获取租户信息失败');
+      }
+    });
   });
 
   describe('updateTenantInfo', () => {

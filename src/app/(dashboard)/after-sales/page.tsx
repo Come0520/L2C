@@ -1,12 +1,13 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { AfterSalesList } from '@/features/after-sales/components/after-sales-list';
-
-export const dynamic = 'force-dynamic';
+import { TableSkeleton } from '@/shared/ui/skeleton-variants';
 
 export default function AfterSalesPage() {
   return (
     <div className="flex h-full flex-col">
-      <AfterSalesList />
+      <Suspense fallback={<TableSkeleton />}>
+        <AfterSalesList />
+      </Suspense>
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { auth } from '@/shared/lib/auth';
 import { DashboardPageHeader } from '@/shared/ui/dashboard-page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
@@ -10,17 +11,10 @@ import { ChannelRanking } from '@/features/channels/components/channel-ranking';
 import { TrendingUp, Users, DollarSign, Percent, Wallet } from 'lucide-react';
 import { redirect } from 'next/navigation';
 
-export const dynamic = 'force-dynamic';
-
-/**
- * 渠道业绩分析页面
- *
- * 权限：仅 ADMIN / MANAGER 可访问
- */
-export default async function ChannelAnalyticsPage({
-  searchParams,
+async function ChannelAnalyticsDataWrapper({
+  resolvedSearchParams,
 }: {
-  searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
+  resolvedSearchParams: { [key: string]: string | string[] | undefined } | undefined;
 }) {
   const session = await auth();
 
@@ -38,8 +32,6 @@ export default async function ChannelAnalyticsPage({
     );
   }
 
-  // Next.js 16: searchParams is a Promise
-  const resolvedSearchParams = await searchParams;
   const period = (resolvedSearchParams?.period as 'month' | 'quarter' | 'year' | 'all') || 'month';
 
   // 获取数据
@@ -112,6 +104,29 @@ export default async function ChannelAnalyticsPage({
       {/* 渠道排行榜 */}
       <ChannelRanking data={ranking} currentPeriod={period} />
     </div>
+  );
+}
+
+/**
+ * 渠道业绩分析页面
+ *
+ * 权限：仅 ADMIN / MANAGER 可访问
+ */
+export default async function ChannelAnalyticsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const resolvedSearchParams = await searchParams;
+
+  return (
+    <Suspense
+      fallback={
+        <div className="text-muted-foreground p-8 text-center">正在加载渠道分析数据...</div>
+      }
+    >
+      <ChannelAnalyticsDataWrapper resolvedSearchParams={resolvedSearchParams} />
+    </Suspense>
   );
 }
 

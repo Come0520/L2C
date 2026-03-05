@@ -35,6 +35,7 @@ vi.mock('@/shared/api/db', () => ({
     set: vi.fn().mockReturnThis(),
     insert: vi.fn().mockReturnThis(),
     values: vi.fn().mockReturnThis(),
+    returning: vi.fn().mockReturnValue([{ id: 'mock-id' }]),
     delete: vi.fn().mockReturnThis(),
   },
 }));
@@ -148,6 +149,32 @@ describe('Inventory Actions', () => {
       expect(result.success).toBe(true);
       expect(mockDb.insert).toHaveBeenCalledTimes(2); // inventory 和 logs 各一次
     });
+
+    it('[TDD-RED] 修改已有库存发生高并发扣减时，若超过底线触发 CAS 0 条应报错阻止超发', async () => {
+      mockDb.query.warehouses.findFirst.mockResolvedValue({ id: VALID_UUID });
+      mockDb.execute = vi.fn().mockResolvedValue([{ id: 'inv-1', quantity: 5 }]); // 初始读取通过了 JS 层的 5 > 0
+
+      const originalUpdate = mockDb.update;
+      // 但实际上在 update 时，底层因为 WHERE quantity + (-4) >= 0 而导致返回空！
+      mockDb.update = vi.fn().mockReturnValue({
+        set: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({ returning: vi.fn().mockReturnValue([]) }),
+        }),
+      });
+
+      const { adjustInventory } = await import('../inventory-actions');
+
+      const result = await adjustInventory({
+        warehouseId: VALID_UUID,
+        productId: VALID_UUID_2,
+        quantity: -4, // -4 不触发JS端拦截，专门用于触发底层 CAS 拦截
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('并发扣减异常：库存数量不足以支持本次变动');
+
+      mockDb.update = originalUpdate;
+    });
   });
 
   describe('transferInventoryAction', () => {
@@ -202,6 +229,38 @@ describe('Inventory Actions', () => {
       expect(mockDb.update).toHaveBeenCalledTimes(2);
       expect(mockDb.insert).toHaveBeenCalledTimes(2);
       expect(AuditService.recordFromSession).toHaveBeenCalled();
+    });
+
+    it('[TDD-RED] 同步向外调拨库存造成原仓库存并发穿透为负时应抛出 CAS 异常', async () => {
+      mockDb.query.warehouses.findFirst.mockResolvedValue({ id: 'wh' });
+
+      // from & to inventory execute -> JS checks 20 > 10, passes
+      mockDb.execute = vi
+        .fn()
+        .mockResolvedValueOnce([{ id: 'inv-from', quantity: 20 }])
+        .mockResolvedValueOnce([{ id: 'inv-to', quantity: 5 }]);
+
+      const originalUpdate = mockDb.update;
+      // 模拟底层防护：from warehouse 更新因为 quantity >= 0 检查而失败，没有返回
+      mockDb.update = vi.fn().mockReturnValueOnce({
+        // Mock 第一条更新 (在 tx.update 中)
+        set: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({ returning: vi.fn().mockReturnValue([]) }), // 第一条 source 库存更新被拒
+        }),
+      });
+
+      const { transferInventory } = await import('../inventory-actions');
+      const result = await transferInventory({
+        fromWarehouseId: VALID_UUID,
+        toWarehouseId: VALID_UUID_3,
+        items: [{ productId: VALID_UUID_2, quantity: 10 }],
+        reason: 'Move stock under concurrency',
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('库存扣减失败，可能由库存不足或被并发篡改导致，调拨请求已中止');
+
+      mockDb.update = originalUpdate;
     });
   });
 

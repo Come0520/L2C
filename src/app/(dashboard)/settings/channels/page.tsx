@@ -15,27 +15,10 @@ import { Button } from '@/shared/ui/button';
 import { ExternalLink } from 'lucide-react';
 import { ListSkeleton } from '@/shared/ui/skeleton-variants';
 
-export const dynamic = 'force-dynamic';
-
 /**
  * 渠道配置页面
  */
-export default async function ChannelsPage() {
-  const session = await auth();
-  const tenantId = session?.user?.tenantId || '';
-
-  // Fetch channels (page 1, large size to show list)
-  // In a real scenario, ChannelList should support server-side pagination or we fetch a reasonable amount.
-  // For config page, maybe we want all? getChannels supports pagination.
-  const [channelsRes, categoryTypesRes, gradeDiscounts] = await Promise.all([
-    getChannels({ page: 1, pageSize: 100 }), // Fetch list of actual channels
-    tenantId ? getChannelCategories() : Promise.resolve([]),
-    getChannelGradeDiscounts(),
-  ]);
-
-  const channels = channelsRes.data || [];
-  const categoryTypes = categoryTypesRes || [];
-
+export default function ChannelsConfigPage() {
   return (
     <div className="space-y-6">
       <DashboardPageHeader title="渠道配置" subtitle="管理渠道列表、类型分类及归因规则" />
@@ -49,20 +32,21 @@ export default async function ChannelsPage() {
         </TabsList>
 
         <TabsContent value="list" className="space-y-4">
-          <div className="flex justify-end">
-            <ChannelFormWrapper categories={categoryTypes} tenantId={tenantId} />
-          </div>
           <Suspense fallback={<ListSkeleton />}>
-            <ChannelListWrapper initialData={channels} categories={categoryTypes} />
+            <ChannelListTab />
           </Suspense>
         </TabsContent>
 
         <TabsContent value="types">
-          <CategoryManager initialData={categoryTypes} tenantId={tenantId} />
+          <Suspense fallback={<ListSkeleton />}>
+            <CategoryManagerTab />
+          </Suspense>
         </TabsContent>
 
         <TabsContent value="config" className="max-w-2xl space-y-4">
-          <GradeDiscountConfigForm initialData={gradeDiscounts} />
+          <Suspense fallback={<div className="h-64 animate-pulse rounded-xl bg-white/5"></div>}>
+            <GradeDiscountConfigTab />
+          </Suspense>
 
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div>
@@ -84,4 +68,39 @@ export default async function ChannelsPage() {
       </Tabs>
     </div>
   );
+}
+
+async function ChannelListTab() {
+  const session = await auth();
+  const tenantId = session?.user?.tenantId || '';
+
+  // Fetch channels (page 1, large size to show list)
+  // In a real scenario, ChannelList should support server-side pagination or we fetch a reasonable amount.
+  const channelsRes = await getChannels({ page: 1, pageSize: 100 });
+  const categoriesRes = await getChannelCategories();
+
+  const channels = channelsRes?.data || [];
+  const categoryTypes = categoriesRes || [];
+
+  return (
+    <>
+      <div className="flex justify-end">
+        <ChannelFormWrapper categories={categoryTypes} tenantId={tenantId} />
+      </div>
+      <ChannelListWrapper initialData={channels} categories={categoryTypes} />
+    </>
+  );
+}
+
+async function CategoryManagerTab() {
+  const session = await auth();
+  const tenantId = session?.user?.tenantId || '';
+  const categoryTypes = tenantId ? await getChannelCategories() : [];
+
+  return <CategoryManager initialData={categoryTypes} tenantId={tenantId} />;
+}
+
+async function GradeDiscountConfigTab() {
+  const gradeDiscounts = await getChannelGradeDiscounts();
+  return <GradeDiscountConfigForm initialData={gradeDiscounts} />;
 }

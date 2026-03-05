@@ -196,45 +196,69 @@ const getAfterSalesTicketDetailAction = createSafeAction(
   async ({ id }, { session }) => {
     const tenantId = session.user.tenantId;
 
-    const ticket = await db.query.afterSalesTickets.findFirst({
+    // 1. 获取核心单据及直接的一对一关联数据
+    const ticketPromise = db.query.afterSalesTickets.findFirst({
       where: and(
         eq(afterSalesTickets.id, id),
         eq(afterSalesTickets.tenantId, tenantId) // 租户隔离
       ),
       with: {
         customer: true,
-        order: {
-          with: {
-            installTasks: true,
-            purchaseOrders: true,
-          },
-        },
+        order: true,
         assignee: true,
         creator: true,
         installTask: true,
-        notices: {
-          with: {
-            confirmer: true,
-            sourcePurchaseOrder: true,
-            sourceInstallTask: true,
-          },
-          orderBy: (notices, { desc }) => [desc(notices.createdAt)],
-        },
       },
     });
 
+    // 2. 独立获取复杂的关联集合数据 (与核心查询并行)
+    const noticesPromise = db.query.liabilityNotices.findMany({
+      where: and(eq(liabilityNotices.afterSalesId, id), eq(liabilityNotices.tenantId, tenantId)),
+      with: {
+        confirmer: true,
+        sourcePurchaseOrder: true,
+        sourceInstallTask: true,
+      },
+      orderBy: (notices, { desc }) => [desc(notices.createdAt)],
+    });
+
+    const [ticket, notices] = await Promise.all([ticketPromise, noticesPromise]);
+
     if (!ticket) return { success: false, message: '工单不存在' };
 
-    // P1 FIX (AS-15): 详情页手机号脱敏
-    if (ticket.customer) {
-      // Create a new customer object to avoid mutating the original if it were cached/readonly
-      // explicit assignment to satisfy type checker if necessary, or just mutation if it's a plain object.
-      // Drizzle return types are mutable plain objects.
-      ticket.customer.phone = maskPhoneNumber(ticket.customer.phone);
-      ticket.customer.phoneSecondary = maskPhoneNumber(ticket.customer.phoneSecondary);
+    // 3. 填装分离的嵌套数据 (Notices)
+    const assembledTicket: any = {
+      ...ticket,
+      notices,
+    };
+
+    // 4. 按需并行获取 Order 下面的其它一对多集合（如果原 order 存在）
+    if (ticket.order) {
+      const [installTasks, purchaseOrders] = await Promise.all([
+        db.query.installTasks.findMany({
+          where: eq(sql`"orderId"`, ticket.order.id),
+        }),
+        db.query.purchaseOrders.findMany({
+          where: eq(sql`"orderId"`, ticket.order.id),
+        }),
+      ]);
+      assembledTicket.order = {
+        ...ticket.order,
+        installTasks,
+        purchaseOrders,
+      };
     }
 
-    return { success: true, data: ticket };
+    // P1 FIX (AS-15): 详情页手机号脱敏
+    if (assembledTicket.customer) {
+      assembledTicket.customer = {
+        ...assembledTicket.customer,
+        phone: maskPhoneNumber(assembledTicket.customer.phone),
+        phoneSecondary: maskPhoneNumber(assembledTicket.customer.phoneSecondary),
+      };
+    }
+
+    return { success: true, data: assembledTicket };
   }
 );
 

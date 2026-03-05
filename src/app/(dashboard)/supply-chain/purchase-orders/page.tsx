@@ -13,9 +13,21 @@ import { TableSkeleton } from '@/shared/ui/skeleton-variants';
 import { CreatePODialog } from '@/features/supply-chain/components/create-po-dialog';
 import { getSuppliers } from '@/features/supply-chain/actions/supplier-actions';
 
-export const revalidate = 60;
+export default function PurchaseOrdersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  return (
+    <div className="flex h-full flex-col space-y-4">
+      <Suspense fallback={<TableSkeleton />}>
+        <PurchaseOrdersDataWrapper searchParams={searchParams} />
+      </Suspense>
+    </div>
+  );
+}
 
-export default async function PurchaseOrdersPage({
+async function PurchaseOrdersDataWrapper({
   searchParams,
 }: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -57,22 +69,20 @@ export default async function PurchaseOrdersPage({
   const suppliers = suppliersData.map((s) => ({ id: s.id, name: s.name }));
 
   return (
-    <div className="flex h-full flex-col space-y-4">
+    <>
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold tracking-tight">采购订单</h2>
         <CreatePODialog suppliers={suppliers} />
       </div>
       <div className="glass-liquid-ultra flex-1 rounded-2xl border border-white/10 p-6">
-        <Suspense fallback={<TableSkeleton />}>
-          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-          <EnhancedPOTable data={result.data as any} />
-        </Suspense>
+        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+        <EnhancedPOTable data={result.data as any} />
 
         {/* 分页信息 */}
         <div className="text-muted-foreground mt-4 text-center text-sm">
           共 {result.total} 条，第 {result.page} / {result.totalPages} 页
         </div>
       </div>
-    </div>
+    </>
   );
 }

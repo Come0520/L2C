@@ -158,6 +158,12 @@ export const PERMISSIONS = {
     MANAGE: 'products.manage', // 产品管理
   },
 
+  // ==================== 云展厅模块（独立于产品权限） ====================
+  SHOWROOM: {
+    VIEW: 'showroom.view', // 浏览展厅（销售用于向客户展示产品）
+    MANAGE: 'showroom.manage', // 管理展品（上传/编辑商品展示内容）
+  },
+
   // ==================== 供应链模块 ====================
   SUPPLY_CHAIN: {
     VIEW: 'supply_chain.view', // 查看供应链
@@ -180,6 +186,12 @@ export const PERMISSIONS = {
     SETTLEMENT: 'channel.settlement', // 结算管理
     MANAGE_COMMISSION: 'channel.manage_commission', // 佣金管理(兼容)
     MANAGE_SETTLEMENT: 'channel.manage_settlement', // 结算管理(兼容)
+  },
+
+  // ==================== 审批流程模块 ====================
+  APPROVAL: {
+    VIEW: 'approval.view', // 查看待我审批的事项（发起/处理审批）
+    HANDLE: 'approval.handle', // 处理审批（驳回/通过/催办）
   },
 
   // ==================== 数据分析模块 ====================
@@ -464,8 +476,10 @@ export const PERMISSION_LABELS: Record<string, string> = {
  */
 export const PERMISSION_DESCRIPTIONS: Record<string, string> = {
   // 线索模块
-  'lead.all.view': '可查看系统内所有销售人员的线索，包括他人负责的线索。适合经理进行进度监控和资源调配。',
-  'lead.all.edit': '可创建、修改系统内所有人的线索，包括转移负责人。拥有此权限即隐含查看所有线索的能力。',
+  'lead.all.view':
+    '可查看系统内所有销售人员的线索，包括他人负责的线索。适合经理进行进度监控和资源调配。',
+  'lead.all.edit':
+    '可创建、修改系统内所有人的线索，包括转移负责人。拥有此权限即隐含查看所有线索的能力。',
   'lead.own.view': '只能查看分配给自己的线索，无法看到其他销售人员的线索。',
   'lead.own.edit': '可创建新线索，并修改分配给自己的线索信息。创建和编辑能力合并在此权限内。',
   'lead.delete': '可将线索标记为作废（软删除）。一般仅授予有删除权的角色，删除后可恢复。',

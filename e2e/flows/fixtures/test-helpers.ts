@@ -27,10 +27,11 @@ export async function createLead(
     // 点击新建线索按钮
     console.log('Step 1: Creating Lead...');
     await page.getByTestId('create-lead-btn').click();
+    await page.waitForTimeout(500);
 
     // 等待对话框出现
-    const dialog = page.getByRole('dialog');
-    await dialog.waitFor({ state: 'visible', timeout: 10000 });
+    const dialog = page.locator('[role="dialog"], [data-vaul-drawer]').first();
+    await dialog.waitFor({ state: 'visible', timeout: 20000 });
 
     // 填写客户姓名（使用通配符匹配兼容不同措辞）
     await dialog.locator('input[placeholder*="客户姓名"], input[placeholder*="姓名"]').first().fill(name);
@@ -210,14 +211,32 @@ export async function fillLeadForm(
     }
 
     if (data.intention) {
-        const intentionSelect = page.locator('select').filter({ hasText: /选择等级|高|中|低/ }).first();
-        if (await intentionSelect.isVisible({ timeout: 1000 })) {
-            await intentionSelect.selectOption({ label: data.intention });
+        try {
+            const intentionTrigger = page.locator('button[role="combobox"]').filter({ hasText: /选择意向|意向/ }).first();
+            if (await intentionTrigger.isVisible({ timeout: 1000 })) {
+                await intentionTrigger.click();
+
+                const intentionMap = {
+                    '高': '高意向',
+                    '中': '中意向',
+                    '低': '低意向'
+                };
+                const mappedIntention = intentionMap[data.intention] || data.intention;
+
+                await page.getByRole('option', { name: new RegExp(mappedIntention) }).click();
+            } else {
+                const intentionSelect = page.locator('select').filter({ hasText: /选择等级|高|中|低/ }).first();
+                if (await intentionSelect.isVisible({ timeout: 1000 })) {
+                    await intentionSelect.selectOption({ label: data.intention });
+                }
+            }
+        } catch (e) {
+            console.log('⚠️ 意向等级选择失败，跳过', e);
         }
     }
 
     if (data.notes) {
-        const notesInput = page.locator('textarea[placeholder*="备注"]');
+        const notesInput = page.locator('textarea[placeholder*="备注"], textarea[placeholder*="补充资料"]');
         if (await notesInput.isVisible({ timeout: 1000 })) {
             await notesInput.fill(data.notes);
         }

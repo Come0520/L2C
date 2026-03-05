@@ -6,9 +6,21 @@ import { UrlSyncedTabs } from '@/shared/ui/url-synced-tabs';
 import { CreateInstallTaskDialog } from '@/features/service/installation/components/create-install-task-dialog';
 import { Skeleton } from '@/shared/ui/skeleton';
 
-export const dynamic = 'force-dynamic';
+export default function InstallationPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  return (
+    <div className="flex h-full flex-col gap-6 p-6">
+      <Suspense fallback={<TableSkeleton />}>
+        <InstallationDataWrapper searchParams={searchParams} />
+      </Suspense>
+    </div>
+  );
+}
 
-export default async function InstallationPage({
+async function InstallationDataWrapper({
   searchParams,
 }: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -30,7 +42,7 @@ export default async function InstallationPage({
   const pagination = result.success ? result.pagination : undefined;
 
   return (
-    <div className="flex h-full flex-col gap-6 p-6">
+    <>
       {/* Header Section - Tabs 和新建按钮同一行 */}
       <div className="flex items-center justify-between">
         <UrlSyncedTabs
@@ -52,12 +64,10 @@ export default async function InstallationPage({
         <InstallationToolbar />
 
         <div className="min-h-0 flex-1 overflow-auto">
-          <Suspense fallback={<TableSkeleton />}>
-            <InstallTaskTable data={tasks} pagination={pagination} />
-          </Suspense>
+          <InstallTaskTable data={tasks} pagination={pagination} />
         </div>
       </div>
-    </div>
+    </>
   );
 }
 

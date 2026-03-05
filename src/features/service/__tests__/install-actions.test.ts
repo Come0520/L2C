@@ -107,8 +107,8 @@ describe('Service Feature - Install Actions', () => {
           dispatcherId: mockUserId,
         })
       );
-      expect(mockRevalidatePath).toHaveBeenCalledWith('/projects');
-      expect(mockRevalidatePath).toHaveBeenCalledWith(`/projects/${mockTaskId}`);
+      expect(mockRevalidatePath).toHaveBeenCalledWith('/service/installation');
+      expect(mockRevalidatePath).toHaveBeenCalledWith(`/service/installation/${mockTaskId}`);
     });
 
     it('should reject if permission check fails', async () => {

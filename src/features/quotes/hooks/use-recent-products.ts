@@ -27,7 +27,7 @@ export function useRecentProducts() {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored) as RecentProduct[];
-        return parsed.sort((a, b) => b.usedAt - a.usedAt);
+        return parsed.toSorted((a, b) => b.usedAt - a.usedAt);
       }
     } catch {
       // 忽略 SSR 或解析错误
@@ -95,7 +95,7 @@ export function getRecentProductIdsFromStorage(): string[] {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       const parsed = JSON.parse(stored) as RecentProduct[];
-      return parsed.sort((a, b) => b.usedAt - a.usedAt).map((p) => p.id);
+      return parsed.toSorted((a, b) => b.usedAt - a.usedAt).map((p) => p.id);
     }
   } catch {
     // 忽略错误

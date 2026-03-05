@@ -5,13 +5,13 @@ test.describe('报价组合 (Quote Bundles) 模块 E2E 测试', () => {
 
     test.beforeEach(async ({ page }) => {
         // 导航到报价组合列表页
-        await safeGoto(page, '/quote-bundles');
+        await safeGoto(page, '/quotes/bundles');
         await page.waitForLoadState('domcontentloaded');
     });
 
     test('验证报价组合/套餐基础布局', async ({ page }) => {
         // 尝试直接访问
-        await safeGoto(page, '/quote-bundles');
+        await safeGoto(page, '/quotes/bundles');
         await page.waitForTimeout(3000);
 
         // 如果 404 或内容为空，尝试辅助路径

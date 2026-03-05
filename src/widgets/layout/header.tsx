@@ -28,13 +28,11 @@ export function Header({ session }: HeaderProps) {
     if (pathname.startsWith('/leads')) return '线索管理';
     // 客户管理
     if (pathname.startsWith('/customers')) return '客户管理';
-    // 报价管理（子路由优先于通用前缀）
-    if (pathname.startsWith('/quote-bundles')) return '报价套餐';
+    // 报价管理（含套餐子路由）
     if (pathname.startsWith('/quotes')) return '报价管理';
     // 订单管理
     if (pathname.startsWith('/orders')) return '订单管理';
-    // 项目管理
-    if (pathname.startsWith('/projects')) return '项目管理';
+
     // 上门服务（子路由优先）
     if (pathname.startsWith('/service/measurement')) return '测量服务';
     if (pathname.startsWith('/service/installation')) return '安装服务';
@@ -54,8 +52,7 @@ export function Header({ session }: HeaderProps) {
     // 审批工作流（子路由优先）
     if (pathname.startsWith('/workflow/approvals')) return '审批中心';
     if (pathname.startsWith('/workflow')) return '工作流';
-    // 工作台通知
-    if (pathname.startsWith('/workbench')) return '工作台';
+
     // 通知中心
     if (pathname.startsWith('/notifications')) return '通知中心';
     // 个人设置

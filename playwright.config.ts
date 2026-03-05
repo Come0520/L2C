@@ -21,7 +21,7 @@ export default defineConfig({
     /* Shared settings for all the projects below. See https://playwright.dev/docs/test-use-options. */
     use: {
         /* Base URL to use in actions like `await page.goto('/')`. */
-        baseURL: 'http://localhost:3000',
+        baseURL: process.env.BASE_URL || 'http://localhost:3004',
 
         /* Collect trace on retry failed test. See https://playwright.dev/docs/trace-viewer */
         trace: 'on-first-retry',
@@ -42,7 +42,7 @@ export default defineConfig({
             name: 'api',
             testMatch: /mobile-api-.*\.spec\.ts/,
             use: {
-                baseURL: 'http://localhost:3000',
+                baseURL: process.env.BASE_URL || 'http://localhost:3004',
             },
         },
         {
@@ -90,15 +90,15 @@ export default defineConfig({
 
     /* 在测试前自动启动 production server */
     webServer: {
-        command: 'pnpm start',
-        url: 'http://localhost:3000',
+        command: 'pnpm start -- -p 3004',
+        port: 3004,
         reuseExistingServer: !process.env.CI,
-        stdout: 'pipe',
         timeout: 300 * 1000,
+        stdout: 'pipe',
         env: {
             AUTH_TRUST_HOST: 'true',
-            AUTH_URL: 'http://localhost:3000',
-            NEXTAUTH_URL: 'http://localhost:3000',
-        }
+            AUTH_URL: process.env.BASE_URL || 'http://localhost:3004',
+            NEXTAUTH_URL: process.env.BASE_URL || 'http://localhost:3004',
+        },
     },
 });

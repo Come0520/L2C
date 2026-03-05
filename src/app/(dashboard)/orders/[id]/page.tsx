@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
 import { getOrderDetail, getOrderItems, getOrderPaymentSchedules } from '@/features/orders/actions';
 import {
@@ -5,9 +6,15 @@ import {
   type OrderData,
 } from '@/features/orders/components/order-dashboard-view';
 
-export const revalidate = 0;
+export default function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  return (
+    <Suspense fallback={<div>加载中...</div>}>
+      <OrderDetailDataWrapper params={params} />
+    </Suspense>
+  );
+}
 
-export default async function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
+async function OrderDetailDataWrapper({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
   // 性能优化：并行获取订单基础信息、明细和收款计划 (D8)

@@ -24,7 +24,7 @@ import Star from 'lucide-react/dist/esm/icons/star';
 import FileText from 'lucide-react/dist/esm/icons/file-text';
 import { SendToCustomerDialog } from '@/shared/components/send-to-customer-dialog';
 
-export const dynamic = 'force-dynamic';
+import { Suspense } from 'react';
 
 const statusMap = {
   PENDING: { label: '待分配', color: 'bg-gray-500' },
@@ -36,11 +36,15 @@ const statusMap = {
   CANCELLED: { label: '已取消', color: 'bg-red-500' },
 };
 
-export default async function InstallTaskDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default function InstallTaskDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <InstallTaskDetailDataWrapper params={params} />
+    </Suspense>
+  );
+}
+
+async function InstallTaskDetailDataWrapper({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const result = await getInstallTaskById(id);
 

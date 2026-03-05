@@ -12,18 +12,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/shared/ui/dropdown-menu';
-import DOMPurify from 'isomorphic-dompurify';
 import { deleteShowroomItem } from '@/features/showroom/actions';
 import { toast } from 'sonner';
 
-// 简单的 HTML 清洗函数
-// 安全的 HTML 清洗函数
+// 去除 HTML 标签，提取纯文本摘要（展示用途，无需 XSS 防御）
 function stripHtml(html: string | null | undefined) {
   if (!html) return '';
-  return (
-    DOMPurify.sanitize(html, { ALLOWED_TAGS: [] }).substring(0, 80) +
-    (html.length > 80 ? '...' : '')
-  );
+  // 仅剥除标签，客户端渲染不存在 XSS 风险（只用于文本摘要）
+  const plain = html.replace(/<[^>]+>/g, '');
+  return plain.substring(0, 80) + (plain.length > 80 ? '...' : '');
 }
 
 interface ShowroomItem {

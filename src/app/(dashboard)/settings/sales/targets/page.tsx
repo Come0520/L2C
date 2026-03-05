@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
+import { Suspense } from 'react';
 import { TargetsClientPage } from './client';
-export const dynamic = 'force-dynamic';
 import { getSalesTargets } from '@/features/sales/actions/targets';
 import { getAnnualTargets } from '@/features/sales/actions/annual-targets';
 import { getWeeklyTargets, getCurrentWeekInfo } from '@/features/sales/actions/weekly-targets';
@@ -9,7 +9,25 @@ export const metadata: Metadata = {
   title: '销售目标配置 | 系统设置',
 };
 
-export default async function SalesTargetsPage({
+export default function SalesTargetsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ year?: string; month?: string; week?: string }>;
+}) {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-lg font-medium">销售目标配置</h3>
+        <p className="text-muted-foreground text-sm">设置销售团队的周度、月度和年度绩效目标。</p>
+      </div>
+      <Suspense fallback={<div>加载中...</div>}>
+        <SalesTargetsDataWrapper searchParams={searchParams} />
+      </Suspense>
+    </div>
+  );
+}
+
+async function SalesTargetsDataWrapper({
   searchParams,
 }: {
   searchParams: Promise<{ year?: string; month?: string; week?: string }>;
@@ -33,20 +51,13 @@ export default async function SalesTargetsPage({
   const weeklyTargets = weeklyRes.success ? weeklyRes.data || [] : [];
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-medium">销售目标配置</h3>
-        <p className="text-muted-foreground text-sm">设置销售团队的周度、月度和年度绩效目标。</p>
-      </div>
-
-      <TargetsClientPage
-        initialTargets={targets}
-        initialAnnualTargets={annualTargets}
-        initialWeeklyTargets={weeklyTargets}
-        initialYear={year}
-        initialMonth={month}
-        initialWeek={week}
-      />
-    </div>
+    <TargetsClientPage
+      initialTargets={targets}
+      initialAnnualTargets={annualTargets}
+      initialWeeklyTargets={weeklyTargets}
+      initialYear={year}
+      initialMonth={month}
+      initialWeek={week}
+    />
   );
 }

@@ -24,19 +24,32 @@ export async function skipOnDataLoadError(page: Page): Promise<boolean> {
 
 /**
  * 动态获取最近一条工单/订单的关联订单ID
+ * 优先通过 API 直查，失败则尝试 UI 方式，最终无数据则跳过测试
  */
 export async function getValidOrderId(page: Page): Promise<string> {
-    const defaultFallback = '4be245bf-6681-4925-972f-3191c04636c6';
+    // 方案 A：通过 API 直查（最快最可靠）
+    try {
+        const apiRes = await page.request.get('/api/orders?limit=1');
+        if (apiRes.ok()) {
+            const json = await apiRes.json();
+            const items = json?.items || json?.data || (Array.isArray(json) ? json : []);
+            if (items.length > 0 && items[0].id) {
+                console.log(`✅ API 直查获取订单ID: ${items[0].id}`);
+                return items[0].id;
+            }
+        }
+    } catch {
+        console.log('⚠️ API 直查订单失败，回退到 UI 方式');
+    }
 
+    // 方案 B：通过 UI 页面抓取
     try {
         await page.goto('/orders', { waitUntil: 'domcontentloaded', timeout: 15000 });
-
-        // 由于可能是 /orders 或 /sales/orders 路由，先查验当前是否有数据
         const firstLink = page.locator('table tbody tr a').first();
         if (await firstLink.isVisible({ timeout: 5000 })) {
             const href = await firstLink.getAttribute('href');
             const exactId = href?.split('/').pop();
-            if (exactId && exactId.length > 20) return exactId; // 基础的 UUID 长度过滤
+            if (exactId && exactId.length > 20) return exactId;
         }
 
         await page.goto('/sales/orders', { waitUntil: 'domcontentloaded', timeout: 15000 });
@@ -47,10 +60,13 @@ export async function getValidOrderId(page: Page): Promise<string> {
             if (exactId && exactId.length > 20) return exactId;
         }
     } catch (e) {
-        console.log('⚠️ 获取可用订单ID发生超时或错误，回退到默认ID:', e);
+        console.log('⚠️ UI 方式获取订单ID也失败:', e);
     }
 
-    return defaultFallback;
+    // 方案 C：无可用数据，跳过当前测试而非使用伪 ID
+    console.log('⏭️ 无可用订单数据，跳过当前测试');
+    test.skip(true, '环境中无可用订单数据');
+    return ''; // 不会执行到此处，但 TypeScript 需要返回值
 }
 
 /**

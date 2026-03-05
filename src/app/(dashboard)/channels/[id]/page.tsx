@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import { Suspense } from 'react';
 import { auth } from '@/shared/lib/auth';
 import { getChannelById } from '@/features/channels/actions/queries';
 import { DashboardPageHeader } from '@/shared/ui/dashboard-page-header';
@@ -11,12 +12,18 @@ interface PageProps {
   params: Promise<{ id: string }>;
 }
 
-export const dynamic = 'force-dynamic';
-
 /**
  * 渠道详情页
  */
-export default async function ChannelDetailPage({ params }: PageProps) {
+export default function ChannelDetailPage({ params }: PageProps) {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ChannelDetailDataWrapper params={params} />
+    </Suspense>
+  );
+}
+
+async function ChannelDetailDataWrapper({ params }: PageProps) {
   const resolvedParams = await params;
   const session = await auth();
   const tenantId = session?.user?.tenantId;

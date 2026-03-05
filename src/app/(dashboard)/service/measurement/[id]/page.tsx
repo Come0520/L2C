@@ -30,13 +30,17 @@ import type { MeasureTaskWithRelations } from '@/types/service';
 import { formatDateTimeDisplay } from '@/types/service';
 import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert';
 
-export const dynamic = 'force-dynamic';
+import { Suspense } from 'react';
 
-export default async function MeasureTaskDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default function MeasureTaskDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <MeasureTaskDetailDataWrapper params={params} />
+    </Suspense>
+  );
+}
+
+async function MeasureTaskDetailDataWrapper({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const result = await getMeasureTaskById(id);
 

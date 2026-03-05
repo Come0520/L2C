@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { getProcessingOrderById } from '@/features/supply-chain/actions/processing-actions';
 import { ShipmentTracker } from '@/features/supply-chain/components/shipment-tracker';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
@@ -7,11 +8,15 @@ import { ArrowLeft, Package, Truck, FileText } from 'lucide-react';
 import { Badge } from '@/shared/ui/badge';
 import { getShipments } from '@/features/supply-chain/actions/shipment-actions';
 
-export default async function ProcessingOrderDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default function ProcessingOrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ProcessingOrderDetailDataWrapper params={params} />
+    </Suspense>
+  );
+}
+
+async function ProcessingOrderDetailDataWrapper({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const res = await getProcessingOrderById({ id });
   if (!res.success || !res.data) {

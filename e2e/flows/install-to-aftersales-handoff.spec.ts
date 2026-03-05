@@ -40,10 +40,10 @@ test.describe('安装完成→售后保修联动（跨模块闭环）', () => {
             return;
         }
 
-        // 切换到"待验收"Tab
-        const tabs = ['待确认', '已安装', '验收中'];
+        // 切换到"待验收"Tab — 实际 UI 使用 UrlSyncedTabs 渲染为 button
+        const tabs = ['待确认', '已安装', '验收中', '已完成'];
         for (const tabText of tabs) {
-            const tab = page.getByRole('tab', { name: new RegExp(tabText) });
+            const tab = page.getByRole('button', { name: new RegExp(tabText) });
             if (await tab.isVisible({ timeout: 2000 })) {
                 await tab.click();
                 await page.waitForTimeout(500);
@@ -53,8 +53,8 @@ test.describe('安装完成→售后保修联动（跨模块闭环）', () => {
 
         // 获取第一行安装单
         const firstRow = page.locator('table tbody tr').first();
-        if (!(await firstRow.isVisible())) {
-            console.log('⚠️ 无待验收安装单，跳过');
+        if (!(await firstRow.isVisible({ timeout: 5000 }).catch(() => false))) {
+            test.skip(true, '无待验收安装单数据，跳过整个联动测试');
             return;
         }
 

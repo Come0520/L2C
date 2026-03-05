@@ -18,6 +18,8 @@ import {
   liabilityStatusEnum,
   liabilityReasonCategoryEnum,
   debtStatusEnum,
+  damageReportStatusEnum,
+  signatureStatusEnum,
 } from './enums';
 import { customers } from './customers';
 import { purchaseOrders } from './supply-chain';
@@ -89,8 +91,50 @@ export const afterSalesTickets = pgTable(
 );
 
 /**
- * 定责通知单表
- * 记录售后责任划分及罚款详情
+ * 定损总单表 (New in V2.0)
+ * 记录售后赔付的实际总体损失额度，作为定责划扣的总控账本
+ */
+export const afterSalesDamageReports = pgTable(
+  'after_sales_damage_reports',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tenantId: uuid('tenant_id')
+      .references(() => tenants.id)
+      .notNull(),
+    reportNo: varchar('report_no', { length: 50 }).unique().notNull(), // DR+日期+序号
+    afterSalesTicketId: uuid('after_sales_ticket_id')
+      .references(() => afterSalesTickets.id, { onDelete: 'cascade', onUpdate: 'cascade' })
+      .notNull(), // 必须关联网源工单
+
+    totalDamageAmount: decimal('total_damage_amount', { precision: 12, scale: 2 }).notNull(), // 查勘定损总金额
+    description: text('description').notNull(), // 破损情况与定损依据描述
+    evidencePhotos: text('evidence_photos').array(), // 现场查勘定损照片
+
+    status: damageReportStatusEnum('status').default('DRAFT').notNull(),
+
+    // 审计字段体系
+    creatorId: uuid('creator_id').references(() => users.id), // 发起核损的客服主管
+    resolvedAt: timestamp('resolved_at', { withTimezone: true }), // 全员确认生效或已仲裁的时间戳
+
+    createdBy: uuid('created_by'),
+    updatedBy: uuid('updated_by'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .$onUpdateFn(() => new Date()),
+  },
+  (table) => ({
+    tenantIdx: index('idx_dr_tenant').on(table.tenantId),
+    afterSalesIdx: index('idx_dr_after_sales').on(table.afterSalesTicketId),
+    reportNoIdx: index('idx_dr_report_no').on(table.reportNo),
+    tenantStatusIdx: index('idx_dr_tenant_status').on(table.tenantId, table.status),
+  })
+);
+
+/**
+ * 定责通知单表 (子级明细)
+ * 原为独立单据，现作为 damageReport 的责任拆分单元
+ * 记录具体的单体责任划分比例与罚款金额，并引入签字节点
  */
 export const liabilityNotices = pgTable(
   'liability_notices',
@@ -100,9 +144,13 @@ export const liabilityNotices = pgTable(
       .references(() => tenants.id)
       .notNull(),
     noticeNo: varchar('notice_no', { length: 50 }).unique().notNull(), // LN+日期+序号
-    afterSalesId: uuid('after_sales_id')
+    afterSalesId: uuid('after_sales_id') // 兼容旧逻辑保留，但不应直接使用
       .references(() => afterSalesTickets.id, { onDelete: 'cascade', onUpdate: 'cascade' })
       .notNull(),
+    damageReportId: uuid('damage_report_id').references(() => afterSalesDamageReports.id, {
+      onDelete: 'cascade',
+      onUpdate: 'cascade',
+    }), // [NEW] 指向定损大单
 
     liablePartyType: liablePartyTypeEnum('liable_party_type').notNull(), // 责任方类型: FACTORY, INSTALLER, 等
     liablePartyId: uuid('liable_party_id'), // 具体责任人 ID (供应商或师傅)
@@ -111,7 +159,7 @@ export const liabilityNotices = pgTable(
     reason: text('reason').notNull(), // 定责原因
     liabilityReasonCategory: liabilityReasonCategoryEnum('liability_reason_category'), // 定责原因分类 (结构化)
 
-    amount: decimal('amount', { precision: 12, scale: 2 }).notNull(), // 扣款/处罚金额
+    amount: decimal('amount', { precision: 12, scale: 2 }).notNull(), // 本笔扣款/处罚金额
 
     // 成本明细 (JSON 存储多种费用构成)
     costItems: jsonb('cost_items'),
@@ -123,11 +171,17 @@ export const liabilityNotices = pgTable(
     status: liabilityStatusEnum('status').default('DRAFT').notNull(), // DRAFT -> PENDING_CONFIRM -> CONFIRMED/DISPUTED -> ARBITRATED
     evidencePhotos: text('evidence_photos').array(), // 证据图片
 
-    // 确认环节
+    // [NEW] 电子签字认证体系
+    signatureStatus: signatureStatusEnum('signature_status').default('PENDING').notNull(),
+    signatureImage: text('signature_image'), // 签名笔迹 OSS URL
+    signedAt: timestamp('signed_at', { withTimezone: true }), // 实际签字时间
+    rejectReason: text('reject_reason'), // 拒签抗辩理由
+
+    // 确认环节 (保留旧审计)
     confirmedAt: timestamp('confirmed_at', { withTimezone: true }),
     confirmedBy: uuid('confirmed_by').references(() => users.id),
 
-    // 争议处理
+    // 争议处理 (被 rejectReason 融合)
     disputeReason: text('dispute_reason'), // 争议理由
     disputeEvidence: text('dispute_evidence').array(), // 争议证据图片
 
@@ -152,6 +206,7 @@ export const liabilityNotices = pgTable(
   (table) => ({
     tenantIdx: index('idx_ln_tenant').on(table.tenantId),
     afterSalesIdx: index('idx_ln_after_sales').on(table.afterSalesId),
+    damageReportIdx: index('idx_ln_damage_report').on(table.damageReportId),
     noticeNoIdx: index('idx_ln_notice_no').on(table.noticeNo),
     tenantPartyStatusIdx: index('idx_ln_tenant_party_status').on(
       table.tenantId,

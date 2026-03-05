@@ -343,7 +343,7 @@ export async function getChannelRanking(
     },
   });
 
-  const results: ChannelStats[] = [];
+  let results: ChannelStats[] = [];
 
   // Parallelize stats fetching for top channels
   // Optimization: Use stored fields from channels table instead of recalculating (N+1 recursion)

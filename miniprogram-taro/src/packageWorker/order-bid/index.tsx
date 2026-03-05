@@ -20,10 +20,10 @@ export default function WorkerOrderBidPage() {
         try {
             setLoading(true)
             const res = await engineerService.getBiddableTasks()
-            if (res.success || res.data) {
-                setOrders(res.data || [])
+            if (res && Array.isArray(res)) {
+                setOrders(res)
             } else {
-                Taro.showToast({ title: res.error || '获取抢单池失败', icon: 'none' })
+                Taro.showToast({ title: '获取抢单池失败', icon: 'none' })
             }
         } catch (err) {
             Taro.showToast({ title: '网络异常', icon: 'none' })

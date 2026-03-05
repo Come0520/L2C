@@ -1,6 +1,7 @@
 import { View, Text, Input, Button, Image, ScrollView, Picker } from '@tarojs/components'
 import Taro, { useLoad } from '@tarojs/taro'
 import { useState } from 'react'
+import { taskService } from '@/services/task-service'
 import './index.scss'
 
 interface RoomMeasure {
@@ -28,13 +29,18 @@ export default function MeasurePage() {
 
   useLoad((params) => { setTaskId(params.taskId || 'T-2026-001') })
 
-  const handleCheckIn = () => {
+  const handleCheckIn = async () => {
     Taro.showLoading({ title: '定位打卡中...' })
-    setTimeout(() => {
+    try {
+      // 模拟获取定位并打卡
+      await taskService.checkIn(_taskId, { latitude: 39.9, longitude: 116.4, address: '北京市朝阳区绿地云都会' })
       Taro.hideLoading()
       Taro.showToast({ title: '打卡成功', icon: 'success' })
       setIsCheckedIn(true)
-    }, 1500)
+    } catch (err: any) {
+      Taro.hideLoading()
+      Taro.showToast({ title: err.message || '打卡失败', icon: 'none' })
+    }
   }
 
   const addPlan = () => {
@@ -77,11 +83,15 @@ export default function MeasurePage() {
       return
     }
     setLoading(true)
-    setTimeout(() => {
+    try {
+      await taskService.submitMeasureData(_taskId, { plans, images })
       setLoading(false)
       Taro.showToast({ title: '数据已回传报价单', icon: 'success' })
       setTimeout(() => Taro.navigateBack(), 1500)
-    }, 1500)
+    } catch (err: any) {
+      setLoading(false)
+      Taro.showToast({ title: err.message || '提交失败', icon: 'none' })
+    }
   }
 
   const installTypes = ['顶装', '侧装', '罗马杆', '轨道']

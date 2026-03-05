@@ -1,4 +1,4 @@
-export const dynamic = 'force-dynamic';
+// 移除 force-dynamic
 import { Suspense } from 'react';
 import { getQuoteTemplates } from '@/features/quotes/actions/template-actions';
 import { QuoteTemplateList } from '@/features/quotes/components/quote-template-list';
@@ -11,11 +11,7 @@ export const metadata = {
   description: '管理和使用报价模板',
 };
 
-export default async function QuoteTemplatesPage() {
-  const templatesRes = await getQuoteTemplates({});
-  const templates = templatesRes?.data?.templates || [];
-  const categories = templatesRes?.data?.categories || [];
-
+export default function QuoteTemplatesPage() {
   return (
     <div className="space-y-6 p-8">
       {/* 头部 */}
@@ -35,8 +31,16 @@ export default async function QuoteTemplatesPage() {
 
       {/* 模板列表 */}
       <Suspense fallback={<div className="text-muted-foreground">加载中...</div>}>
-        <QuoteTemplateList templates={templates} categories={categories as string[]} />
+        <QuoteTemplatesDataWrapper />
       </Suspense>
     </div>
   );
+}
+
+async function QuoteTemplatesDataWrapper() {
+  const templatesRes = await getQuoteTemplates({});
+  const templates = templatesRes?.data?.templates || [];
+  const categories = templatesRes?.data?.categories || [];
+
+  return <QuoteTemplateList templates={templates} categories={categories as string[]} />;
 }

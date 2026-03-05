@@ -51,14 +51,13 @@ export default function SalesMeasureReviewPage() {
     const handleDispute = () => {
         Taro.showModal({
             title: '申诉打回',
-            content: '确认为数据异常/照片不清晰需打回？',
-            editable: true,
-            placeholderText: '请输入打回理由',
+            content: '确认为数据异常/照片不清晰需打回？打回后将通知师傅重测。',
             success: async (res) => {
-                if (res.confirm && res.content) {
+                if (res.confirm) {
+                    const disputeReason = '小程序端销售主动打回'
                     Taro.showLoading({ title: '提交中...' })
                     try {
-                        await taskService.verifyMeasureData(taskId, 'DISPUTE', res.content)
+                        await taskService.verifyMeasureData(taskId, 'DISPUTE', disputeReason)
                         Taro.hideLoading()
                         Taro.showToast({ title: '已打回重测', icon: 'none' })
                         setTimeout(() => Taro.navigateBack(), 1500)
@@ -66,8 +65,6 @@ export default function SalesMeasureReviewPage() {
                         Taro.hideLoading()
                         Taro.showToast({ title: e.message || '申诉失败', icon: 'none' })
                     }
-                } else if (res.confirm && !res.content) {
-                    Taro.showToast({ title: '请填写打回理由', icon: 'none' })
                 }
             }
         })

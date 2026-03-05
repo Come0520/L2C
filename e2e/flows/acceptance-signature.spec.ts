@@ -61,19 +61,21 @@ test.describe('电子验收签字与验证 (Acceptance E-Signature)', () => {
         }
 
         const taskRow = page.locator('table tbody tr').first();
-        if (await taskRow.isVisible({ timeout: 5000 })) {
-            await taskRow.click();
-            await page.waitForLoadState('domcontentloaded');
+        if (!(await taskRow.isVisible({ timeout: 5000 }))) {
+            test.skip(true, '无已完成的安装任务行可供测试');
+            return;
+        }
+        await taskRow.click();
+        await page.waitForLoadState('domcontentloaded');
 
-            // 查找电子签名显示区
-            const signImg = page.locator('img[src*="E-Signature"], img[alt*="签名"], img[alt*="signature"]');
-            const signBlock = page.locator('text=/客户验收签名|电子签名|Signature/');
+        // 查找电子签名显示区
+        const signImg = page.locator('img[src*="E-Signature"], img[alt*="签名"], img[alt*="signature"]');
+        const signBlock = page.locator('text=/客户验收签名|电子签名|Signature/');
 
-            if (await signImg.isVisible({ timeout: 5000 }) || await signBlock.isVisible({ timeout: 3000 })) {
-                console.log('✅ 验收详情页成功展示客户电子签名块');
-            } else {
-                console.log('⚠️ 缺失客户电子签名展示的前端 UI');
-            }
+        if (await signImg.isVisible({ timeout: 5000 }) || await signBlock.isVisible({ timeout: 3000 })) {
+            console.log('✅ 验收详情页成功展示客户电子签名块');
+        } else {
+            console.log('⚠️ 缺失客户电子签名展示的前端 UI');
         }
     });
 
@@ -108,7 +110,7 @@ test.describe('电子验收签字与验证 (Acceptance E-Signature)', () => {
                 }
             }
         } else {
-            console.log('⚠️ 无待验收工单记录进行强制关单拦截测试');
+            test.skip(true, '无待验收工单记录进行强制关单拦截测试');
         }
     });
 });

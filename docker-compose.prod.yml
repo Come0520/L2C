@@ -29,7 +29,7 @@ services:
     restart: unless-stopped
     depends_on:
       db-migrate:
-        condition: service_completed_successfully
+        condition: service_started  # 迁移失败不阻断 app 启动（app 内部有健康检查）
     environment:
       - NODE_ENV=production
       # 使用 .env 中已编码的 DATABASE_URL

@@ -5,13 +5,21 @@ import { getActiveChannelCategories } from '@/features/channels/actions/categori
 import { ChannelTree } from '@/features/channels/components/channel-tree';
 import { Skeleton } from '@/shared/ui/skeleton';
 
-export const dynamic = 'force-dynamic';
-
 /**
  * 渠道管理主页面
  * 展示树形结构的渠道列表
  */
-export default async function ChannelsPage() {
+export default function ChannelsPage() {
+  return (
+    <div className="space-y-6">
+      <Suspense fallback={<ChannelTreeSkeleton />}>
+        <ChannelsDataWrapper />
+      </Suspense>
+    </div>
+  );
+}
+
+async function ChannelsDataWrapper() {
   const session = await auth();
   const tenantId = session?.user?.tenantId;
 
@@ -33,11 +41,7 @@ export default async function ChannelsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <Suspense fallback={<ChannelTreeSkeleton />}>
-        <ChannelTree initialData={channelTree} categoryTypes={categoryTypes} tenantId={tenantId} />
-      </Suspense>
-    </div>
+    <ChannelTree initialData={channelTree} categoryTypes={categoryTypes} tenantId={tenantId} />
   );
 }
 

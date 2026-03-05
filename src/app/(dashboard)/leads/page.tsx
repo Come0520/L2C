@@ -15,9 +15,39 @@ import { TableSkeleton } from '@/shared/ui/skeleton-variants';
 import { LeadsErrorBoundary } from '@/features/leads/components/leads-error-boundary';
 import { LeadAnalyticsDashboard } from '@/features/leads/components/lead-analytics-dashboard';
 
-export const dynamic = 'force-dynamic';
+export default function LeadsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  return (
+    <LeadsErrorBoundary>
+      <div className="flex h-full w-full flex-col gap-6 p-8 perspective-[1000px]">
+        {/* Top Section: Tabs and Actions */}
+        <div className="flex w-full items-center justify-between">
+          <div className="flex-1">
+            <LeadsFilterBar />
+          </div>
+          <div className="mb-4 flex items-center gap-2">
+            <ExcelImportDialog />
+            <CreateLeadDialog
+              tenantId="" /* TenantID will be loaded by client/session internally or passed differently if needed. Temporary empty string */
+            />
+          </div>
+        </div>
 
-export default async function LeadsPage({
+        {/* Content Card */}
+        <div className="glass-liquid relative flex h-full w-full flex-1 flex-col gap-4 overflow-hidden rounded-2xl border border-white/10 p-6">
+          <Suspense fallback={<TableSkeleton />}>
+            <LeadsDataWrapper searchParams={searchParams} />
+          </Suspense>
+        </div>
+      </div>
+    </LeadsErrorBoundary>
+  );
+}
+
+async function LeadsDataWrapper({
   searchParams,
 }: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -80,59 +110,34 @@ export default async function LeadsPage({
       getSalesUsers(),
     ]);
 
-    return (
-      <LeadsErrorBoundary>
-        <div className="flex h-full w-full flex-col gap-6 p-8 perspective-[1000px]">
-          {/* Top Section: Tabs and Actions */}
-          <div className="flex w-full items-center justify-between">
-            <div className="flex-1">
-              <LeadsFilterBar />
-            </div>
-            <div className="mb-4 flex items-center gap-2">
-              <ExcelImportDialog />
-              <CreateLeadDialog tenantId={tenantId} />
-            </div>
-          </div>
-
-          {/* Content Card */}
-          <div className="glass-liquid relative flex h-full w-full flex-1 flex-col gap-4 overflow-hidden rounded-2xl border border-white/10 p-6">
-            {statusParam === 'ANALYTICS' ? (
-              <LeadAnalyticsDashboard />
-            ) : (
-              <>
-                <LeadsToolbar tenantId={tenantId} salesList={salesList} />
-                <div className="flex-1 overflow-auto">
-                  <Suspense fallback={<TableSkeleton />}>
-                    <LeadTable
-                      data={leadsResult.data}
-                      page={page}
-                      pageSize={10}
-                      total={leadsResult.total}
-                      userRole={userRole}
-                      userId={userId}
-                    />
-                  </Suspense>
-                </div>
-              </>
-            )}
-          </div>
+    return statusParam === 'ANALYTICS' ? (
+      <LeadAnalyticsDashboard />
+    ) : (
+      <>
+        <LeadsToolbar tenantId={tenantId} salesList={salesList} />
+        <div className="flex-1 overflow-auto">
+          <LeadTable
+            data={leadsResult.data}
+            page={page}
+            pageSize={10}
+            total={leadsResult.total}
+            userRole={userRole}
+            userId={userId}
+          />
         </div>
-      </LeadsErrorBoundary>
+      </>
     );
   } catch (error) {
     console.error('LeadsPage Error:', error);
     return (
-      <div className="space-y-6 p-6">
-        <PageHeader title="线索管理" description="管理和追踪所有潜在客户线索" />
-        <div className="bg-destructive/10 text-destructive rounded-md p-4">
-          <h3 className="font-semibold">无法加载线索数据</h3>
-          <p className="mt-1 text-sm">{(error as Error).message}</p>
-          {(error as { digest?: string }).digest && (
-            <p className="text-muted-foreground mt-2 font-mono text-xs">
-              Digest: {(error as { digest?: string }).digest}
-            </p>
-          )}
-        </div>
+      <div className="bg-destructive/10 text-destructive rounded-md p-4">
+        <h3 className="font-semibold">无法加载线索数据</h3>
+        <p className="mt-1 text-sm">{(error as Error).message}</p>
+        {(error as { digest?: string }).digest && (
+          <p className="text-muted-foreground mt-2 font-mono text-xs">
+            Digest: {(error as { digest?: string }).digest}
+          </p>
+        )}
       </div>
     );
   }

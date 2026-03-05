@@ -17,8 +17,6 @@ import { ApPaymentInfo } from './payment-info';
 import { ApApprovalHistory } from './approval-history';
 import { ApFilePreview } from './file-preview';
 
-export const dynamic = 'force-dynamic';
-
 export default async function ApDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
@@ -28,12 +26,12 @@ export default async function ApDetailPage({ params }: { params: Promise<{ id: s
 
   return (
     <Suspense fallback={<DetailSkeleton />}>
-      <ApDetailContent id={id} />
+      <ApDetailDataWrapper id={id} />
     </Suspense>
   );
 }
 
-async function ApDetailContent({ id }: { id: string }) {
+async function ApDetailDataWrapper({ id }: { id: string }) {
   const bill = await db.query.paymentBills.findFirst({
     where: eq(paymentBills.id, id),
     with: {

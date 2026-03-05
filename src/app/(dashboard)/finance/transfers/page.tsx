@@ -4,15 +4,13 @@ import { CreateTransferDialog } from '@/features/finance/components/create-trans
 import { Button } from '@/shared/ui/button';
 import { Plus } from 'lucide-react';
 
-export const dynamic = 'force-dynamic';
+import { Suspense } from 'react';
+import { TableSkeleton } from '@/shared/ui/skeleton-variants';
 
 /**
  * 资金调拨管理页面
  */
-export default async function TransfersPage() {
-  const result = await getInternalTransfers();
-  const transfers = result.success ? result.data || [] : [];
-
+export default function TransfersPage() {
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b px-6 py-4">
@@ -30,8 +28,17 @@ export default async function TransfersPage() {
         />
       </div>
       <div className="flex-1 p-6">
-        <TransfersList data={transfers} />
+        <Suspense fallback={<TableSkeleton />}>
+          <TransfersDataWrapper />
+        </Suspense>
       </div>
     </div>
   );
+}
+
+async function TransfersDataWrapper() {
+  const result = await getInternalTransfers();
+  const transfers = result.success ? result.data || [] : [];
+
+  return <TransfersList data={transfers} />;
 }

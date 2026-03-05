@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { getPoById } from '@/features/supply-chain/actions/po-actions';
 import { AddLogisticsDialog as LogisticsDialog } from '@/features/supply-chain/components/add-logistics-dialog';
 import { Button } from '@/shared/ui/button';
@@ -8,7 +9,15 @@ import { notFound } from 'next/navigation';
 import { format } from 'date-fns';
 import { PoStatusActions } from '@/features/supply-chain/components/po-status-actions';
 
-export default async function PoDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default function PoDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <PoDetailDataWrapper params={params} />
+    </Suspense>
+  );
+}
+
+async function PoDetailDataWrapper({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const res = await getPoById({ id });
   const po = res.success ? res.data : null;

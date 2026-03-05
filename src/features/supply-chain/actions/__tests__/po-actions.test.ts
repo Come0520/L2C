@@ -33,12 +33,16 @@ const mockDb = createMockDb([
   'poShipments',
 ]);
 
-// 基础 mock 方法链
-const chainUpdate = () => ({
-  set: vi.fn().mockReturnValue({
-    where: vi.fn().mockResolvedValue([{}]),
-  }),
-});
+// 基础 mock 方法链，支持直接 await where，也支持 await where(...).returning()
+const chainUpdate = () => {
+  const builder: any = Promise.resolve([{}]);
+  builder.returning = vi.fn().mockResolvedValue([{ id: 'mocked-id' }]);
+  return {
+    set: vi.fn().mockReturnValue({
+      where: vi.fn().mockReturnValue(builder),
+    }),
+  };
+};
 
 const chainDelete = () => ({
   where: vi.fn().mockResolvedValue([{}]),
@@ -297,6 +301,27 @@ describe('PO Actions (L5)', () => {
         '不允许确认报价'
       );
     });
+
+    it('[TDD-RED] 如果底层 CAS 未能命中原始状态，应抛出并发流转异常', async () => {
+      mockDb.query.purchaseOrders.findFirst.mockResolvedValue({
+        id: VALID_UUID,
+        status: 'PENDING_CONFIRMATION',
+      });
+
+      const updateBuilder: any = Promise.resolve([]);
+      updateBuilder.returning = vi.fn().mockResolvedValue([]); // 没更新到数据
+
+      mockDb.update.mockReturnValueOnce({
+        set: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue(updateBuilder),
+        }),
+      } as any);
+
+      const { confirmPoQuote } = await import('../po-actions');
+      await expect(confirmPoQuote({ poId: VALID_UUID, totalAmount: 500 })).rejects.toThrow(
+        '单据状态已发生变更，请刷新后重试'
+      );
+    });
   });
 
   describe('confirmPoCompletion', () => {
@@ -310,6 +335,50 @@ describe('PO Actions (L5)', () => {
       const result = await confirmPoCompletion({ poId: VALID_UUID });
 
       expect(result.success).toBe(true);
+    });
+  });
+
+  describe('confirmPoReceipt', () => {
+    it('[TDD-RED] 高并发情况下发生超额收货时，由于 CAS 保护应被拦截', async () => {
+      mockDb.transaction.mockImplementationOnce(async (cb) => {
+        return cb({
+          query: {
+            purchaseOrders: {
+              findFirst: vi.fn().mockResolvedValue({
+                id: VALID_UUID,
+                status: 'SHIPPED',
+                items: [{ id: VALID_UUID, quantity: '10', receivedQuantity: '0' }],
+              }),
+            },
+            warehouses: {
+              findFirst: vi.fn().mockResolvedValue({ id: 'wh-1' }),
+            },
+          },
+          update: vi.fn().mockReturnValue({
+            set: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({ returning: vi.fn().mockResolvedValue([]) }), // 底层防御未命中（即 <= quantity 的限制生效使得没更新）
+            }),
+          }),
+          insert: vi.fn(),
+        });
+      });
+
+      const { confirmPoReceipt } = await import('../po-actions');
+      const data = {
+        poId: VALID_UUID,
+        warehouseId: VALID_UUID_2,
+        receivedDate: new Date().toISOString(),
+        items: [
+          {
+            poItemId: VALID_UUID,
+            productId: VALID_UUID_2,
+            quantity: 8,
+          },
+        ],
+      };
+      await expect(confirmPoReceipt(data)).rejects.toThrow(
+        '收货数量异常，并发限制或数量超出采购预期'
+      );
     });
   });
 

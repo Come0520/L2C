@@ -122,8 +122,8 @@ export async function dispatchInstallTask(data: {
       })
       .where(and(eq(installTasks.id, taskId), eq(installTasks.tenantId, session.user.tenantId)));
 
-    revalidatePath('/projects');
-    revalidatePath(`/projects/${taskId}`);
+    revalidatePath('/service/installation');
+    revalidatePath(`/service/installation/${taskId}`);
     return { success: true };
   } catch {
     return { success: false, error: 'Dispatch Failed' };

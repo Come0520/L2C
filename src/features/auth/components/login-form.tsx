@@ -186,8 +186,9 @@ export function LoginForm() {
          *
          * @description 将 'CredentialsSignin' 这类晦涩的 OAuth 原生报错映射为用户能够理解的中文文案。
          */
-        const errorMsg =
-          result.error === 'CredentialsSignin'
+        const errorMsg = result.error.includes('SYSTEM_ERROR')
+          ? '系统繁忙，请稍后重试'
+          : result.error === 'CredentialsSignin'
             ? '登录失败：用户名或密码错误'
             : `登录失败: ${result.error}`;
 

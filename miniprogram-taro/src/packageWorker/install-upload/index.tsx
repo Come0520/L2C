@@ -1,6 +1,8 @@
 import { View, Text, ScrollView, Button, Image, Textarea } from '@tarojs/components'
 import Taro, { useLoad } from '@tarojs/taro'
 import { useState } from 'react'
+import { taskService } from '@/services/task-service'
+import { engineerService } from '@/services/engineer-service'
 import './index.scss'
 
 export default function InstallUploadPage() {
@@ -15,13 +17,17 @@ export default function InstallUploadPage() {
         if (params.taskId) setTaskId(params.taskId)
     })
 
-    const handleCheckIn = () => {
+    const handleCheckIn = async () => {
         Taro.showLoading({ title: '定位中...' })
-        setTimeout(() => {
+        try {
+            await taskService.checkIn(_taskId, { latitude: 39.9, longitude: 116.4, address: '北京市朝阳区绿地云都会' })
             Taro.hideLoading()
             Taro.showToast({ title: '已到达现场', icon: 'success' })
             setIsCheckedIn(true)
-        }, 1000)
+        } catch (err: any) {
+            Taro.hideLoading()
+            Taro.showToast({ title: err.message || '打卡失败', icon: 'none' })
+        }
     }
 
     const takePhoto = (type: 'before' | 'after') => {
@@ -41,7 +47,7 @@ export default function InstallUploadPage() {
         })
     }
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         if (!isCheckedIn) {
             Taro.showToast({ title: '请先打卡', icon: 'none' })
             return
@@ -51,11 +57,18 @@ export default function InstallUploadPage() {
             return
         }
         Taro.showLoading({ title: '提交中...' })
-        setTimeout(() => {
+        try {
+            await engineerService.completeTask(_taskId, {
+                photos: afterImages,
+                notes: remark
+            })
             Taro.hideLoading()
             Taro.showToast({ title: '回传成功', icon: 'success' })
             setTimeout(() => Taro.navigateBack(), 1500)
-        }, 1500)
+        } catch (err: any) {
+            Taro.hideLoading()
+            Taro.showToast({ title: err.message || '回传失败', icon: 'none' })
+        }
     }
 
     return (

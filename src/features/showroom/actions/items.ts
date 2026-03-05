@@ -13,7 +13,7 @@ import {
   getShowroomItemsSchema,
 } from './schema';
 import { AuditService } from '@/shared/services/audit-service';
-import DOMPurify from 'isomorphic-dompurify';
+import { sanitizeContent } from './sanitize';
 import { ShowroomError, ShowroomErrors } from '../errors';
 import { calculateScore } from '../logic/scoring';
 import { canManageShowroomItem } from '../logic/permissions';
@@ -42,16 +42,29 @@ export async function getShowroomItems(input: z.input<typeof getShowroomItemsSch
 
   // 1. 缓存读取 (仅限非搜索查询)
   const versionKey = `showroom:items:${session.user.tenantId}:version`;
-  const version = (redis && (await redis.get<number>(versionKey))) || 0;
+  let version = 0;
+
+  if (redis) {
+    try {
+      version = (await redis.get<number>(versionKey)) || 0;
+    } catch (err) {
+      logger.warn('获取展厅版本缓存失败', { error: err });
+    }
+  }
+
   const cacheKey = `showroom:items:${session.user.tenantId}:v${version}:${JSON.stringify(input)}`;
 
   if (redis && !search) {
-    const cached = await redis.get(cacheKey);
-    if (cached)
-      return cached as {
-        data: (typeof showroomItems.$inferSelect)[];
-        pagination: { total: number; page: number; pageSize: number; totalPages: number };
-      };
+    try {
+      const cached = await redis.get(cacheKey);
+      if (cached)
+        return cached as {
+          data: (typeof showroomItems.$inferSelect)[];
+          pagination: { total: number; page: number; pageSize: number; totalPages: number };
+        };
+    } catch (err) {
+      logger.warn('读取展厅缓存失败，降级为直连数据库', { error: err });
+    }
   }
 
   // 2. 构造查询
@@ -131,12 +144,16 @@ export async function getShowroomItems(input: z.input<typeof getShowroomItemsSch
 
     // 4. 写入缓存 (5分钟)
     if (redis && !search) {
-      await redis.set(cacheKey, response, {
-        ex: 300,
-        // 标记该缓存属于展厅列表，方便未来扩展
-        // [Note] 这里配合 `revalidateTag` 使用 Next.js 原生缓存层会更优雅，
-        // 但为了保持现有 Redis 逻辑的一致性，我们先保留手动 Redis 写入。
-      });
+      try {
+        await redis.set(cacheKey, response, {
+          ex: 300,
+          // 标记该缓存属于展厅列表，方便未来扩展
+          // [Note] 这里配合 `revalidateTag` 使用 Next.js 原生缓存层会更优雅，
+          // 但为了保持现有 Redis 逻辑的一致性，我们先保留手动 Redis 写入。
+        });
+      } catch (err) {
+        logger.warn('写入展厅列表缓存失败', { error: err });
+      }
     }
 
     logger.info('获取展厅素材列表成功', { tenantId: session.user.tenantId, page, pageSize, total });
@@ -190,9 +207,9 @@ export async function createShowroomItem(input: z.input<typeof createShowroomIte
 
   const data = createShowroomItemSchema.parse(input);
 
-  // XSS 防御
+  // XSS 防御（使用纯函数清洗，无 jsdom 依赖）
   if (data.content) {
-    data.content = DOMPurify.sanitize(data.content);
+    data.content = sanitizeContent(data.content);
   }
 
   const score = calculateScore(data);
@@ -244,9 +261,9 @@ export async function updateShowroomItem(input: z.input<typeof updateShowroomIte
 
   const { id, ...data } = updateShowroomItemSchema.parse(input);
 
-  // XSS 防御：尽早清洗
+  // XSS 防御：尽早清洗（使用纯函数清洗，无 jsdom 依赖）
   if (data.content) {
-    data.content = DOMPurify.sanitize(data.content);
+    data.content = sanitizeContent(data.content);
   }
 
   const existing = await db.query.showroomItems.findFirst({
@@ -368,6 +385,10 @@ export async function deleteShowroomItem(input: z.input<typeof deleteShowroomIte
  */
 async function invalidateShowroomCache(tenantId: string) {
   if (redis) {
-    await redis.incr(`showroom:items:${tenantId}:version`);
+    try {
+      await redis.incr(`showroom:items:${tenantId}:version`);
+    } catch (err) {
+      logger.warn('失效展厅缓存缓存版本号失败', { error: err });
+    }
   }
 }

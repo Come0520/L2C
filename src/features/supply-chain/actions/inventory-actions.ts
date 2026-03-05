@@ -496,7 +496,7 @@ const checkInventoryAlertsActionInternal = createSafeAction(
       .leftJoin(products, eq(inventory.productId, products.id))
       .where(and(...baseFilters));
 
-    const alerts: {
+    let alerts: {
       level: 'CRITICAL' | 'WARNING' | 'OK';
       item: (typeof allInventory)[number];
       shortage: number;

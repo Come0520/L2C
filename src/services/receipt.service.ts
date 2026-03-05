@@ -49,6 +49,20 @@ export class ReceiptService {
 
       const totalAmount = new Decimal(data.totalAmount).toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
 
+      if (totalAmount.lte(0)) {
+        throw new Error('收款总金额必须大于0');
+      }
+
+      if (data.type === 'NORMAL' && data.items && data.items.length > 0) {
+        const itemsTotal = data.items.reduce(
+          (sum, item) => sum.plus(new Decimal(item.amount)),
+          new Decimal(0)
+        );
+        if (!itemsTotal.toDecimalPlaces(2, Decimal.ROUND_HALF_UP).eq(totalAmount)) {
+          throw new Error('收款明细总额必须等于收款总金额');
+        }
+      }
+
       const [bill] = await tx
         .insert(receiptBills)
         .values({

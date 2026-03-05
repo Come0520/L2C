@@ -2,57 +2,60 @@
 import { logger } from '@/shared/lib/logger';
 import { Decimal } from 'decimal.js';
 
-import { db } from "@/shared/api/db";
+import { db } from '@/shared/api/db';
 import {
-    purchaseOrders,
-    purchaseOrderItems,
-    suppliers,
-    products,
-    inventory,
-    inventoryLogs,
-    warehouses,
-    poPayments
-} from "@/shared/api/schema";
-import { eq, and, desc, sql, inArray } from "drizzle-orm";
-import { auth, checkPermission } from "@/shared/lib/auth";
-import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
-import { PERMISSIONS } from "@/shared/config/permissions";
-import { SUPPLY_CHAIN_PATHS, VALID_PO_TRANSITIONS, isValidPoTransition } from "../constants";
-import { type POStatus } from "../constants";
-import { generateDocNo } from "@/shared/lib/utils";
-import { createSafeAction } from "@/shared/lib/server-action";
-import { z } from "zod";
-import { AuditService } from "@/shared/services/audit-service";
-import type { ProcurementMetrics } from "../types";
-
+  purchaseOrders,
+  purchaseOrderItems,
+  suppliers,
+  products,
+  inventory,
+  inventoryLogs,
+  warehouses,
+  poPayments,
+} from '@/shared/api/schema';
+import { eq, and, desc, sql, inArray } from 'drizzle-orm';
+import { auth, checkPermission } from '@/shared/lib/auth';
+import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache';
+import { PERMISSIONS } from '@/shared/config/permissions';
+import { SUPPLY_CHAIN_PATHS, VALID_PO_TRANSITIONS, isValidPoTransition } from '../constants';
+import { type POStatus } from '../constants';
+import { generateDocNo } from '@/shared/lib/utils';
+import { createSafeAction } from '@/shared/lib/server-action';
+import { z } from 'zod';
+import { AuditService } from '@/shared/services/audit-service';
+import type { ProcurementMetrics } from '../types';
 
 // 状态转换矩阵已迁移到 constants.ts（使用 VALID_PO_TRANSITIONS）
 
 // --- Schemas (可以在 schemas.ts 中定义，这里简化) ---
 // --- Schemas (可以在 schemas.ts 中定义，这里简化) ---
-import {
-    createPOSchema,
-    confirmPaymentSchema,
-    confirmReceiptSchema
-} from "../schemas";
+import { createPOSchema, confirmPaymentSchema, confirmReceiptSchema } from '../schemas';
 
 const batchUpdateStatusSchema = z.object({
-    poIds: z.array(z.string()),
-    status: z.enum([
-        'DRAFT', 'PENDING_CONFIRMATION', 'PENDING_PAYMENT', 'IN_PRODUCTION',
-        'READY', 'SHIPPED', 'PARTIALLY_RECEIVED', 'DELIVERED', 'COMPLETED', 'CANCELLED'
-    ])
+  poIds: z.array(z.string()),
+  status: z.enum([
+    'DRAFT',
+    'PENDING_CONFIRMATION',
+    'PENDING_PAYMENT',
+    'IN_PRODUCTION',
+    'READY',
+    'SHIPPED',
+    'PARTIALLY_RECEIVED',
+    'DELIVERED',
+    'COMPLETED',
+    'CANCELLED',
+  ]),
 });
 
 const batchDeleteSchema = z.object({
-    poIds: z.array(z.string())
+  poIds: z.array(z.string()),
 });
 
 // --- Actions ---
 
 /**
  * 分页获取采购单列表
- * 
+ *
  * @description 支持根据状态、供应商、付款状态和单号搜索过滤。包含权限校验和租户隔离。
  * @param params 包含以下属性的对象：
  * - `page` (number, optional): 页码，默认 1
@@ -65,196 +68,213 @@ const batchDeleteSchema = z.object({
  */
 
 export async function getPurchaseOrders(params: {
-    page?: number;
-    pageSize?: number;
-    status?: string | string[];
-    supplierId?: string;
-    paymentStatus?: string;
-    search?: string;
+  page?: number;
+  pageSize?: number;
+  status?: string | string[];
+  supplierId?: string;
+  paymentStatus?: string;
+  search?: string;
 }) {
-    logger.info('[supply-chain] getPurchaseOrders 查询参数:', params);
+  logger.info('[supply-chain] getPurchaseOrders 查询参数:', params);
 
-    const session = await auth();
-    // ... (保持原有逻辑)
-    if (!session?.user?.id) return { success: false, error: '未授权', data: [], total: 0 };
+  const session = await auth();
+  // ... (保持原有逻辑)
+  if (!session?.user?.id) return { success: false, error: '未授权', data: [], total: 0 };
 
-    await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.VIEW);
+  await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.VIEW);
 
-    const { page = 1, pageSize = 20, status, supplierId, paymentStatus, search } = params;
-    const conditions = [eq(purchaseOrders.tenantId, session.user.tenantId)];
+  const { page = 1, pageSize = 20, status, supplierId, paymentStatus, search } = params;
+  const conditions = [eq(purchaseOrders.tenantId, session.user.tenantId)];
 
-    if (status && status !== 'ALL' && status !== 'all') {
-        if (Array.isArray(status)) {
-            conditions.push(inArray(purchaseOrders.status, status as POStatus[]));
-        } else {
-            conditions.push(eq(purchaseOrders.status, status as POStatus));
-        }
+  if (status && status !== 'ALL' && status !== 'all') {
+    if (Array.isArray(status)) {
+      conditions.push(inArray(purchaseOrders.status, status as POStatus[]));
+    } else {
+      conditions.push(eq(purchaseOrders.status, status as POStatus));
     }
-    if (supplierId) {
-        conditions.push(eq(purchaseOrders.supplierId, supplierId));
-    }
-    if (paymentStatus && paymentStatus !== 'ALL') {
-        conditions.push(eq(purchaseOrders.paymentStatus, paymentStatus as "PAID" | "PENDING" | "PARTIAL"));
-    }
-    if (search) {
-        conditions.push(sql`(${purchaseOrders.poNo} ILIKE ${`%${search}%`})`);
-    }
+  }
+  if (supplierId) {
+    conditions.push(eq(purchaseOrders.supplierId, supplierId));
+  }
+  if (paymentStatus && paymentStatus !== 'ALL') {
+    conditions.push(
+      eq(purchaseOrders.paymentStatus, paymentStatus as 'PAID' | 'PENDING' | 'PARTIAL')
+    );
+  }
+  if (search) {
+    conditions.push(sql`(${purchaseOrders.poNo} ILIKE ${`%${search}%`})`);
+  }
 
-    const data = await db.query.purchaseOrders.findMany({
-        where: and(...conditions),
-        orderBy: [desc(purchaseOrders.createdAt)],
-        limit: pageSize,
-        offset: (page - 1) * pageSize,
-        with: {
-            order: true,
-            items: true
-        }
-    });
+  const data = await db.query.purchaseOrders.findMany({
+    where: and(...conditions),
+    orderBy: [desc(purchaseOrders.createdAt)],
+    limit: pageSize,
+    offset: (page - 1) * pageSize,
+    with: {
+      order: true,
+      items: true,
+    },
+  });
 
-    const total = await db.$count(purchaseOrders, and(...conditions));
+  const total = await db.$count(purchaseOrders, and(...conditions));
 
-    return {
-        success: true,
-        data,
-        total,
-        page,
-        pageSize,
-        totalPages: Math.ceil(total / pageSize)
-    };
+  return {
+    success: true,
+    data,
+    total,
+    page,
+    pageSize,
+    totalPages: Math.ceil(total / pageSize),
+  };
 }
 
 /**
  * 根据 ID 获取采购单详细信息
- * 
+ *
  * @description 获取采购单主表数据及其关联的订单信息、明细清单及创建人信息。
  * @param params 包含 `id` (string) 采购单 ID 的对象
  * @returns {Promise<{success: boolean, data?: PurchaseOrderDetail, error?: string}>} 返回采购单详情对象
  */
 
 export async function getPoById({ id }: { id: string }) {
-    logger.info('[supply-chain] getPoById 查询 ID:', id);
+  logger.info('[supply-chain] getPoById 查询 ID:', id);
 
-    const session = await auth();
-    // ... (保持原有逻辑)
-    if (!session?.user?.id) return { success: false, error: '未授权' };
+  const session = await auth();
+  // ... (保持原有逻辑)
+  if (!session?.user?.id) return { success: false, error: '未授权' };
 
-    await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.VIEW);
+  await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.VIEW);
 
-    const po = await db.query.purchaseOrders.findFirst({
-        where: and(
-            eq(purchaseOrders.id, id),
-            eq(purchaseOrders.tenantId, session.user.tenantId)
-        ),
-        with: {
-            order: true,
-            items: true,
-            creator: true
-        }
-    });
+  const po = await db.query.purchaseOrders.findFirst({
+    where: and(eq(purchaseOrders.id, id), eq(purchaseOrders.tenantId, session.user.tenantId)),
+    with: {
+      order: true,
+      items: true,
+      creator: true,
+    },
+  });
 
-    if (!po) return { success: false, error: '采购单不存在' };
+  if (!po) return { success: false, error: '采购单不存在' };
 
-    return { success: true, data: po };
+  return { success: true, data: po };
 }
 
 /**
  * 创建新的采购单
- * 
+ *
  * @description 核心逻辑：校验供应商状态、计算总价、插入主表及明细表，并记录审计日志。
  * @param data 符合 createPOSchema 的输入数据
  * @returns {Promise<{id: string}>} 创建的采购单 ID
  */
 export const createPurchaseOrder = createSafeAction(createPOSchema, async (data, { session }) => {
-    try {
-        await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.PO_MANAGE);
-        logger.info('[supply-chain] 创建采购单:', { supplierId: data.supplierId, tenantId: session.user.tenantId });
+  try {
+    await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.PO_MANAGE);
+    logger.info('[supply-chain] 创建采购单:', {
+      supplierId: data.supplierId,
+      tenantId: session.user.tenantId,
+    });
 
+    return await db.transaction(async (tx) => {
+      const poNo = generateDocNo('PO');
 
-        return await db.transaction(async (tx) => {
-            const poNo = generateDocNo('PO');
+      // 1. 获取供应商信息
+      const supplier = await tx.query.suppliers.findFirst({
+        where: and(
+          eq(suppliers.id, data.supplierId),
+          eq(suppliers.tenantId, session.user.tenantId)
+        ),
+      });
+      if (!supplier) throw new Error('供应商不存在');
 
-            // 1. 获取供应商信息
-            const supplier = await tx.query.suppliers.findFirst({
-                where: and(eq(suppliers.id, data.supplierId), eq(suppliers.tenantId, session.user.tenantId))
-            });
-            if (!supplier) throw new Error('供应商不存在');
+      // P1-07 修复：校验供应商是否启用
+      if (supplier.isActive === false) {
+        throw new Error(`供应商「${supplier.name}」已停用，无法创建采购单`);
+      }
 
-            // P1-07 修复：校验供应商是否启用
-            if (supplier.isActive === false) {
-                throw new Error(`供应商「${supplier.name}」已停用，无法创建采购单`);
-            }
+      // SC-08 修复：使用 Decimal.js 进行精确计算，避免原生 JS 浮点乘法导致的金额误差
+      const totalAmount = data.items
+        .reduce(
+          (sum, item) => sum.plus(new Decimal(item.quantity).mul(new Decimal(item.unitCost))),
+          new Decimal(0)
+        )
+        .toDecimalPlaces(2, Decimal.ROUND_HALF_UP)
+        .toString();
 
-            // SC-08 修复：使用 Decimal.js 进行精确计算，避免原生 JS 浮点乘法导致的金额误差
-            const totalAmount = data.items
-                .reduce((sum, item) => sum.plus(new Decimal(item.quantity).mul(new Decimal(item.unitCost))), new Decimal(0))
-                .toDecimalPlaces(2, Decimal.ROUND_HALF_UP)
-                .toString();
+      // 3. 创建 PO
+      const [po] = await tx
+        .insert(purchaseOrders)
+        .values({
+          tenantId: session.user.tenantId,
+          poNo,
+          supplierId: data.supplierId,
+          supplierName: supplier.name,
+          orderId: data.orderId,
+          type: data.type, // P1-04 修复：使用 schema 传入的类型
+          status: 'DRAFT',
+          totalAmount: totalAmount.toString(),
+          createdBy: session.user.id,
+        })
+        .returning();
 
-            // 3. 创建 PO
-            const [po] = await tx.insert(purchaseOrders).values({
-                tenantId: session.user.tenantId,
-                poNo,
-                supplierId: data.supplierId,
-                supplierName: supplier.name,
-                orderId: data.orderId,
-                type: data.type, // P1-04 修复：使用 schema 传入的类型
-                status: 'DRAFT',
-                totalAmount: totalAmount.toString(),
-                createdBy: session.user.id,
-            }).returning();
+      // 4. 创建 Items
+      if (data.items.length > 0) {
+        // 需要获取产品名称等信息
+        for (const item of data.items) {
+          const product = await tx.query.products.findFirst({
+            where: and(
+              eq(products.id, item.productId),
+              eq(products.tenantId, session.user.tenantId)
+            ),
+          });
 
-            // 4. 创建 Items
-            if (data.items.length > 0) {
-                // 需要获取产品名称等信息
-                for (const item of data.items) {
-                    const product = await tx.query.products.findFirst({
-                        where: and(
-                            eq(products.id, item.productId),
-                            eq(products.tenantId, session.user.tenantId)
-                        )
-                    });
+          if (!product) {
+            throw new Error(`产品 ${item.productId} 不存在或无权访问`);
+          }
 
-                    if (!product) {
-                        throw new Error(`产品 ${item.productId} 不存在或无权访问`);
-                    }
+          await tx.insert(purchaseOrderItems).values({
+            tenantId: session.user.tenantId,
+            poId: po.id,
+            productId: item.productId,
+            productName: product?.name || '未知产品',
+            quantity: item.quantity.toString(),
+            unitPrice: item.unitCost.toString(),
+            subtotal: (item.quantity * item.unitCost).toString(),
+          });
+        }
+      }
 
-                    await tx.insert(purchaseOrderItems).values({
-                        tenantId: session.user.tenantId,
-                        poId: po.id,
-                        productId: item.productId,
-                        productName: product?.name || '未知产品',
-                        quantity: item.quantity.toString(),
-                        unitPrice: item.unitCost.toString(),
-                        subtotal: (item.quantity * item.unitCost).toString(),
-                    });
-                }
-            }
+      revalidatePath(SUPPLY_CHAIN_PATHS.PURCHASE_ORDERS);
 
-            revalidatePath(SUPPLY_CHAIN_PATHS.PURCHASE_ORDERS);
+      // 添加审计日志
+      await AuditService.recordFromSession(
+        session,
+        'purchaseOrders',
+        po.id,
+        'CREATE',
+        {
+          new: {
+            poNo: po.poNo,
+            supplierId: data.supplierId,
+            supplierName: supplier.name,
+            totalAmount: totalAmount.toString(),
+            type: data.type,
+            status: 'DRAFT',
+          },
+        },
+        tx
+      );
 
-            // 添加审计日志
-            await AuditService.recordFromSession(session, 'purchaseOrders', po.id, 'CREATE', {
-                new: {
-                    poNo: po.poNo,
-                    supplierId: data.supplierId,
-                    supplierName: supplier.name,
-                    totalAmount: totalAmount.toString(),
-                    type: data.type,
-                    status: 'DRAFT'
-                }
-            }, tx);
-
-            return { id: po.id };
-        });
-    } catch (error) {
-        logger.error('[supply-chain] 创建采购单失败:', error);
-        throw error;
-    }
+      return { id: po.id };
+    });
+  } catch (error) {
+    logger.error('[supply-chain] 创建采购单失败:', error);
+    throw error;
+  }
 });
 
 /**
  * 更新采购单状态
- * 
+ *
  * @description 通过状态转换矩阵 (VALID_PO_TRANSITIONS) 校验转换合法性。
  * @param params 包含以下属性的对象：
  * - `poId` (string): 采购单 ID
@@ -262,224 +282,262 @@ export const createPurchaseOrder = createSafeAction(createPOSchema, async (data,
  * @returns {Promise<{success: boolean, error?: string}>} 返回执行结果状态
  */
 export async function updatePoStatus({ poId, status }: { poId: string; status: string }) {
-    try {
-        const session = await auth();
-        if (!session?.user?.id) return { success: false, error: '未授权' };
+  try {
+    const session = await auth();
+    if (!session?.user?.id) return { success: false, error: '未授权' };
 
-        await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.PO_MANAGE);
-        logger.info('[supply-chain] updatePoStatus 开始更新:', { poId, status });
+    await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.PO_MANAGE);
+    logger.info('[supply-chain] updatePoStatus 开始更新:', { poId, status });
 
-
-        // 获取当前 PO 状态并校验租户隔离
-        const currentPO = await db.query.purchaseOrders.findFirst({
-            where: and(
-                eq(purchaseOrders.id, poId),
-                eq(purchaseOrders.tenantId, session.user.tenantId)
-            ),
-            columns: { status: true, supplierId: true }
-        });
-        if (!currentPO) {
-            logger.error('[supply-chain] updatePoStatus 采购单不存在:', poId);
-            return { success: false, error: '采购单不存在' };
-        }
-
-        // 校验状态转换合法性
-        const allowed = VALID_PO_TRANSITIONS[currentPO.status!] || [];
-        if (!allowed.includes(status)) {
-            logger.error('[supply-chain] updatePoStatus 状态转换非法:', { from: currentPO.status, to: status });
-            return { success: false, error: `状态不允许从「${currentPO.status}」转换为「${status}」` };
-        }
-
-        await db.update(purchaseOrders)
-            .set({
-                status: status as POStatus,
-                updatedAt: new Date()
-            })
-            .where(and(
-                eq(purchaseOrders.id, poId),
-                eq(purchaseOrders.tenantId, session.user.tenantId)
-            ));
-
-        // 添加审计日志
-        await AuditService.recordFromSession(session, 'purchaseOrders', poId, 'UPDATE', {
-            old: { status: currentPO.status },
-            new: { status },
-            changed: { status }
-        });
-
-        logger.info('[supply-chain] updatePoStatus 更新成功');
-        revalidatePath(SUPPLY_CHAIN_PATHS.PURCHASE_ORDERS);
-        if (currentPO?.supplierId) {
-            // revalidateTag 不支持多参数，这里修复
-            revalidateTag(`supplier-rating-${currentPO.supplierId}`, {});
-        }
-        return { success: true };
-    } catch (error) {
-        logger.error('[supply-chain] updatePoStatus 更新失败:', error);
-        return { success: false, error: '更新采购单状态失败' };
+    // 获取当前 PO 状态并校验租户隔离
+    const currentPO = await db.query.purchaseOrders.findFirst({
+      where: and(eq(purchaseOrders.id, poId), eq(purchaseOrders.tenantId, session.user.tenantId)),
+      columns: { status: true, supplierId: true },
+    });
+    if (!currentPO) {
+      logger.error('[supply-chain] updatePoStatus 采购单不存在:', poId);
+      return { success: false, error: '采购单不存在' };
     }
+
+    // 校验状态转换合法性
+    const allowed = VALID_PO_TRANSITIONS[currentPO.status!] || [];
+    if (!allowed.includes(status)) {
+      logger.error('[supply-chain] updatePoStatus 状态转换非法:', {
+        from: currentPO.status,
+        to: status,
+      });
+      return { success: false, error: `状态不允许从「${currentPO.status}」转换为「${status}」` };
+    }
+
+    // CAS 原子更新，附带之前查出的 status 作为条件
+    const result = await db
+      .update(purchaseOrders)
+      .set({
+        status: status as POStatus,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(purchaseOrders.id, poId),
+          eq(purchaseOrders.tenantId, session.user.tenantId),
+          eq(purchaseOrders.status, currentPO.status!)
+        )
+      )
+      .returning({ id: purchaseOrders.id });
+
+    if (result.length === 0) {
+      throw new Error('单据状态已发生变更，请刷新后重试');
+    }
+
+    // 添加审计日志
+    await AuditService.recordFromSession(session, 'purchaseOrders', poId, 'UPDATE', {
+      old: { status: currentPO.status },
+      new: { status },
+      changed: { status },
+    });
+
+    logger.info('[supply-chain] updatePoStatus 更新成功');
+    revalidatePath(SUPPLY_CHAIN_PATHS.PURCHASE_ORDERS);
+    if (currentPO?.supplierId) {
+      // revalidateTag 不支持多参数，这里修复
+      revalidateTag(`supplier-rating-${currentPO.supplierId}`, {});
+    }
+    return { success: true };
+  } catch (error) {
+    logger.error('[supply-chain] updatePoStatus 更新失败:', error);
+    return { success: false, error: '更新采购单状态失败' };
+  }
 }
 
 /**
  * 添加/更新采购单物流信息 (旧版)
- * 
+ *
  * @deprecated 建议优先使用 shipment-actions.ts 中的 createShipment 记录多次发货。
  * @param data 物流详情及关联 PO ID
  * @returns {Promise<{success: boolean, error?: string}>} 执行结果
  */
 export async function addPOLogistics(data: {
-    poId: string;
-    company: string;
-    trackingNo: string;
-    shippedAt: Date;
-    remark?: string;
+  poId: string;
+  company: string;
+  trackingNo: string;
+  shippedAt: Date;
+  remark?: string;
 }) {
-    const session = await auth();
-    if (!session?.user?.id) return { success: false, error: '未授权' };
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: '未授权' };
 
-    await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.PO_MANAGE);
-    logger.info('[supply-chain] 添加/更新采购单物流信息:', { poId: data.poId, logisticsCompany: data.company, trackingNo: data.trackingNo, tenantId: session.user.tenantId });
+  await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.PO_MANAGE);
+  logger.info('[supply-chain] 添加/更新采购单物流信息:', {
+    poId: data.poId,
+    logisticsCompany: data.company,
+    trackingNo: data.trackingNo,
+    tenantId: session.user.tenantId,
+  });
 
+  try {
+    await db
+      .update(purchaseOrders)
+      .set({
+        logisticsCompany: data.company,
+        logisticsNo: data.trackingNo,
+        shippedAt: data.shippedAt,
+        remark: data.remark,
+        status: 'SHIPPED',
+        updatedAt: new Date(),
+      })
+      .where(
+        and(eq(purchaseOrders.id, data.poId), eq(purchaseOrders.tenantId, session.user.tenantId))
+      );
 
-    try {
-        await db
-            .update(purchaseOrders)
-            .set({
-                logisticsCompany: data.company,
-                logisticsNo: data.trackingNo,
-                shippedAt: data.shippedAt,
-                remark: data.remark,
-                status: 'SHIPPED',
-                updatedAt: new Date(),
-            })
-            .where(and(
-                eq(purchaseOrders.id, data.poId),
-                eq(purchaseOrders.tenantId, session.user.tenantId)
-            ));
+    // 添加审计日志
+    await AuditService.recordFromSession(session, 'purchaseOrders', data.poId, 'UPDATE', {
+      new: {
+        logisticsCompany: data.company,
+        logisticsNo: data.trackingNo,
+        shippedAt: data.shippedAt,
+        status: 'SHIPPED',
+      },
+    });
 
-        // 添加审计日志
-        await AuditService.recordFromSession(session, 'purchaseOrders', data.poId, 'UPDATE', {
-            new: {
-                logisticsCompany: data.company,
-                logisticsNo: data.trackingNo,
-                shippedAt: data.shippedAt,
-                status: 'SHIPPED'
-            }
-        });
-
-        revalidatePath(SUPPLY_CHAIN_PATHS.PURCHASE_ORDERS);
-        return { success: true };
-    } catch (error) {
-        logger.error('Failed to add PO logistics:', error);
-        return { success: false, error: '添加物流信息失败' };
-    }
+    revalidatePath(SUPPLY_CHAIN_PATHS.PURCHASE_ORDERS);
+    return { success: true };
+  } catch (error) {
+    logger.error('Failed to add PO logistics:', error);
+    return { success: false, error: '添加物流信息失败' };
+  }
 }
-
 
 /**
  * 批量更新采购单状态
- * 
+ *
  * @description 针对选中的一组 PO 进行统一的状态变更，包含批量审计记录。
  * @param data 包含 poIds 数组和目标状态
  * @returns 执行成功状态
  */
-export const batchUpdatePoStatus = createSafeAction(batchUpdateStatusSchema, async (data, { session }) => {
+export const batchUpdatePoStatus = createSafeAction(
+  batchUpdateStatusSchema,
+  async (data, { session }) => {
     try {
-        await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.PO_MANAGE);
-        logger.info('[supply-chain] 批量更新采购单状态:', { poIds: data.poIds, status: data.status, tenantId: session.user.tenantId });
+      await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.PO_MANAGE);
+      logger.info('[supply-chain] 批量更新采购单状态:', {
+        poIds: data.poIds,
+        status: data.status,
+        tenantId: session.user.tenantId,
+      });
 
+      if (data.poIds.length === 0) {
+        throw new Error('至少选择一个采购单');
+      }
 
-        if (data.poIds.length === 0) {
-            throw new Error('至少选择一个采购单');
-        }
+      await db
+        .update(purchaseOrders)
+        .set({
+          status: data.status as POStatus,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            inArray(purchaseOrders.id, data.poIds),
+            eq(purchaseOrders.tenantId, session.user.tenantId)
+          )
+        );
 
-        await db.update(purchaseOrders)
-            .set({
-                status: data.status as POStatus,
-                updatedAt: new Date()
-            })
-            .where(and(
-                inArray(purchaseOrders.id, data.poIds),
-                eq(purchaseOrders.tenantId, session.user.tenantId)
-            ));
+      // 批量添加审计日志
+      for (const poId of data.poIds) {
+        await AuditService.recordFromSession(session, 'purchaseOrders', poId, 'UPDATE', {
+          new: { status: data.status },
+        });
+      }
 
-        // 批量添加审计日志
-        for (const poId of data.poIds) {
-            await AuditService.recordFromSession(session, 'purchaseOrders', poId, 'UPDATE', {
-                new: { status: data.status }
-            });
-        }
-
-        revalidatePath(SUPPLY_CHAIN_PATHS.PURCHASE_ORDERS);
-        return { success: true };
+      revalidatePath(SUPPLY_CHAIN_PATHS.PURCHASE_ORDERS);
+      return { success: true };
     } catch (error) {
-        logger.error('[supply-chain] 批量更新采购单状态失败:', error);
-        throw error;
+      logger.error('[supply-chain] 批量更新采购单状态失败:', error);
+      throw error;
     }
-});
+  }
+);
 
 /**
  * 批量删除草稿状态的采购单
- * 
+ *
  * @description 仅限 DRAFT 状态。操作会级联删除采购明细。
  * @param data 待删除的 PO ID 数组
  * @returns {Promise<{success: boolean}>} 执行成功状态
  */
-export const batchDeleteDraftPOs = createSafeAction(batchDeleteSchema, async (data, { session }) => {
+export const batchDeleteDraftPOs = createSafeAction(
+  batchDeleteSchema,
+  async (data, { session }) => {
     try {
-        await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.PO_MANAGE);
-        logger.info('[supply-chain] 批量删除草稿状态采购单:', { poIds: data.poIds, tenantId: session.user.tenantId });
+      await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.PO_MANAGE);
+      logger.info('[supply-chain] 批量删除草稿状态采购单:', {
+        poIds: data.poIds,
+        tenantId: session.user.tenantId,
+      });
 
+      if (data.poIds.length === 0) {
+        throw new Error('至少选择一个采购单');
+      }
 
-        if (data.poIds.length === 0) {
-            throw new Error('至少选择一个采购单');
-        }
+      // 这里由于有外键约束，需要先删除 items，或者依赖 cascade。
+      // 假设 purchaseOrderItems 表有 ON DELETE CASCADE。如果没有，需要手动删。
+      // 为了安全，先手动删 Items。
 
-        // 这里由于有外键约束，需要先删除 items，或者依赖 cascade。
-        // 假设 purchaseOrderItems 表有 ON DELETE CASCADE。如果没有，需要手动删。
-        // 为了安全，先手动删 Items。
+      // Verify all are DRAFT? The requirement says "batchDeleteDraftPOs".
+      // Should we enforce check?
+      // Let's enforce check.
+      const invalidPos = await db.query.purchaseOrders.findMany({
+        where: and(
+          inArray(purchaseOrders.id, data.poIds),
+          eq(purchaseOrders.tenantId, session.user.tenantId),
+          // status != 'DRAFT'
+          sql`${purchaseOrders.status} != 'DRAFT'`
+        ),
+      });
 
-        // Verify all are DRAFT? The requirement says "batchDeleteDraftPOs".
-        // Should we enforce check?
-        // Let's enforce check.
-        const invalidPos = await db.query.purchaseOrders.findMany({
-            where: and(
-                inArray(purchaseOrders.id, data.poIds),
-                eq(purchaseOrders.tenantId, session.user.tenantId),
-                // status != 'DRAFT'
-                sql`${purchaseOrders.status} != 'DRAFT'`
+      if (invalidPos.length > 0) {
+        throw new Error('只能删除草稿状态的采购单');
+      }
+
+      await db.transaction(async (tx) => {
+        await tx
+          .delete(purchaseOrderItems)
+          .where(
+            and(
+              inArray(purchaseOrderItems.poId, data.poIds),
+              eq(purchaseOrderItems.tenantId, session.user.tenantId)
             )
-        });
+          );
 
-        if (invalidPos.length > 0) {
-            throw new Error('只能删除草稿状态的采购单');
+        for (const poId of data.poIds) {
+          await AuditService.recordFromSession(
+            session,
+            'purchaseOrders',
+            poId,
+            'DELETE',
+            undefined,
+            tx
+          );
         }
 
-        await db.transaction(async (tx) => {
-            await tx.delete(purchaseOrderItems)
-                .where(and(
-                    inArray(purchaseOrderItems.poId, data.poIds),
-                    eq(purchaseOrderItems.tenantId, session.user.tenantId)
-                ));
+        await tx
+          .delete(purchaseOrders)
+          .where(
+            and(
+              inArray(purchaseOrders.id, data.poIds),
+              eq(purchaseOrders.tenantId, session.user.tenantId)
+            )
+          );
+      });
 
-            for (const poId of data.poIds) {
-                await AuditService.recordFromSession(session, 'purchaseOrders', poId, 'DELETE', undefined, tx);
-            }
-
-            await tx.delete(purchaseOrders)
-                .where(and(
-                    inArray(purchaseOrders.id, data.poIds),
-                    eq(purchaseOrders.tenantId, session.user.tenantId)
-                ));
-        });
-
-        revalidatePath(SUPPLY_CHAIN_PATHS.PURCHASE_ORDERS);
-        return { success: true };
+      revalidatePath(SUPPLY_CHAIN_PATHS.PURCHASE_ORDERS);
+      return { success: true };
     } catch (error) {
-        logger.error('[supply-chain] 批量删除草稿采购单失败:', error);
-        throw error;
+      logger.error('[supply-chain] 批量删除草稿采购单失败:', error);
+      throw error;
     }
-});
+  }
+);
 
 // ============ PO 生命周期 Actions ============
 
@@ -487,13 +545,13 @@ export const batchDeleteDraftPOs = createSafeAction(batchDeleteSchema, async (da
  * 确认报价 Schema
  */
 const confirmQuoteSchema = z.object({
-    poId: z.string().uuid(),
-    /** 实际报价金额 */
-    totalAmount: z.coerce.number().min(0),
-    /** 供应商报价单图片 URL */
-    supplierQuoteImg: z.string().url().optional(),
-    /** 备注 */
-    remark: z.string().max(500).optional(),
+  poId: z.string().uuid(),
+  /** 实际报价金额 */
+  totalAmount: z.coerce.number().min(0),
+  /** 供应商报价单图片 URL */
+  supplierQuoteImg: z.string().url().optional(),
+  /** 备注 */
+  remark: z.string().max(500).optional(),
 });
 
 /**
@@ -505,128 +563,167 @@ const confirmQuoteSchema = z.object({
  * @returns {Promise<{success: boolean}>} 成功状态
  */
 export const confirmPoQuote = createSafeAction(confirmQuoteSchema, async (data, { session }) => {
-    try {
-        await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.PO_MANAGE);
-        logger.info('[supply-chain] 确认采购单报价:', { poId: data.poId, totalAmount: data.totalAmount, tenantId: session.user.tenantId });
+  try {
+    await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.PO_MANAGE);
+    logger.info('[supply-chain] 确认采购单报价:', {
+      poId: data.poId,
+      totalAmount: data.totalAmount,
+      tenantId: session.user.tenantId,
+    });
 
+    const po = await db.query.purchaseOrders.findFirst({
+      where: and(
+        eq(purchaseOrders.id, data.poId),
+        eq(purchaseOrders.tenantId, session.user.tenantId)
+      ),
+      columns: { id: true, status: true },
+    });
 
-        const po = await db.query.purchaseOrders.findFirst({
-            where: and(
-                eq(purchaseOrders.id, data.poId),
-                eq(purchaseOrders.tenantId, session.user.tenantId)
-            ),
-            columns: { id: true, status: true }
-        });
-
-        if (!po) throw new Error('采购单不存在');
-        if (!isValidPoTransition(po.status!, 'PENDING_PAYMENT')) {
-            throw new Error(`当前状态「${po.status}」不允许确认报价，需要先处于「PENDING_CONFIRMATION」状态`);
-        }
-
-        await db.update(purchaseOrders)
-            .set({
-                totalAmount: data.totalAmount.toString(),
-                supplierQuoteImg: data.supplierQuoteImg,
-                remark: data.remark ?? undefined,
-                status: 'PENDING_PAYMENT' as POStatus,
-                updatedAt: new Date(),
-            })
-            .where(and(
-                eq(purchaseOrders.id, data.poId),
-                eq(purchaseOrders.tenantId, session.user.tenantId)
-            ));
-
-        // 添加审计日志
-        await AuditService.recordFromSession(session, 'purchaseOrders', data.poId, 'UPDATE', {
-            old: { status: po.status },
-            new: {
-                totalAmount: data.totalAmount.toString(),
-                status: 'PENDING_PAYMENT'
-            }
-        });
-
-        revalidatePath(SUPPLY_CHAIN_PATHS.PURCHASE_ORDERS);
-        return { success: true };
-    } catch (error) {
-        logger.error('[supply-chain] 确认采购单报价失败:', error);
-        throw error;
+    if (!po) throw new Error('采购单不存在');
+    if (!isValidPoTransition(po.status!, 'PENDING_PAYMENT')) {
+      throw new Error(
+        `当前状态「${po.status}」不允许确认报价，需要先处于「PENDING_CONFIRMATION」状态`
+      );
     }
-});
 
+    const result = await db
+      .update(purchaseOrders)
+      .set({
+        totalAmount: data.totalAmount.toString(),
+        supplierQuoteImg: data.supplierQuoteImg,
+        remark: data.remark ?? undefined,
+        status: 'PENDING_PAYMENT' as POStatus,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(purchaseOrders.id, data.poId),
+          eq(purchaseOrders.tenantId, session.user.tenantId),
+          eq(purchaseOrders.status, po.status!) // CAS 锁
+        )
+      )
+      .returning({ id: purchaseOrders.id });
+
+    if (result.length === 0) {
+      throw new Error('单据状态已发生变更，请刷新后重试');
+    }
+
+    // 添加审计日志
+    await AuditService.recordFromSession(session, 'purchaseOrders', data.poId, 'UPDATE', {
+      old: { status: po.status },
+      new: {
+        totalAmount: data.totalAmount.toString(),
+        status: 'PENDING_PAYMENT',
+      },
+    });
+
+    revalidatePath(SUPPLY_CHAIN_PATHS.PURCHASE_ORDERS);
+    return { success: true };
+  } catch (error) {
+    logger.error('[supply-chain] 确认采购单报价失败:', error);
+    throw error;
+  }
+});
 
 /**
  * 确认采购单付款
- * 
+ *
  * @description 记录付款详情并插入 poPayments 表。
  * @param data 符合 confirmPaymentSchema 的付款信息
  * @status 流转：PENDING_PAYMENT → IN_PRODUCTION
  * @returns {Promise<{success: boolean}>} 成功状态
  */
-export const confirmPoPayment = createSafeAction(confirmPaymentSchema, async (data, { session }) => {
+export const confirmPoPayment = createSafeAction(
+  confirmPaymentSchema,
+  async (data, { session }) => {
     try {
-        await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.PO_MANAGE);
-        logger.info('[supply-chain] 确认采购单付款:', { poId: data.poId, amount: data.paymentAmount, method: data.paymentMethod, tenantId: session.user.tenantId });
+      await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.PO_MANAGE);
+      logger.info('[supply-chain] 确认采购单付款:', {
+        poId: data.poId,
+        amount: data.paymentAmount,
+        method: data.paymentMethod,
+        tenantId: session.user.tenantId,
+      });
 
-        return await db.transaction(async (tx) => {
-            const po = await tx.query.purchaseOrders.findFirst({
-                where: and(
-                    eq(purchaseOrders.id, data.poId),
-                    eq(purchaseOrders.tenantId, session.user.tenantId)
-                ),
-                columns: { id: true, status: true, totalAmount: true }
-            });
-
-            if (!po) throw new Error('采购单不存在');
-            if (!isValidPoTransition(po.status!, 'IN_PRODUCTION')) {
-                throw new Error(`当前状态「${po.status}」不允许确认付款，需要先处于「PENDING_PAYMENT」状态`);
-            }
-
-            // P0-04 修复：使用独立的 poPayments 表存储付款记录，不再覆盖 remark
-            await tx.insert(poPayments).values({
-                tenantId: session.user.tenantId,
-                poId: data.poId,
-                paymentMethod: data.paymentMethod,
-                amount: data.paymentAmount.toString(),
-                transactionTime: new Date(data.paymentTime),
-                voucherUrl: data.paymentVoucherImg,
-                remark: data.remark,
-                createdBy: session.user.id,
-            });
-
-            // 更新采购单状态
-            await tx.update(purchaseOrders)
-                .set({
-                    paymentStatus: 'PAID',
-                    status: 'IN_PRODUCTION' as POStatus,
-                    updatedAt: new Date(),
-                })
-                .where(and(
-                    eq(purchaseOrders.id, data.poId),
-                    eq(purchaseOrders.tenantId, session.user.tenantId)
-                ));
-
-            // 添加审计日志
-            await AuditService.recordFromSession(session, 'purchaseOrders', data.poId, 'UPDATE', {
-                old: { status: po.status, paymentStatus: 'PENDING' },
-                new: { status: 'IN_PRODUCTION', paymentStatus: 'PAID' }
-            }, tx);
-
-            revalidatePath(SUPPLY_CHAIN_PATHS.PURCHASE_ORDERS);
-            return { success: true };
+      return await db.transaction(async (tx) => {
+        const po = await tx.query.purchaseOrders.findFirst({
+          where: and(
+            eq(purchaseOrders.id, data.poId),
+            eq(purchaseOrders.tenantId, session.user.tenantId)
+          ),
+          columns: { id: true, status: true, totalAmount: true },
         });
+
+        if (!po) throw new Error('采购单不存在');
+        if (!isValidPoTransition(po.status!, 'IN_PRODUCTION')) {
+          throw new Error(
+            `当前状态「${po.status}」不允许确认付款，需要先处于「PENDING_PAYMENT」状态`
+          );
+        }
+
+        // P0-04 修复：使用独立的 poPayments 表存储付款记录，不再覆盖 remark
+        await tx.insert(poPayments).values({
+          tenantId: session.user.tenantId,
+          poId: data.poId,
+          paymentMethod: data.paymentMethod,
+          amount: data.paymentAmount.toString(),
+          transactionTime: new Date(data.paymentTime),
+          voucherUrl: data.paymentVoucherImg,
+          remark: data.remark,
+          createdBy: session.user.id,
+        });
+
+        // 更新采购单状态
+        const updateResult = await tx
+          .update(purchaseOrders)
+          .set({
+            paymentStatus: 'PAID',
+            status: 'IN_PRODUCTION' as POStatus,
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(purchaseOrders.id, data.poId),
+              eq(purchaseOrders.tenantId, session.user.tenantId),
+              eq(purchaseOrders.status, po.status!) // CAS 锁
+            )
+          )
+          .returning({ id: purchaseOrders.id });
+
+        if (updateResult.length === 0) {
+          throw new Error('单据状态已发生变更，请刷新后重试');
+        }
+
+        // 添加审计日志
+        await AuditService.recordFromSession(
+          session,
+          'purchaseOrders',
+          data.poId,
+          'UPDATE',
+          {
+            old: { status: po.status, paymentStatus: 'PENDING' },
+            new: { status: 'IN_PRODUCTION', paymentStatus: 'PAID' },
+          },
+          tx
+        );
+
+        revalidatePath(SUPPLY_CHAIN_PATHS.PURCHASE_ORDERS);
+        return { success: true };
+      });
     } catch (error) {
-        logger.error('[supply-chain] 确认采购单付款失败:', error);
-        throw error;
+      logger.error('[supply-chain] 确认采购单付款失败:', error);
+      throw error;
     }
-});
+  }
+);
 
 /**
  * 完工确认 Schema
  */
 const confirmCompletionSchema = z.object({
-    poId: z.string().uuid(),
-    /** 完工备注 */
-    remark: z.string().max(500).optional(),
+  poId: z.string().uuid(),
+  /** 完工备注 */
+  remark: z.string().max(500).optional(),
 });
 
 /**
@@ -637,49 +734,60 @@ const confirmCompletionSchema = z.object({
  * @status 流转：IN_PRODUCTION → READY
  * @returns {Promise<{success: boolean}>} 成功状态
  */
-export const confirmPoCompletion = createSafeAction(confirmCompletionSchema, async (data, { session }) => {
+export const confirmPoCompletion = createSafeAction(
+  confirmCompletionSchema,
+  async (data, { session }) => {
     try {
-        await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.PO_MANAGE);
-        logger.info('[supply-chain] 确认完工:', { poId: data.poId, tenantId: session.user.tenantId });
+      await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.PO_MANAGE);
+      logger.info('[supply-chain] 确认完工:', { poId: data.poId, tenantId: session.user.tenantId });
 
-        const po = await db.query.purchaseOrders.findFirst({
-            where: and(
-                eq(purchaseOrders.id, data.poId),
-                eq(purchaseOrders.tenantId, session.user.tenantId)
-            ),
-            columns: { id: true, status: true }
-        });
+      const po = await db.query.purchaseOrders.findFirst({
+        where: and(
+          eq(purchaseOrders.id, data.poId),
+          eq(purchaseOrders.tenantId, session.user.tenantId)
+        ),
+        columns: { id: true, status: true },
+      });
 
-        if (!po) throw new Error('采购单不存在');
-        if (!isValidPoTransition(po.status!, 'READY')) {
-            throw new Error(`当前状态「${po.status}」不允许确认完工，需要先处于「IN_PRODUCTION」状态`);
-        }
+      if (!po) throw new Error('采购单不存在');
+      if (!isValidPoTransition(po.status!, 'READY')) {
+        throw new Error(`当前状态「${po.status}」不允许确认完工，需要先处于「IN_PRODUCTION」状态`);
+      }
 
-        await db.update(purchaseOrders)
-            .set({
-                remark: data.remark ?? undefined,
-                status: 'READY' as POStatus,
-                updatedAt: new Date(),
-            })
-            .where(and(
-                eq(purchaseOrders.id, data.poId),
-                eq(purchaseOrders.tenantId, session.user.tenantId)
-            ));
+      const result = await db
+        .update(purchaseOrders)
+        .set({
+          remark: data.remark ?? undefined,
+          status: 'READY' as POStatus,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(purchaseOrders.id, data.poId),
+            eq(purchaseOrders.tenantId, session.user.tenantId),
+            eq(purchaseOrders.status, po.status!) // CAS 锁
+          )
+        )
+        .returning({ id: purchaseOrders.id });
 
-        // 添加审计日志
-        await AuditService.recordFromSession(session, 'purchaseOrders', data.poId, 'UPDATE', {
-            old: { status: po.status },
-            new: { status: 'READY' }
-        });
+      if (result.length === 0) {
+        throw new Error('单据状态已发生变更，请刷新后重试');
+      }
 
-        revalidatePath(SUPPLY_CHAIN_PATHS.PURCHASE_ORDERS);
-        return { success: true };
+      // 添加审计日志
+      await AuditService.recordFromSession(session, 'purchaseOrders', data.poId, 'UPDATE', {
+        old: { status: po.status },
+        new: { status: 'READY' },
+      });
+
+      revalidatePath(SUPPLY_CHAIN_PATHS.PURCHASE_ORDERS);
+      return { success: true };
     } catch (error) {
-        logger.error('[supply-chain] 确认完工失败:', error);
-        throw error;
+      logger.error('[supply-chain] 确认完工失败:', error);
+      throw error;
     }
-});
-
+  }
+);
 
 /**
  * 确认收货/入库
@@ -690,119 +798,152 @@ export const confirmPoCompletion = createSafeAction(confirmCompletionSchema, asy
  * @returns {Promise<{success: boolean, data?: { status: string, allFullyReceived: boolean }, error?: string}>} 成功状态及收货情况
  */
 
-export const confirmPoReceipt = createSafeAction(confirmReceiptSchema, async (data, { session }) => {
+export const confirmPoReceipt = createSafeAction(
+  confirmReceiptSchema,
+  async (data, { session }) => {
     try {
-        await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.STOCK_MANAGE);
-        logger.info('[supply-chain] 确认采购单收货:', { poId: data.poId, warehouseId: data.warehouseId, tenantId: session.user.tenantId });
+      await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.STOCK_MANAGE);
+      logger.info('[supply-chain] 确认采购单收货:', {
+        poId: data.poId,
+        warehouseId: data.warehouseId,
+        tenantId: session.user.tenantId,
+      });
 
+      return await db.transaction(async (tx) => {
+        // 1. 查询采购单 + 明细
+        const po = await tx.query.purchaseOrders.findFirst({
+          where: and(
+            eq(purchaseOrders.id, data.poId),
+            eq(purchaseOrders.tenantId, session.user.tenantId)
+          ),
+          columns: { id: true, status: true, type: true, poNo: true, supplierId: true },
+          with: { items: true },
+        });
 
-        return await db.transaction(async (tx) => {
-            // 1. 查询采购单 + 明细
-            const po = await tx.query.purchaseOrders.findFirst({
-                where: and(
-                    eq(purchaseOrders.id, data.poId),
-                    eq(purchaseOrders.tenantId, session.user.tenantId)
-                ),
-                columns: { id: true, status: true, type: true, poNo: true, supplierId: true },
-                with: { items: true },
-            });
+        if (!po) throw new Error('采购单不存在');
 
-            if (!po) throw new Error('采购单不存在');
+        // P1-01 修复：校验仓库是否属于当前租户，防止跨租户写入
+        const warehouse = await tx.query.warehouses.findFirst({
+          where: and(
+            eq(warehouses.id, data.warehouseId),
+            eq(warehouses.tenantId, session.user.tenantId)
+          ),
+        });
+        if (!warehouse) {
+          throw new Error('仓库不存在或无权访问');
+        }
 
-            // P1-01 修复：校验仓库是否属于当前租户，防止跨租户写入
-            const warehouse = await tx.query.warehouses.findFirst({
-                where: and(
-                    eq(warehouses.id, data.warehouseId),
-                    eq(warehouses.tenantId, session.user.tenantId)
-                ),
-            });
-            if (!warehouse) {
-                throw new Error('仓库不存在或无权访问');
+        // P0-05 修复：使用状态流转矩阵校验，而非硬编码状态列表
+        const canReceive =
+          isValidPoTransition(po.status!, 'PARTIALLY_RECEIVED') ||
+          isValidPoTransition(po.status!, 'COMPLETED');
+        if (!canReceive) {
+          throw new Error(`当前状态「${po.status}」不允许确认收货`);
+        }
+
+        // 2. 校验并更新每个明细的 receivedQuantity
+        const poItemsMap = new Map(po.items.map((item) => [item.id, item]));
+        let allFullyReceived = true;
+
+        for (const receiptItem of data.items) {
+          if (receiptItem.quantity <= 0) continue;
+
+          const poItem = poItemsMap.get(receiptItem.poItemId);
+          if (!poItem) {
+            throw new Error(`采购单明细 ${receiptItem.poItemId} 不存在`);
+          }
+
+          // P0-02 修复：幂等性校验，检查剩余可收货数量
+          const alreadyReceived = Number(poItem.receivedQuantity || 0);
+          const ordered = Number(poItem.quantity);
+          const remaining = ordered - alreadyReceived;
+
+          if (receiptItem.quantity > remaining) {
+            throw new Error(
+              `商品「${poItem.productName}」收货数量(${receiptItem.quantity})超过剩余可收货数量(${remaining})`
+            );
+          }
+
+          // 更新明细的已收货数量，并带上底层限制作为 CAS 锁防御并发超额
+          const itemResult = await tx
+            .update(purchaseOrderItems)
+            .set({
+              receivedQuantity: sql`COALESCE(${purchaseOrderItems.receivedQuantity}, '0')::numeric + ${receiptItem.quantity}`,
+            })
+            .where(
+              and(
+                eq(purchaseOrderItems.id, receiptItem.poItemId),
+                sql`COALESCE(${purchaseOrderItems.receivedQuantity}, '0')::numeric + ${receiptItem.quantity} <= ${purchaseOrderItems.quantity}`
+              )
+            )
+            .returning({ id: purchaseOrderItems.id });
+
+          if (itemResult.length === 0) {
+            throw new Error('收货数量异常，并发限制或数量超出采购预期');
+          }
+
+          // 检查该明细是否完全收货
+          if (alreadyReceived + receiptItem.quantity < ordered) {
+            allFullyReceived = false;
+          }
+        }
+
+        // 检查未在本次收货中的明细是否已全部收货
+        const receivedItemIds = new Set(data.items.map((i) => i.poItemId));
+        for (const item of po.items) {
+          if (!receivedItemIds.has(item.id)) {
+            const received = Number(item.receivedQuantity || 0);
+            const ordered = Number(item.quantity);
+            if (received < ordered) {
+              allFullyReceived = false;
+              break;
             }
+          }
+        }
 
-            // P0-05 修复：使用状态流转矩阵校验，而非硬编码状态列表
-            const canReceive = isValidPoTransition(po.status!, 'PARTIALLY_RECEIVED') ||
-                isValidPoTransition(po.status!, 'COMPLETED');
-            if (!canReceive) {
-                throw new Error(`当前状态「${po.status}」不允许确认收货`);
-            }
+        // 3. 根据收货进度决定状态
+        const newStatus: POStatus = allFullyReceived ? 'COMPLETED' : 'PARTIALLY_RECEIVED';
 
-            // 2. 校验并更新每个明细的 receivedQuantity
-            const poItemsMap = new Map(po.items.map(item => [item.id, item]));
-            let allFullyReceived = true;
+        const poUpdateResult = await tx
+          .update(purchaseOrders)
+          .set({
+            status: newStatus,
+            deliveredAt: allFullyReceived ? new Date(data.receivedDate) : undefined,
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(purchaseOrders.id, data.poId),
+              eq(purchaseOrders.tenantId, session.user.tenantId),
+              eq(purchaseOrders.status, po.status!)
+            )
+          )
+          .returning({ id: purchaseOrders.id });
 
-            for (const receiptItem of data.items) {
-                if (receiptItem.quantity <= 0) continue;
+        if (poUpdateResult.length === 0) {
+          throw new Error('单据状态已发生变更，请刷新后重试');
+        }
 
-                const poItem = poItemsMap.get(receiptItem.poItemId);
-                if (!poItem) {
-                    throw new Error(`采购单明细 ${receiptItem.poItemId} 不存在`);
-                }
+        // 添加审计日志 (PO 状态更新)
+        await AuditService.recordFromSession(
+          session,
+          'purchaseOrders',
+          data.poId,
+          'UPDATE',
+          {
+            old: { status: po.status },
+            new: { status: newStatus },
+          },
+          tx
+        );
 
-                // P0-02 修复：幂等性校验，检查剩余可收货数量
-                const alreadyReceived = Number(poItem.receivedQuantity || 0);
-                const ordered = Number(poItem.quantity);
-                const remaining = ordered - alreadyReceived;
+        // 4. P0-01 修复 ...
+        if (po.type === 'FINISHED' || po.type === 'STOCK') {
+          for (const item of data.items) {
+            if (item.quantity <= 0) continue;
 
-                if (receiptItem.quantity > remaining) {
-                    throw new Error(
-                        `商品「${poItem.productName}」收货数量(${receiptItem.quantity})超过剩余可收货数量(${remaining})`
-                    );
-                }
-
-                // 更新明细的已收货数量
-                await tx.update(purchaseOrderItems)
-                    .set({
-                        receivedQuantity: sql`COALESCE(${purchaseOrderItems.receivedQuantity}, '0')::numeric + ${receiptItem.quantity}`,
-                    })
-                    .where(eq(purchaseOrderItems.id, receiptItem.poItemId));
-
-                // 检查该明细是否完全收货
-                if (alreadyReceived + receiptItem.quantity < ordered) {
-                    allFullyReceived = false;
-                }
-            }
-
-            // 检查未在本次收货中的明细是否已全部收货
-            const receivedItemIds = new Set(data.items.map(i => i.poItemId));
-            for (const item of po.items) {
-                if (!receivedItemIds.has(item.id)) {
-                    const received = Number(item.receivedQuantity || 0);
-                    const ordered = Number(item.quantity);
-                    if (received < ordered) {
-                        allFullyReceived = false;
-                        break;
-                    }
-                }
-            }
-
-            // 3. 根据收货进度决定状态
-            const newStatus: POStatus = allFullyReceived ? 'COMPLETED' : 'PARTIALLY_RECEIVED';
-
-            await tx.update(purchaseOrders)
-                .set({
-                    status: newStatus,
-                    deliveredAt: allFullyReceived ? new Date(data.receivedDate) : undefined,
-                    updatedAt: new Date(),
-                })
-                .where(and(
-                    eq(purchaseOrders.id, data.poId),
-                    eq(purchaseOrders.tenantId, session.user.tenantId)
-                ));
-
-            // 添加审计日志 (PO 状态更新)
-            await AuditService.recordFromSession(session, 'purchaseOrders', data.poId, 'UPDATE', {
-                old: { status: po.status },
-                new: { status: newStatus }
-            }, tx);
-
-            // 4. P0-01 修复 ...
-            if (po.type === 'FINISHED' || po.type === 'STOCK') {
-                for (const item of data.items) {
-                    if (item.quantity <= 0) continue;
-
-                    // 原子性 UPSERT: 存在则增加，不存在则插入
-                    await tx.execute(sql`
+            // 原子性 UPSERT: 存在则增加，不存在则插入
+            await tx.execute(sql`
                     INSERT INTO inventory (id, tenant_id, warehouse_id, product_id, quantity, updated_at)
                     VALUES (gen_random_uuid(), ${session.user.tenantId}, ${data.warehouseId}, ${item.productId}, ${item.quantity}, NOW())
                     ON CONFLICT (warehouse_id, product_id)
@@ -811,40 +952,44 @@ export const confirmPoReceipt = createSafeAction(confirmReceiptSchema, async (da
                         updated_at = NOW()
                 `);
 
-                    // 查询更新后的余额用于日志
-                    const [updatedStock] = await tx.select({ quantity: inventory.quantity })
-                        .from(inventory)
-                        .where(and(
-                            eq(inventory.warehouseId, data.warehouseId),
-                            eq(inventory.productId, item.productId)
-                        ));
+            // 查询更新后的余额用于日志
+            const [updatedStock] = await tx
+              .select({ quantity: inventory.quantity })
+              .from(inventory)
+              .where(
+                and(
+                  eq(inventory.warehouseId, data.warehouseId),
+                  eq(inventory.productId, item.productId)
+                )
+              );
 
-                    await tx.insert(inventoryLogs).values({
-                        tenantId: session.user.tenantId,
-                        warehouseId: data.warehouseId,
-                        productId: item.productId,
-                        type: 'IN',
-                        quantity: item.quantity,
-                        balanceAfter: Number(updatedStock?.quantity || item.quantity),
-                        reason: 'PURCHASE_ORDER',
-                        referenceType: 'PO',
-                        referenceId: po.id,
-                        operatorId: session.user.id,
-                        description: `采购入库: ${po.poNo}`,
-                    });
-                }
-            }
+            await tx.insert(inventoryLogs).values({
+              tenantId: session.user.tenantId,
+              warehouseId: data.warehouseId,
+              productId: item.productId,
+              type: 'IN',
+              quantity: item.quantity,
+              balanceAfter: Number(updatedStock?.quantity || item.quantity),
+              reason: 'PURCHASE_ORDER',
+              referenceType: 'PO',
+              referenceId: po.id,
+              operatorId: session.user.id,
+              description: `采购入库: ${po.poNo}`,
+            });
+          }
+        }
 
-            revalidatePath(SUPPLY_CHAIN_PATHS.PURCHASE_ORDERS);
-            // revalidateTag 同样修复
-            revalidateTag(`supplier-rating-${po.supplierId}`, {});
-            return { success: true, data: { status: newStatus, allFullyReceived } };
-        });
+        revalidatePath(SUPPLY_CHAIN_PATHS.PURCHASE_ORDERS);
+        // revalidateTag 同样修复
+        revalidateTag(`supplier-rating-${po.supplierId}`, {});
+        return { success: true, data: { status: newStatus, allFullyReceived } };
+      });
     } catch (error) {
-        logger.error('[supply-chain] 确认采购单收货失败:', error);
-        throw error;
+      logger.error('[supply-chain] 确认采购单收货失败:', error);
+      throw error;
     }
-});
+  }
+);
 
 /**
  * 导出采购单数据用于 PDF 渲染
@@ -855,96 +1000,93 @@ export const confirmPoReceipt = createSafeAction(confirmReceiptSchema, async (da
  */
 
 export async function exportPoPdf({ poId }: { poId: string }) {
-    const session = await auth();
-    if (!session?.user?.id) return { success: false, error: '未授权' };
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: '未授权' };
 
-    await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.PO_MANAGE);
+  await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.PO_MANAGE);
 
-    const po = await db.query.purchaseOrders.findFirst({
-        where: and(
-            eq(purchaseOrders.id, poId),
-            eq(purchaseOrders.tenantId, session.user.tenantId)
-        ),
-        with: {
-            items: true,
-        }
-    });
+  const po = await db.query.purchaseOrders.findFirst({
+    where: and(eq(purchaseOrders.id, poId), eq(purchaseOrders.tenantId, session.user.tenantId)),
+    with: {
+      items: true,
+    },
+  });
 
-    if (!po) return { success: false, error: '采购单不存在' };
+  if (!po) return { success: false, error: '采购单不存在' };
 
-    // 检查状态：DRAFT 和 PENDING_CONFIRMATION 不允许导出
-    const nonExportableStatuses = ['DRAFT', 'PENDING_CONFIRMATION'];
-    if (nonExportableStatuses.includes(po.status!)) {
-        return { success: false, error: '草稿和待审批状态的采购单不能导出' };
-    }
+  // 检查状态：DRAFT 和 PENDING_CONFIRMATION 不允许导出
+  const nonExportableStatuses = ['DRAFT', 'PENDING_CONFIRMATION'];
+  if (nonExportableStatuses.includes(po.status!)) {
+    return { success: false, error: '草稿和待审批状态的采购单不能导出' };
+  }
 
-    return {
-        success: true,
-        data: {
-            poNo: po.poNo,
-            supplierName: po.supplierName,
-            status: po.status,
-            totalAmount: po.totalAmount,
-            createdAt: po.createdAt,
-            items: po.items,
-            remark: po.remark,
-        }
-    };
+  return {
+    success: true,
+    data: {
+      poNo: po.poNo,
+      supplierName: po.supplierName,
+      status: po.status,
+      totalAmount: po.totalAmount,
+      createdAt: po.createdAt,
+      items: po.items,
+      remark: po.remark,
+    },
+  };
 }
 
 /**
  * 获取采购仪表盘统计指标 (内部实现)
  */
 async function getCachedDashboardMetrics(tenantId: string) {
-    const now = new Date();
-    const nowIso = now.toISOString();
+  const now = new Date();
+  const nowIso = now.toISOString();
 
-    const [results] = await db.select({
-        pending: sql<number>`count(*) FILTER (WHERE status = 'PENDING_CONFIRMATION')`,
-        inTransit: sql<number>`count(*) FILTER (WHERE status = 'SHIPPED')`,
-        completed: sql<number>`count(*) FILTER (WHERE status = 'COMPLETED')`,
-        delayed: sql<number>`count(*) FILTER (WHERE status NOT IN ('COMPLETED', 'CANCELLED', 'DELIVERED') AND expected_date < ${nowIso})`
+  const [results] = await db
+    .select({
+      pending: sql<number>`count(*) FILTER (WHERE status = 'PENDING_CONFIRMATION')`,
+      inTransit: sql<number>`count(*) FILTER (WHERE status = 'SHIPPED')`,
+      completed: sql<number>`count(*) FILTER (WHERE status = 'COMPLETED')`,
+      delayed: sql<number>`count(*) FILTER (WHERE status NOT IN ('COMPLETED', 'CANCELLED', 'DELIVERED') AND expected_date < ${nowIso})`,
     })
-        .from(purchaseOrders)
-        .where(eq(purchaseOrders.tenantId, tenantId));
+    .from(purchaseOrders)
+    .where(eq(purchaseOrders.tenantId, tenantId));
 
-    return {
-        pending: Number(results.pending || 0),
-        inTransit: Number(results.inTransit || 0),
-        delayed: Number(results.delayed || 0),
-        completed: Number(results.completed || 0)
-    };
+  return {
+    pending: Number(results.pending || 0),
+    inTransit: Number(results.inTransit || 0),
+    delayed: Number(results.delayed || 0),
+    completed: Number(results.completed || 0),
+  };
 }
 
 /**
  * 获取采购仪表盘统计指标
- * 
+ *
  * @description 统计待确认、运输中、已延期及已完成的采购单数量。使用 unstable_cache 缓存 60 秒。
  * @returns {Promise<{success: boolean, data: ProcurementMetrics | null, error?: string}>}
  */
 export async function getProcurementDashboardMetrics() {
-    const session = await auth();
-    if (!session?.user?.id) return { success: false, error: '未授权', data: null };
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: '未授权', data: null };
 
-    const tenantId = session.user.tenantId;
+  const tenantId = session.user.tenantId;
 
-    try {
-        const data = (await unstable_cache(
-            async () => getCachedDashboardMetrics(tenantId),
-            [`procurement-dashboard-metrics-${tenantId}`],
-            {
-                revalidate: 60,
-                tags: [`procurement-metrics-${tenantId}`]
-            }
-        )()) as ProcurementMetrics;
+  try {
+    const data = (await unstable_cache(
+      async () => getCachedDashboardMetrics(tenantId),
+      [`procurement-dashboard-metrics-${tenantId}`],
+      {
+        revalidate: 60,
+        tags: [`procurement-metrics-${tenantId}`],
+      }
+    )()) as ProcurementMetrics;
 
-
-        return {
-            success: true,
-            data
-        };
-    } catch (error) {
-        logger.error('Failed to fetch dashboard metrics:', error);
-        return { success: false, error: '获取统计数据失败', data: null };
-    }
+    return {
+      success: true,
+      data,
+    };
+  } catch (error) {
+    logger.error('Failed to fetch dashboard metrics:', error);
+    return { success: false, error: '获取统计数据失败', data: null };
+  }
 }

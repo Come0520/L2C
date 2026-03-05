@@ -27,7 +27,6 @@ import {
 } from 'lucide-react';
 
 import { motion } from 'motion/react';
-import { AnimatedList } from '@/shared/ui/animated-list';
 import { LogoWithThemeSwitcher } from '@/shared/ui/theme-pill-nav';
 import { useTenant } from '@/shared/providers/tenant-provider';
 import { VerifiedIcon } from '@/shared/ui/verification-badge';
@@ -36,106 +35,84 @@ import { useSession } from 'next-auth/react';
 import { ROLES } from '@/shared/config/roles';
 
 /**
- * 导航链接配置
- * 各模块入口，使用 lucide-react 图标
+ * 导航链接项类型定义
+ */
+interface NavLinkItem {
+  label: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  requiredPermission: string | null;
+}
+
+/**
+ * 导航分组类型定义
+ */
+interface NavGroup {
+  title: string; // 分组标题（侧边栏展开时显示）
+  items: NavLinkItem[];
+}
+
+/**
+ * 导航分组配置
+ * 按业务逻辑将菜单分为 4 组，提升高权限用户的导航体验
  * requiredPermission: 访问该菜单所需的模块权限前缀（用于角色过滤）
  */
-const navLinks = [
+const navGroups: NavGroup[] = [
   {
-    label: '工作台',
-    href: '/dashboard',
-    icon: Home,
-    requiredPermission: null, // 所有角色可见
+    title: '业务中心',
+    items: [
+      { label: '工作台', href: '/dashboard', icon: Home, requiredPermission: null },
+      { label: '线索管理', href: '/leads', icon: Users, requiredPermission: 'lead' },
+      { label: '渠道管理', href: '/channels', icon: Network, requiredPermission: 'channel' },
+      { label: '客户管理', href: '/customers', icon: UserCheck, requiredPermission: 'customer' },
+      { label: '报价管理', href: '/quotes', icon: FileText, requiredPermission: 'quote' },
+      { label: '订单管理', href: '/orders', icon: ShoppingCart, requiredPermission: 'order' },
+      { label: '云展厅', href: '/showroom', icon: Store, requiredPermission: 'showroom' },
+    ],
   },
   {
-    label: '线索管理',
-    href: '/leads',
-    icon: Users,
-    requiredPermission: 'lead',
+    title: '交付中心',
+    items: [
+      {
+        label: '测量服务',
+        href: '/service/measurement',
+        icon: Ruler,
+        requiredPermission: 'measure',
+      },
+      {
+        label: '安装服务',
+        href: '/service/installation',
+        icon: Wrench,
+        requiredPermission: 'install',
+      },
+      { label: '供应链', href: '/supply-chain', icon: Truck, requiredPermission: 'supply_chain' },
+      {
+        label: '售后服务',
+        href: '/after-sales',
+        icon: Headphones,
+        requiredPermission: 'after_sales',
+      },
+    ],
   },
   {
-    label: '渠道管理',
-    href: '/channels',
-    icon: Network,
-    requiredPermission: 'channel',
+    title: '管理中心',
+    items: [
+      { label: '财务中心', href: '/finance', icon: DollarSign, requiredPermission: 'finance' },
+      {
+        label: '审批中心',
+        href: '/workflow/approvals',
+        icon: ClipboardCheck,
+        requiredPermission: 'approval',
+      },
+      { label: '数据分析', href: '/analytics', icon: BarChart2, requiredPermission: 'analytics' },
+      { label: '通知中心', href: '/notifications', icon: Bell, requiredPermission: null },
+    ],
   },
   {
-    label: '客户管理',
-    href: '/customers',
-    icon: UserCheck,
-    requiredPermission: 'customer',
-  },
-  {
-    label: '报价管理',
-    href: '/quotes',
-    icon: FileText,
-    requiredPermission: 'quote',
-  },
-  {
-    label: '订单管理',
-    href: '/orders',
-    icon: ShoppingCart,
-    requiredPermission: 'order',
-  },
-  {
-    label: '云展厅',
-    href: '/showroom',
-    icon: Store,
-    requiredPermission: 'products', // 需要产品查看权限
-  },
-  {
-    label: '测量服务',
-    href: '/service/measurement',
-    icon: Ruler,
-    requiredPermission: 'measure',
-  },
-  {
-    label: '安装服务',
-    href: '/service/installation',
-    icon: Wrench,
-    requiredPermission: 'install',
-  },
-  {
-    label: '供应链',
-    href: '/supply-chain',
-    icon: Truck,
-    requiredPermission: 'supply_chain',
-  },
-  {
-    label: '财务中心',
-    href: '/finance',
-    icon: DollarSign,
-    requiredPermission: 'finance',
-  },
-  {
-    label: '审批中心',
-    href: '/workflow/approvals',
-    icon: ClipboardCheck,
-    requiredPermission: null, // 所有角色可见（内容按权限过滤）
-  },
-  {
-    label: '售后服务',
-    href: '/after-sales',
-    icon: Headphones,
-    requiredPermission: 'after_sales',
-  },
-  {
-    label: '通知中心',
-    href: '/notifications',
-    icon: Bell,
-    requiredPermission: null, // 所有角色可见
-  },
-  {
-    label: '数据分析',
-    href: '/analytics',
-    icon: BarChart2,
-    requiredPermission: 'analytics',
-  },
-  {
-    label: '系统设置',
-    href: '/settings',
-    icon: Settings,
-    requiredPermission: 'settings',
+    title: '系统',
+    items: [
+      { label: '系统设置', href: '/settings', icon: Settings, requiredPermission: 'settings' },
+    ],
   },
 ];
 
@@ -165,33 +142,51 @@ function hasModuleAccess(roles: string[], modulePrefix: string): boolean {
 /**
  * 应用侧边栏导航组件
  * 使用 Aceternity UI Sidebar 实现悬停展开效果
+ * 按分组渲染导航链接，提升高权限用户的导航体验
  */
 export function AppSidebar() {
   const pathname = usePathname();
   const [open, setOpen] = React.useState(false);
   const { data: session } = useSession();
 
-  // 动态生成导航菜单：按角色过滤 + 平台管理员添加租户管理
-  const displayNavLinks = React.useMemo(() => {
+  // 动态生成分组导航菜单：按角色过滤 + 平台管理员添加租户管理
+  const displayGroups = React.useMemo(() => {
     const userRoles = session?.user?.roles || [session?.user?.role || 'SALES'];
 
-    // 按权限过滤可见菜单
-    let filtered = navLinks.filter((link) => {
-      if (!link.requiredPermission) return true; // 无权限要求，所有人可见
-      return hasModuleAccess(userRoles, link.requiredPermission);
-    });
+    // 按权限过滤每组中的可见菜单
+    const filtered = navGroups
+      .map((group) => ({
+        ...group,
+        items: group.items.filter((link) => {
+          if (!link.requiredPermission) return true;
+          return hasModuleAccess(userRoles, link.requiredPermission);
+        }),
+      }))
+      .filter((group) => group.items.length > 0); // 移除空分组
 
-    // 平台管理员额外显示租户管理
+    // 平台管理员额外显示租户管理（追加到系统分组）
     if (session?.user?.isPlatformAdmin) {
-      filtered = [
-        ...filtered,
-        {
+      const systemGroup = filtered.find((g) => g.title === '系统');
+      if (systemGroup) {
+        systemGroup.items.push({
           label: '租户管理',
           href: '/admin/tenants',
           icon: Building2,
           requiredPermission: null,
-        },
-      ];
+        });
+      } else {
+        filtered.push({
+          title: '系统',
+          items: [
+            {
+              label: '租户管理',
+              href: '/admin/tenants',
+              icon: Building2,
+              requiredPermission: null,
+            },
+          ],
+        });
+      }
     }
     return filtered;
   }, [session?.user?.isPlatformAdmin, session?.user?.roles, session?.user?.role]);
@@ -205,27 +200,42 @@ export function AppSidebar() {
             <LogoWrapper />
           </div>
 
-          {/* 导航链接 - 使用 AnimatedList */}
+          {/* 分组导航链接 */}
           <div className="mt-4 flex-1 overflow-x-hidden overflow-y-auto px-1">
-            <AnimatedList
-              items={displayNavLinks.map((link) => {
-                const isActive =
-                  pathname === link.href || (link.href !== '/' && pathname.startsWith(link.href));
-                return (
-                  <NavLink
-                    key={link.href}
-                    href={link.href}
-                    label={link.label}
-                    icon={link.icon}
-                    isActive={isActive}
-                  />
-                );
-              })}
-              showGradients={false}
-              enableArrowNavigation={false}
-              displayScrollbar={true}
-              itemClassName="mb-1"
-            />
+            {displayGroups.map((group, groupIndex) => (
+              <div key={group.title} className={groupIndex > 0 ? 'mt-4' : ''}>
+                {/* 分组标题 - 仅侧边栏展开时显示 */}
+                <motion.div
+                  animate={{
+                    display: open ? 'block' : 'none',
+                    opacity: open ? 1 : 0,
+                  }}
+                  className="mb-1.5 px-3"
+                >
+                  <span className="text-muted-foreground/60 text-[10px] font-semibold tracking-widest uppercase">
+                    {group.title}
+                  </span>
+                </motion.div>
+                {/* 收起时的分组分隔线 */}
+                {!open && groupIndex > 0 && (
+                  <div className="border-border/30 mx-2 mb-2 border-t dark:border-white/5" />
+                )}
+                {/* 导航项 */}
+                {group.items.map((link) => {
+                  const isActive =
+                    pathname === link.href || (link.href !== '/' && pathname.startsWith(link.href));
+                  return (
+                    <NavLink
+                      key={link.href}
+                      href={link.href}
+                      label={link.label}
+                      icon={link.icon}
+                      isActive={isActive}
+                    />
+                  );
+                })}
+              </div>
+            ))}
           </div>
         </div>
 

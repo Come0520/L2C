@@ -1,4 +1,3 @@
-export const dynamic = 'force-dynamic';
 import { Suspense } from 'react';
 import { getInventoryLevels } from '@/features/supply-chain/actions/inventory-actions';
 import { InventoryList } from '@/features/supply-chain/components/inventory-list';
@@ -15,9 +14,10 @@ export const metadata = {
 async function InventoryData({
   searchParams,
 }: {
-  searchParams: { [key: string]: string | string[] | undefined };
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  const page = Number(searchParams?.page) || 1;
+  const resolvedParams = await searchParams;
+  const page = Number(resolvedParams?.page) || 1;
   const pageSize = 20;
 
   // Initial fetch: all warehouses (or filter by default)
@@ -31,7 +31,7 @@ async function InventoryData({
 export default function InventoryPage({
   searchParams,
 }: {
-  searchParams: { [key: string]: string | string[] | undefined };
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   return (
     <div className="flex h-full flex-col space-y-4">

@@ -4,7 +4,7 @@ test.describe('审批流超时与非正常干预验证', () => {
 
     test.beforeEach(async ({ page }) => {
         // 先跳到可能包含待办审批或者发起审批的入口点，作为前置准备
-        await page.goto('/workbench/approvals', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.goto('/workflow/approvals', { waitUntil: 'domcontentloaded', timeout: 60000 });
     });
 
     // 提示：这通常需要后端支持 Mock 时间流逝，或是一个特制的 "触发超时任务" API

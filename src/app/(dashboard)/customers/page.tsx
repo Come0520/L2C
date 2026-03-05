@@ -15,9 +15,19 @@ import { CustomersToolbar } from '@/features/customers/components/customers-tool
 
 import { CustomerListItem } from '@/features/customers/types';
 
-export const revalidate = 60; // Revalidate every minute
+export default function CustomersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  return (
+    <Suspense fallback={<div>加载中...</div>}>
+      <CustomersDataWrapper searchParams={searchParams} />
+    </Suspense>
+  );
+}
 
-export default async function CustomersPage({
+async function CustomersDataWrapper({
   searchParams,
 }: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;

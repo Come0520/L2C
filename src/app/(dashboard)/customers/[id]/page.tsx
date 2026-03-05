@@ -2,6 +2,7 @@
  * 客户详情页
  */
 
+import { Suspense } from 'react';
 import { notFound, redirect } from 'next/navigation';
 import { getCustomerDetail } from '@/features/customers/actions/queries';
 import { Button } from '@/shared/ui/button';
@@ -22,9 +23,15 @@ import { CustomerActivitiesSection } from '@/features/customers/components/Custo
 import { InlineNotesEditor } from '@/features/customers/components/inline-notes-editor';
 import { CreateLeadDialog } from '@/features/leads/components/create-lead-dialog';
 
-export const revalidate = 60;
+export default function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  return (
+    <Suspense fallback={<div>加载中...</div>}>
+      <CustomerDetailDataWrapper params={params} />
+    </Suspense>
+  );
+}
 
-export default async function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
+async function CustomerDetailDataWrapper({ params }: { params: Promise<{ id: string }> }) {
   const [session, resolvedParams] = await Promise.all([auth(), params]);
 
   const userId = session?.user?.id;

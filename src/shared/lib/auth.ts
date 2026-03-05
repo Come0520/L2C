@@ -50,12 +50,24 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             return null;
           }
 
-          const candidates = await db.query.users.findMany({
-            where: and(
-              or(eq(users.email, username), eq(users.phone, username)),
-              eq(users.isActive, true)
-            ),
-          });
+          /**
+           * DB query with isolated try-catch
+           * If DB query fails, throw SYSTEM_ERROR instead of returning null
+           */
+          let candidates;
+          try {
+            candidates = await db.query.users.findMany({
+              where: and(
+                or(eq(users.email, username), eq(users.phone, username)),
+                eq(users.isActive, true)
+              ),
+            });
+          } catch (dbError) {
+            logger.error('[Auth] DB query failed (system error, not password error)', {
+              error: dbError instanceof Error ? dbError.message : String(dbError),
+            });
+            throw new Error('SYSTEM_ERROR: DB unavailable');
+          }
 
           if (candidates.length === 0) {
             return null;
@@ -170,10 +182,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             isPlatformAdmin: false,
           };
         } catch (error) {
+          const errorMsg = error instanceof Error ? error.message : String(error);
           console.error('[Auth:Debug] Exception in authorize:', error);
-          logger.error('[Auth] 认证验证过程发生异常', {
-            error: error instanceof Error ? error.message : String(error),
-          });
+
+          // SYSTEM_ERROR: re-throw to let NextAuth pass real error type to frontend
+          if (errorMsg.startsWith('SYSTEM_ERROR')) {
+            logger.error('[Auth] System-level exception, aborting auth', { error: errorMsg });
+            throw error;
+          }
+
+          logger.error('[Auth] Unexpected exception in authorize', { error: errorMsg });
           return null;
         }
       },

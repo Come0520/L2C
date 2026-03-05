@@ -1,7 +1,4 @@
-/**
- * 线索详情页
- */
-
+import { Suspense } from 'react';
 import { notFound, redirect } from 'next/navigation';
 import { getLeadById, getChannels } from '@/features/leads/actions';
 
@@ -24,9 +21,15 @@ import { LeadRelatedCards } from '@/features/leads/components/lead-related-cards
 import { NoiseButton } from '@/shared/ui/noise-button';
 import { auth } from '@/shared/lib/auth';
 
-export const revalidate = 60;
+export default function LeadDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  return (
+    <Suspense fallback={<div>加载中...</div>}>
+      <LeadDetailDataWrapper params={params} />
+    </Suspense>
+  );
+}
 
-export default async function LeadDetailPage({ params }: { params: Promise<{ id: string }> }) {
+async function LeadDetailDataWrapper({ params }: { params: Promise<{ id: string }> }) {
   const [session, resolvedParams] = await Promise.all([auth(), params]);
 
   const userId = session?.user?.id;

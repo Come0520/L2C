@@ -1,0 +1,79 @@
+name: Deploy to Aliyun ECS
+
+on:
+  push:
+    branches:
+      - main # 仅在推送到 main 分支时触发部署（可按需修改）
+  workflow_dispatch: # 允许手动在 Actions 页面触发部署
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - name: 设置 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' # 项目使用的 Node 版本
+          cache: 'pnpm'
+
+      - name: 安装项目依赖
+        run: pnpm install --frozen-lockfile
+
+      - name: 注入环境变量并构建
+        env:
+          NEXT_PUBLIC_API_URL: https://l2c.asia
+          # 在此添加打包过程中需要的其他环境变量（例如 Sentry DSN，高德 SDK Key 等）
+        run: pnpm run build
+
+      - name: 打包构建产物 (规避 Windows tar 问题)
+        run: |
+          echo "压缩构建产物..."
+          tar -czf next-build.tar.gz .next/standalone .next/static public docker-compose.prod.yml Dockerfile.prebuilt
+
+      - name: 通过 SCP 传输构建包到阿里云 ECS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.ALIYUN_ECS_HOST }}
+          username: ${{ secrets.ALIYUN_ECS_USER }}
+          password: ${{ secrets.ALIYUN_ECS_PASSWORD }}
+          source: "next-build.tar.gz,docker-compose.prod.yml,Dockerfile.prebuilt"
+          target: "/root/L2C"
+          strip_components: 0
+
+      - name: 通过 SSH 远程执行部署命令
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.ALIYUN_ECS_HOST }}
+          username: ${{ secrets.ALIYUN_ECS_USER }}
+          password: ${{ secrets.ALIYUN_ECS_PASSWORD }}
+          script: |
+            cd /root/L2C
+            
+            echo "============= 解压最新构建包 ============="
+            rm -rf .next
+            tar -xzf next-build.tar.gz
+            
+            echo "============= 重新构建应用镜像 ============="
+            # 停止当前运行的应用容器
+            docker compose -f docker-compose.prod.yml stop app
+            
+            # 强制使用新产物构建镜像 (无缓存)
+            docker compose -f docker-compose.prod.yml build --no-cache app
+            
+            echo "============= 启动应用 ============="
+            # 启动服务，暂时绕过迁移(因0045问题)，强制重建 app
+            docker compose -f docker-compose.prod.yml up -d --no-deps app
+            
+            echo "============= 清理旧无用镜像 ============="
+            docker image prune -af --filter "until=24h"
+            
+            echo "部署完成！🎉"

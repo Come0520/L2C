@@ -26,7 +26,8 @@ test.describe('电子合同签约与档案留存 (Contract Signing Archival)', (
             // 点击后可能存在一个包含电子签或附件上传的确认 Modal
             const signDialog = page.getByRole('dialog', { name: /确认签单|签章|附件/ });
             if (await signDialog.isVisible({ timeout: 3000 })) {
-                const hasUploader = await signDialog.locator('input[type="file"], text=/上传合同|点击签名|电子签/).isVisible();
+                // 检查是否有上传控件或签名区域
+                const hasUploader = await signDialog.locator('input[type="file"], text=/上传合同|点击签名|电子签/').isVisible();
                 if (hasUploader) {
                     console.log('✅ 转订单交互中，系统强制或提示了凭证上传 (合同签章/图片)');
                 } else {

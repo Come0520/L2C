@@ -15,7 +15,7 @@ export const engineerService = {
      * API: GET /miniprogram/engineer/tasks/biddable
      */
     async getBiddableTasks() {
-        return api.get<any[]>('/engineer/tasks/biddable')
+        return api.get<any[]>('/engineer/tasks/biddable').then(res => res.data)
     },
 
     /**
@@ -25,7 +25,7 @@ export const engineerService = {
     async getSchedule(startDate: string, endDate: string) {
         return api.get<{ tasks: any[] }>('/engineer/schedule', {
             data: { startDate, endDate }
-        })
+        }).then(res => res.data)
     },
 
     /**

@@ -131,7 +131,8 @@ export async function requestCancelOrder(input: z.infer<typeof requestOrderCance
     };
   } catch (error) {
     logger.error('撤单申请失败:', error);
-    return { success: false, error: '撤单申请失败' };
+    const errorMsg = error instanceof Error ? error.message : '撤单申请失败';
+    return { success: false, error: errorMsg };
   }
 }
 

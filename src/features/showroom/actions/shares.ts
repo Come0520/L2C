@@ -148,13 +148,19 @@ export async function getShareContent(input: z.input<typeof getShareContentSchem
   }
 
   // 采样回写：10% 概率回写到 DB，减轻 DB 压力
-  const currentViews = await redis.incr(`showroom:share:views:${shareId}`);
-  if (Math.random() < 0.1) {
-    const cachedViews = await redis.get(`showroom:share:views:${shareId}`);
-    await db
-      .update(showroomShares)
-      .set({ views: Number(cachedViews || currentViews) })
-      .where(eq(showroomShares.id, shareId));
+  let currentViews;
+  try {
+    currentViews = await redis.incr(`showroom:share:views:${shareId}`);
+    if (Math.random() < 0.1) {
+      const cachedViews = await redis.get(`showroom:share:views:${shareId}`);
+      await db
+        .update(showroomShares)
+        .set({ views: Number(cachedViews || currentViews) })
+        .where(eq(showroomShares.id, shareId));
+    }
+  } catch (err) {
+    logger.error('Redis 操作异常，展厅分享访问拒绝服务', { error: err, shareId });
+    throw new ShowroomError(ShowroomErrors.REDIS_UNAVAILABLE);
   }
 
   try {

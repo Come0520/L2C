@@ -1,0 +1,281 @@
+# ============================================================
+# L2C Flow 流水线 — 最佳部署方案
+# 触发方式：推送 main 分支自动触发
+# 架构：CI 编译(杭州构建集群) → 产物直传 → ECS 轻量部署
+# ============================================================
+# 🔧 使用前请在 Flow 的「变量和缓存」中配置以下变量：
+#    ECS_HOST     = 你 ECS 的公网 IP（明文）
+#    ECS_PASSWORD = root 密码（勾选 🔒 加密）
+# ============================================================
+
+variables:
+  - key: PNPM_VERSION
+    value: '9.15.0'
+  - key: NODE_VERSION
+    value: '20.19.0'
+
+sources:
+  codeup_source:
+    type: codeup
+    name: "Codeup 代码源"
+    endpoint: https://codeup.aliyun.com/697359d3b28d0aba0f5e4ff2/l2c.git
+    branch: main
+    certificate:
+      type: serviceConnection
+      serviceConnection: "n91ncnbpmgw4ybzk"
+
+triggers:
+  push_trigger:
+    name: "main 分支推送自动触发"
+    type: push
+    enabled: true
+    branches:
+      include:
+        - main
+
+stages:
+  # ==================== 阶段一：质量检查 ====================
+  quality_gate:
+    name: "质量检查"
+    jobs:
+      lint_job:
+        name: "ESLint + TypeScript 检查"
+        runsOn:
+          group: public/cn-hangzhou
+          container: build-steps-public-registry.cn-beijing.cr.aliyuncs.com/build-steps/alinux3:latest
+        steps:
+          lint_step:
+            step: Command
+            name: "代码质量检查"
+            with:
+              run: |
+                echo "=== 质量检查开始 ==="
+
+                # 安装 Node.js（使用 npmmirror 国内镜像，稳定不被墙）
+                curl -fsSL https://npmmirror.com/mirrors/node/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz -o node.tar.xz
+                tar -xJf node.tar.xz -C /usr/local --strip-components=1
+                rm -f node.tar.xz
+                npm config set registry https://registry.npmmirror.com
+                npm install -g pnpm@${PNPM_VERSION}
+                pnpm config set registry https://registry.npmmirror.com
+                echo "Node $(node -v) | pnpm $(pnpm -v)"
+
+                # 安装依赖
+                pnpm install --frozen-lockfile
+
+                # 代码检查
+                echo ">>> 运行 ESLint..."
+                pnpm lint || { echo "❌ ESLint 检查失败"; exit 1; }
+
+                echo ">>> 运行 TypeScript 类型检查..."
+                pnpm type-check || { echo "❌ 类型检查失败"; exit 1; }
+
+                echo "=== ✅ 质量检查通过 ==="
+
+  # ==================== 阶段二：构建与部署 ====================
+  deploy_stage:
+    name: "构建与部署"
+    jobs:
+      deploy_job:
+        name: "CI 编译 → 产物直传 → ECS 部署"
+        runsOn:
+          # 使用杭州公共构建集群（距上海 ECS 更近，传输更快）
+          group: public/cn-hangzhou
+          container: build-steps-public-registry.cn-beijing.cr.aliyuncs.com/build-steps/alinux3:latest
+        steps:
+          deploy_step:
+            step: Command
+            name: "编译、打包、传输并部署"
+            with:
+              run: |
+                set -e
+                echo "============================================"
+                echo "  L2C 自动化部署流水线"
+                echo "============================================"
+
+                # ===================================
+                # 第一步：安装 Node.js + pnpm
+                # 使用 npmmirror 镜像，避免 nodesource 被墙
+                # ===================================
+                echo ">>> [1/8] 安装 Node.js ${NODE_VERSION}..."
+                curl -fsSL https://npmmirror.com/mirrors/node/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz -o node.tar.xz
+                tar -xJf node.tar.xz -C /usr/local --strip-components=1
+                rm -f node.tar.xz
+                npm config set registry https://registry.npmmirror.com
+                npm install -g pnpm@${PNPM_VERSION}
+                pnpm config set registry https://registry.npmmirror.com
+                echo "Node $(node -v) | pnpm $(pnpm -v)"
+
+                # 安装 sshpass（从 EPEL 源安装，确保可用）
+                yum install -y epel-release >/dev/null 2>&1 || true
+                yum install -y sshpass >/dev/null 2>&1
+
+                # ===================================
+                # 第二步：安装项目依赖
+                # ===================================
+                echo ">>> [2/8] 安装项目依赖..."
+                pnpm install --frozen-lockfile
+
+                # ===================================
+                # 第三步：注入版本信息
+                # ===================================
+                echo ">>> [3/8] 注入版本信息..."
+                export GIT_COMMIT_SHA=$(git rev-parse --short HEAD)
+                export BUILD_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+                mkdir -p public
+                echo "{\"sha\":\"$GIT_COMMIT_SHA\",\"time\":\"$BUILD_TIME\"}" > public/version.json
+                echo "Commit: $GIT_COMMIT_SHA | Time: $BUILD_TIME"
+
+                # ===================================
+                # 第四步：构建 Next.js
+                # ===================================
+                echo ">>> [4/8] 构建 Next.js 应用..."
+                export NEXT_PUBLIC_GIT_COMMIT_SHA="$GIT_COMMIT_SHA"
+                export NEXT_PUBLIC_BUILD_TIME="$BUILD_TIME"
+                export DATABASE_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder"
+                export AUTH_SECRET="build-time-placeholder-secret"
+                pnpm run build
+                echo "✅ Next.js 构建完成"
+
+                # ===================================
+                # 第五步：解析 pnpm 符号链接 + 打包
+                # ===================================
+                echo ">>> [5/8] 打包部署产物..."
+                mkdir -p /tmp/standalone-resolved
+                rsync -aL --ignore-errors .next/standalone/ /tmp/standalone-resolved/ || true
+                rm -rf .next/standalone
+                mv /tmp/standalone-resolved .next/standalone
+                echo "✅ pnpm 符号链接解析完成"
+
+                tar -czf /tmp/l2c-deploy.tar.gz \
+                  .next/standalone/ \
+                  .next/static/ \
+                  public/ \
+                  Dockerfile.prebuilt \
+                  docker-compose.prod.yml \
+                  nginx/ \
+                  drizzle/ \
+                  drizzle.config.ts \
+                  src/shared/api/schema.ts \
+                  src/shared/api/schema/ \
+                  package.json \
+                  pnpm-lock.yaml \
+                  tsconfig.json
+
+                PACKAGE_SIZE=$(ls -lh /tmp/l2c-deploy.tar.gz | awk '{print $5}')
+                echo "✅ 产物打包完成，大小: $PACKAGE_SIZE"
+
+                # ===================================
+                # 第六步：检查环境变量
+                # ===================================
+                echo ">>> [6/8] 检查部署配置..."
+                if [ -z "$ECS_PASSWORD" ]; then
+                  echo "❌ 错误: ECS_PASSWORD 未设置！"
+                  echo "   请在 Flow 流水线 → 变量和缓存 → 添加变量 ECS_PASSWORD（勾选加密）"
+                  exit 1
+                fi
+                if [ -z "$ECS_HOST" ]; then
+                  echo "❌ 错误: ECS_HOST 未设置！"
+                  echo "   请在 Flow 流水线 → 变量和缓存 → 添加变量 ECS_HOST"
+                  exit 1
+                fi
+                echo "✅ ECS_HOST = $ECS_HOST"
+
+                # ===================================
+                # 第七步：上传到 ECS
+                # ===================================
+                echo ">>> [7/8] 上传产物到 ECS..."
+                sshpass -p "$ECS_PASSWORD" scp -o StrictHostKeyChecking=no -o ConnectTimeout=30 \
+                  /tmp/l2c-deploy.tar.gz root@$ECS_HOST:/root/L2C/l2c-deploy.tar.gz
+                echo "✅ 文件传输完成"
+
+                # ===================================
+                # 第八步：远程部署
+                # ===================================
+                echo ">>> [8/8] SSH 到 ECS 执行部署..."
+                sshpass -p "$ECS_PASSWORD" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=30 root@$ECS_HOST << 'DEPLOY_EOF'
+                  set -e
+                  cd /root/L2C
+
+                  echo "=========================================="
+                  echo "  ECS 端部署开始"
+                  echo "=========================================="
+
+                  # 1. 备份 .env
+                  if [ -f .env ]; then cp .env /tmp/.env.l2c_backup; fi
+
+                  # 2. 解压预编译产物
+                  echo ">>> 解压部署产物..."
+                  tar -xzf l2c-deploy.tar.gz
+                  rm -f l2c-deploy.tar.gz
+
+                  # 3. 恢复 .env
+                  if [ -f /tmp/.env.l2c_backup ]; then cp /tmp/.env.l2c_backup /root/L2C/.env; fi
+
+                  # 4. 生成 .dockerignore
+                  printf 'node_modules\n.git\n.env\n*.log\n' > /root/L2C/.dockerignore
+                  echo "✅ .dockerignore 已生成"
+
+                  # 5. 验证关键产物
+                  test -d /root/L2C/.next/standalone || { echo "❌ .next/standalone 不存在"; exit 1; }
+                  test -d /root/L2C/.next/static     || { echo "❌ .next/static 不存在"; exit 1; }
+                  echo "✅ 产物验证通过"
+
+                  # 6. 停止旧容器
+                  echo ">>> 停止旧容器..."
+                  docker compose -f docker-compose.prod.yml down || true
+
+                  # 7. 清理空间（ECS 磁盘 95%，必须清理）
+                  echo ">>> 清理 Docker 缓存..."
+                  docker system prune -f
+                  docker builder prune -f
+
+                  # 8. 构建轻量镜像
+                  echo ">>> 构建 Docker 镜像..."
+                  docker compose -f docker-compose.prod.yml build --no-cache
+                  echo "✅ 镜像构建完成"
+
+                  # 9. 数据库迁移
+                  echo ">>> 执行数据库迁移..."
+                  timeout 120 docker compose -f docker-compose.prod.yml run --rm db-migrate && {
+                    echo "✅ 数据库迁移完成"
+                  } || {
+                    echo "⚠️ 数据库迁移跳过（可能已是最新），继续部署..."
+                  }
+
+                  # 10. 启动应用
+                  echo ">>> 启动应用..."
+                  docker compose -f docker-compose.prod.yml up -d --force-recreate app nginx
+                  echo "容器已启动，等待健康检查..."
+
+                  # 11. 健康检查（最多 3 分钟）
+                  HEALTHY=false
+                  for i in $(seq 1 36); do
+                    STATUS=$(docker inspect --format='{{.State.Health.Status}}' l2c-app 2>/dev/null || echo "none")
+                    if [ "$STATUS" = "healthy" ]; then
+                      echo "✅ 健康检查通过 (第 ${i} 次尝试)"
+                      HEALTHY=true
+                      break
+                    fi
+                    echo "  等待中... ($i/36) [状态: $STATUS]"
+                    sleep 5
+                  done
+
+                  if [ "$HEALTHY" = "false" ]; then
+                    echo "❌ 健康检查超时！"
+                    docker compose -f docker-compose.prod.yml ps
+                    docker compose -f docker-compose.prod.yml logs --tail=80 app
+                    exit 1
+                  fi
+
+                  # 12. 最终状态
+                  docker compose -f docker-compose.prod.yml ps
+                  docker image prune -f --filter "until=24h"
+                  echo "=========================================="
+                  echo "  ✅ L2C 部署成功完成"
+                  echo "=========================================="
+                DEPLOY_EOF
+
+                echo "============================================"
+                echo "  ✅ 流水线执行完毕"
+                echo "============================================"

@@ -20,12 +20,12 @@ const client = postgres(connectionString, {
   idle_timeout: 30, // 空闲超时 30s
   connect_timeout: 10, // 连接超时 10s
   /**
-   * [生产环境 SSL 配置]
-   * 阿里云 RDS 使用非公共 CA 签发的证书，Alpine Linux 容器的根证书库不包含该 CA，
-   * 因此 rejectUnauthorized 必须设为 false（跳过证书验证，但仍保持 TLS 加密传输）。
-   * 本地开发跳过 SSL，避免自签名证书问题。
+   * [数据库 SSL 配置]
+   * 阿里云 RDS 默认未启用 SSL 监听，强制 TLS 握手会导致 ECONNRESET。
+   * VPC 内网连接本身由网络隔离保障安全，无需 TLS 加密。
+   * 通过环境变量 DB_SSL=true 可在需要时启用 SSL（如跨公网连接场景）。
    */
-  ssl: isProd ? { rejectUnauthorized: false } : false,
+  ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
   /**
    * [H6 修复] 生产环境启用预编译语句，提升重复查询性能
    * Serverless 环境（Vercel Edge / Lambda）需关闭（连接不保留 state）

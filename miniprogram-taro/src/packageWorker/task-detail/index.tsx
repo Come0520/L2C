@@ -14,9 +14,7 @@ interface TaskDetailUI {
 
 export default function TaskDetailPage() {
   const [task, setTask] = useState<TaskDetailUI | null>(null)
-  const [rawTask, setRawTask] = useState<MeasureTask | InstallTask | null>(null)
   const [loading, setLoading] = useState(true)
-  const [taskType, setTaskType] = useState<string>('')
 
   // 沟通记录 Mock
   const [logs] = useState([
@@ -33,11 +31,8 @@ export default function TaskDetailPage() {
       setLoading(false)
       return
     }
-    setTaskType(type)
-
     try {
       const res = await taskService.getTaskDetail(id, type as 'measure' | 'install')
-      setRawTask(res)
 
       const isMeasure = type === 'measure'
       const mTask = isMeasure ? (res as MeasureTask) : null
@@ -87,6 +82,7 @@ export default function TaskDetailPage() {
     if (!task) return
     Taro.showLoading({ title: '处理中...' })
     try {
+      console.log('Action:', action)
       // TODO: 接单 API
       Taro.hideLoading()
       Taro.showToast({ title: '操作成功', icon: 'success' })

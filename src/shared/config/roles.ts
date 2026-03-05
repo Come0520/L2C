@@ -108,6 +108,12 @@ export const ROLES: Record<string, RoleDefinition> = {
       PERMISSIONS.ANALYTICS.VIEW,
       PERMISSIONS.ANALYTICS.VIEW_ALL,
       PERMISSIONS.ANALYTICS.EXPORT,
+      // 审批流程 - 处理审批（经理有审批权限）
+      PERMISSIONS.APPROVAL.VIEW,
+      PERMISSIONS.APPROVAL.HANDLE,
+      // 云展厅 - 管理展品
+      PERMISSIONS.SHOWROOM.VIEW,
+      PERMISSIONS.SHOWROOM.MANAGE,
       // 设置 - 用户管理 + 角色管理
       PERMISSIONS.SETTINGS.VIEW,
       PERMISSIONS.SETTINGS.USER_MANAGE,
@@ -148,9 +154,13 @@ export const ROLES: Record<string, RoleDefinition> = {
       PERMISSIONS.CHANNEL.VIEW,
       // 产品 - 仅查看
       PERMISSIONS.PRODUCTS.VIEW,
+      // 云展厅 - 浏览展示（销售向客户展示产品方案）
+      PERMISSIONS.SHOWROOM.VIEW,
       // 财务 - 应收操作（销售负责收款）
       PERMISSIONS.FINANCE.AR_VIEW,
       PERMISSIONS.FINANCE.AR_CREATE,
+      // 审批流程 - 查看自己提交的审批进度
+      PERMISSIONS.APPROVAL.VIEW,
       // 分析 - 自己的数据
       PERMISSIONS.ANALYTICS.VIEW,
     ],
@@ -248,6 +258,9 @@ export const ROLES: Record<string, RoleDefinition> = {
       PERMISSIONS.CHANNEL.VIEW,
       PERMISSIONS.CHANNEL.COMMISSION,
       PERMISSIONS.CHANNEL.SETTLEMENT,
+      // 审批流程 - 财务审批相关事项
+      PERMISSIONS.APPROVAL.VIEW,
+      PERMISSIONS.APPROVAL.HANDLE,
       // 分析 - 财务相关
       PERMISSIONS.ANALYTICS.VIEW,
       PERMISSIONS.ANALYTICS.EXPORT,

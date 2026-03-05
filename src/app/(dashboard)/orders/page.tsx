@@ -1,7 +1,11 @@
+import { Suspense } from 'react';
 import { OrderList } from '@/features/orders/components/order-list';
-
-export const dynamic = 'force-dynamic';
+import { TableSkeleton } from '@/shared/ui/skeleton-variants';
 
 export default function OrdersPage() {
-  return <OrderList />;
+  return (
+    <Suspense fallback={<TableSkeleton />}>
+      <OrderList />
+    </Suspense>
+  );
 }

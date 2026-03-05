@@ -1,21 +1,21 @@
 import { test, expect } from '@playwright/test';
 import { safeGoto } from '../helpers/test-utils';
 
-test.describe('项目 (Projects) 模块 E2E 测试', () => {
+test.describe('安装服务 (Installation) 模块 E2E 测试', () => {
 
     test.beforeEach(async ({ page }) => {
-        // 导航到项目列表页
-        await safeGoto(page, '/projects');
+        // 导航到安装服务列表页
+        await safeGoto(page, '/service/installation');
         await page.waitForLoadState('domcontentloaded');
     });
 
-    test('验证项目列表页基础布局', async ({ page }) => {
+    test('验证安装服务列表页基础布局', async ({ page }) => {
         // 显式等待 URL 到达
-        await page.waitForURL(/\/projects/);
+        await page.waitForURL(/\/service\/installation/);
         await page.waitForTimeout(3000);
 
         // 验证核心业务文案
-        await expect(page.locator('body')).toContainText(/项目管理|任务|工程/);
+        await expect(page.locator('body')).toContainText(/安装|任务|服务/);
         await expect(page.locator('body')).toContainText(/待派单|待处理|全部/);
     });
 

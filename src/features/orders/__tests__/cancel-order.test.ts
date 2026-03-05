@@ -20,11 +20,31 @@ vi.mock('@/shared/api/db', () => ({
     })),
     transaction: vi.fn((cb) =>
       cb({
+        query: {
+          orders: {
+            findFirst: vi.fn().mockResolvedValue({
+              id: '123e4567-e89b-12d3-a456-426614174000',
+              tenantId: 'test-tenant',
+              status: 'PENDING_PRODUCTION',
+              version: 1,
+              totalAmount: '1000.00',
+            }),
+          },
+        },
         update: vi.fn(() => ({
           set: vi.fn(() => ({
-            where: vi.fn(),
+            where: vi.fn(() => ({
+              returning: vi
+                .fn()
+                .mockResolvedValue([{ id: '123e4567-e89b-12d3-a456-426614174000' }]),
+            })),
           })),
           where: vi.fn(),
+        })),
+        insert: vi.fn(() => ({
+          values: vi.fn(() => ({
+            returning: vi.fn(),
+          })),
         })),
       })
     ),
@@ -157,5 +177,47 @@ describe('Order Cancellation', () => {
 
     expect(result.success).toBe(false);
     expect(result.error).toContain('未授权');
+  });
+
+  it('should reject cancellation if optimistic lock fails (Concurrency)', async () => {
+    // Modify the mock for this specific test to return empty array from update (simulating concurrency failure)
+    vi.mocked(db.transaction).mockImplementationOnce((cb: any) =>
+      cb({
+        query: {
+          orders: {
+            findFirst: vi.fn().mockResolvedValue(mockOrder),
+          },
+        },
+        update: vi.fn(() => ({
+          set: vi.fn(() => ({
+            where: vi.fn(() => ({
+              returning: vi.fn().mockResolvedValue([]), // Return empty array to represent no records matched the version lock
+            })),
+          })),
+          where: vi.fn(),
+        })),
+        insert: vi.fn(() => ({
+          values: vi.fn(() => ({
+            returning: vi.fn(),
+          })),
+        })),
+      })
+    );
+
+    (db.query.orders.findFirst as any).mockResolvedValue(mockOrder);
+    (submitApproval as any).mockResolvedValue({
+      success: false,
+      error: '审批流程未定义或已禁用',
+    });
+
+    const result = await requestCancelOrder({
+      orderId: '123e4567-e89b-12d3-a456-426614174000',
+      reason: '客户主动取消' as const,
+      version: 1,
+    });
+
+    // We expect this to fail gracefully because of the lock failure
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('订单已被并发修改，无法执行撤单');
   });
 });

@@ -1,9 +1,28 @@
-export const dynamic = 'force-dynamic';
+import { Suspense } from 'react';
 import { getARStatements } from '@/features/finance/actions/ar';
 import { ARStatementTable } from '@/features/finance/components/ARStatementTable';
 import { DashboardPageHeader } from '@/shared/ui/dashboard-page-header';
 
-export default async function ARPage() {
+import { TableSkeleton } from '@/shared/ui/skeleton-variants';
+
+export default function ARPage() {
+  return (
+    <div className="space-y-6">
+      <DashboardPageHeader
+        title="收款管理 (AR)"
+        subtitle="管理客户应收对账单、登记收款、查看回款进度"
+      />
+
+      <div className="bg-card rounded-lg border p-6 shadow-sm">
+        <Suspense fallback={<TableSkeleton />}>
+          <ARStatementDataWrapper />
+        </Suspense>
+      </div>
+    </div>
+  );
+}
+
+async function ARStatementDataWrapper() {
   let data = [];
   try {
     data = await getARStatements();
@@ -18,16 +37,5 @@ export default async function ARPage() {
     );
   }
 
-  return (
-    <div className="space-y-6">
-      <DashboardPageHeader
-        title="收款管理 (AR)"
-        subtitle="管理客户应收对账单、登记收款、查看回款进度"
-      />
-
-      <div className="bg-card rounded-lg border p-6 shadow-sm">
-        <ARStatementTable data={data} />
-      </div>
-    </div>
-  );
+  return <ARStatementTable data={data} />;
 }

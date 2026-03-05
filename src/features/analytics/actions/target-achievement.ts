@@ -92,7 +92,7 @@ export async function getTargetAchievementOverview(params: { year: number; month
               completionRate: rate,
             };
           })
-          .sort((a, b) => b.completionRate - a.completionRate);
+          .toSorted((a, b) => b.completionRate - a.completionRate);
 
         const totalTarget = details.reduce((s, d) => s + d.targetAmount, 0);
         const totalAchieved = details.reduce((s, d) => s + d.achievedAmount, 0);
@@ -320,7 +320,7 @@ export async function getTargetRiskWarnings(params: { year: number; month: numbe
             };
           })
           .filter((w) => w.riskLevel !== 'low')
-          .sort((a, b) => a.predictedRate - b.predictedRate);
+          .toSorted((a, b) => a.predictedRate - b.predictedRate);
 
         return warnings;
       },

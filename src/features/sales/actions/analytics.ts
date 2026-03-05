@@ -276,13 +276,13 @@ export async function getSalesRanking(
           })
         );
 
-        // 按完成金额降序排序并分配排名
-        rankingItems.sort((a, b) => b.achievedAmount - a.achievedAmount);
-        rankingItems.forEach((item, index) => {
+        // 按完成金额降序排序并分配排名（使用不可变 .toSorted()）
+        const sorted = rankingItems.toSorted((a, b) => b.achievedAmount - a.achievedAmount);
+        sorted.forEach((item, index) => {
           item.rank = index + 1;
         });
 
-        return rankingItems;
+        return sorted;
       },
       ['sales-ranking', session.user.tenantId, String(targetYear), String(targetMonth)],
       { revalidate: 60, tags: ['sales-analytics'] }
@@ -394,8 +394,10 @@ export async function getSalesTargetWarnings(): Promise<{
           })
         );
 
-        // 只返回有风险的（atRisk: true），且按风险从高到低排序
-        return warnings.filter((w) => w.atRisk).sort((a, b) => a.predictedRate - b.predictedRate);
+        // 只返回有风险的（atRisk: true），且按风险从高到低排序（使用不可变 .toSorted()）
+        return warnings
+          .filter((w) => w.atRisk)
+          .toSorted((a, b) => a.predictedRate - b.predictedRate);
       },
       ['sales-warnings', session.user.tenantId, String(year), String(month), String(today)],
       { revalidate: 60, tags: ['sales-analytics'] }

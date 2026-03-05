@@ -59,14 +59,14 @@ export const GET = withMiniprogramAuth(async (request: NextRequest, user) => {
       });
     }
 
-    // 排序
-    list.sort((a, b) => {
+    // 排序（使用不可变 .toSorted()）
+    const sorted = list.toSorted((a, b) => {
       const timeA = new Date(a.createdAt || 0).getTime();
       const timeB = new Date(b.createdAt || 0).getTime();
       return timeB - timeA;
     });
 
-    return apiSuccess(list);
+    return apiSuccess(sorted);
   } catch (error) {
     logger.error('获取邀请列表失败:', error);
     return apiServerError('获取失败');

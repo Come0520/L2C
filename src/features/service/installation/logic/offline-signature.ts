@@ -227,8 +227,8 @@ export async function syncPendingSignatures(
   let success = 0;
   let failed = 0;
 
-  // 按创建时间排序，先处理旧的
-  const sorted = pending.sort(
+  // 按创建时间排序，先处理旧的（使用不可变 .toSorted()）
+  const sorted = pending.toSorted(
     (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
   );
 

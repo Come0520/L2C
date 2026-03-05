@@ -189,7 +189,7 @@ const checkLeadDuplicateInternal = createSafeAction(
         };
       })
       .filter((m) => m.matchScore > 0)
-      .sort((a, b) => b.matchScore - a.matchScore);
+      .toSorted((a, b) => b.matchScore - a.matchScore);
 
     const isDuplicateMatch = matches.some((m) => m.matchScore >= 70);
     logger.info('[leads] 检查线索去重结果:', {

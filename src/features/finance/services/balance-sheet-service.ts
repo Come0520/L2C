@@ -130,10 +130,12 @@ export async function getBalanceSheetData(
     result.equity.total += netProfit;
   }
 
-  // 按照 code 排序
-  result.assets.items.sort((a, b) => a.code.localeCompare(b.code));
-  result.liabilities.items.sort((a, b) => a.code.localeCompare(b.code));
-  result.equity.items.sort((a, b) => a.code.localeCompare(b.code));
+  // 按照 code 排序（使用不可变 .toSorted()）
+  result.assets.items = result.assets.items.toSorted((a, b) => a.code.localeCompare(b.code));
+  result.liabilities.items = result.liabilities.items.toSorted((a, b) =>
+    a.code.localeCompare(b.code)
+  );
+  result.equity.items = result.equity.items.toSorted((a, b) => a.code.localeCompare(b.code));
 
   // 解决浮点数精度
   result.assets.total = Number(result.assets.total.toFixed(2));

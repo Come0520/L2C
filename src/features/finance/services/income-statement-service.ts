@@ -107,9 +107,13 @@ export async function getIncomeStatementData(
     }
   }
 
-  // 排序
-  result.operatingIncome.items.sort((a, b) => a.code.localeCompare(b.code));
-  result.operatingExpense.items.sort((a, b) => a.code.localeCompare(b.code));
+  // 排序（使用不可变 .toSorted()）
+  result.operatingIncome.items = result.operatingIncome.items.toSorted((a, b) =>
+    a.code.localeCompare(b.code)
+  );
+  result.operatingExpense.items = result.operatingExpense.items.toSorted((a, b) =>
+    a.code.localeCompare(b.code)
+  );
 
   // 计算净利润
   result.netIncome = result.operatingIncome.total - result.operatingExpense.total;

@@ -268,13 +268,13 @@ export function matchWorkersForTask(
     });
   }
 
-  // 按综合评分降序排列
-  results.sort((a, b) => b.score - a.score);
+  // 按综合评分降序排列（使用不可变 .toSorted()，不修改 results 数组）
+  const sorted = results.toSorted((a, b) => b.score - a.score);
 
   logger.info('[Dispatch] 任务匹配完成', {
-    matchCount: results.length,
-    topScore: results[0]?.score,
+    matchCount: sorted.length,
+    topScore: sorted[0]?.score,
   });
 
-  return results;
+  return sorted;
 }

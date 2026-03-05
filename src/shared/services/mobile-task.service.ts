@@ -150,7 +150,7 @@ export const mobileTaskService = {
         address: t.address || '',
       })),
     ]
-      .sort((a, b) => {
+      .toSorted((a, b) => {
         const dateA = a.scheduledAt ? new Date(a.scheduledAt).getTime() : 0;
         const dateB = b.scheduledAt ? new Date(b.scheduledAt).getTime() : 0;
         return dateB - dateA; // 降序

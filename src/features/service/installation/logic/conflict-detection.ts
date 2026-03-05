@@ -136,7 +136,7 @@ export async function checkSchedulingConflict(
         const slot = parseTimeSlot(t.scheduledTimeSlot || '');
         return slot && slot.end <= currentSlot.start;
       })
-      .sort((a, b) => {
+      .toSorted((a, b) => {
         const slotA = parseTimeSlot(a.scheduledTimeSlot || '');
         const slotB = parseTimeSlot(b.scheduledTimeSlot || '');
         return (slotB?.end || 0) - (slotA?.end || 0);

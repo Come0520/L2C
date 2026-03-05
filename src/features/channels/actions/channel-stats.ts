@@ -443,7 +443,7 @@ export async function getChannelRanking(
   results.push(...resolvedStats);
 
   // 按带单总额排序 (Now sorting by the period-specific totalDealAmount)
-  results.sort((a, b) => b.totalDealAmount - a.totalDealAmount);
+  results = results.toSorted((a, b) => b.totalDealAmount - a.totalDealAmount);
 
   return results;
 }

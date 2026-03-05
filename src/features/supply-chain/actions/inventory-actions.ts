@@ -96,10 +96,20 @@ const adjustInventoryActionInternal = createSafeAction(
         }
 
         if (currentStock) {
-          await tx
+          const updateResult = await tx
             .update(inventory)
             .set({ quantity: newQty, updatedAt: new Date() })
-            .where(eq(inventory.id, currentStock.id));
+            .where(
+              and(
+                eq(inventory.id, currentStock.id),
+                sql`${inventory.quantity} + ${data.quantity} >= 0` // CAS 防超扣
+              )
+            )
+            .returning({ id: inventory.id });
+
+          if (updateResult.length === 0) {
+            throw new Error('并发扣减异常：库存数量不足以支持本次变动');
+          }
         } else {
           await tx.insert(inventory).values({
             tenantId: session.user.tenantId,
@@ -245,10 +255,20 @@ const transferInventoryActionInternal = createSafeAction(
           }
 
           const newSourceQty = sourceStock.quantity - item.quantity;
-          await tx
+          const updateSourceResult = await tx
             .update(inventory)
             .set({ quantity: newSourceQty, updatedAt: new Date() })
-            .where(eq(inventory.id, sourceStock.id));
+            .where(
+              and(
+                eq(inventory.id, sourceStock.id),
+                sql`${inventory.quantity} - ${item.quantity} >= 0` // CAS 防源仓库并发被击穿
+              )
+            )
+            .returning({ id: inventory.id });
+
+          if (updateSourceResult.length === 0) {
+            throw new Error('库存扣减失败，可能由库存不足或被并发篡改导致，调拨请求已中止');
+          }
 
           const product = await tx.query.products.findFirst({
             where: and(
@@ -495,7 +515,7 @@ const checkInventoryAlertsActionInternal = createSafeAction(
       }
     }
 
-    alerts.sort((a, b) => {
+    alerts = alerts.toSorted((a, b) => {
       const order = { CRITICAL: 0, WARNING: 1, OK: 2 };
       return order[a.level] - order[b.level];
     });

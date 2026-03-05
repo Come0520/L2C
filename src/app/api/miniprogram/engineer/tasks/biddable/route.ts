@@ -94,8 +94,8 @@ export const GET = withMiniprogramAuth(
         createdAt: task.createdAt,
       }));
 
-      // 聚合并按创建时间倒序返回前端
-      const results = [...formatMeasures, ...formatInstalls].sort((a, b) => {
+      // 聚合并按创建时间倒序返回前端（使用不可变 .toSorted()）
+      const results = [...formatMeasures, ...formatInstalls].toSorted((a, b) => {
         const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
         const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
         return timeB - timeA;

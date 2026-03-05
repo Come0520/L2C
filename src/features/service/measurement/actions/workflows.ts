@@ -258,8 +258,8 @@ export async function createNewMeasureVersion(taskId: string, type: 'ROUND' | 'V
     // 找到最大的 variant (这里假设是单字母 A-Z)
     const variants = existingSheets.map((s) => s.variant).filter(Boolean) as string[];
     if (variants.length > 0) {
-      variants.sort();
-      const lastVariant = variants[variants.length - 1];
+      const sortedVariants = variants.toSorted();
+      const lastVariant = sortedVariants[sortedVariants.length - 1];
       // 简单的字符递增逻辑: A -> B, B -> C
       const lastCharCode = lastVariant.charCodeAt(0);
       newVariant = String.fromCharCode(lastCharCode + 1);

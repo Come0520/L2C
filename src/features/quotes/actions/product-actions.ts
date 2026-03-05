@@ -104,7 +104,7 @@ export async function searchProducts(
     const recentSet = new Set(recentProductIds);
     const recentIndexMap = new Map(recentProductIds.map((id, idx) => [id, idx]));
 
-    results.sort((a, b) => {
+    results = results.toSorted((a, b) => {
       const aIsRecent = recentSet.has(a.id);
       const bIsRecent = recentSet.has(b.id);
 

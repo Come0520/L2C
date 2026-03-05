@@ -66,5 +66,5 @@ export function computeChannelAnalytics(
     };
   });
 
-  return results.sort((a, b) => b.totalDealAmount - a.totalDealAmount);
+  return results.toSorted((a, b) => b.totalDealAmount - a.totalDealAmount);
 }

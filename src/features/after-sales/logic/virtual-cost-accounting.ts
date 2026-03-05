@@ -131,7 +131,7 @@ export async function getVirtualCostSummary(params?: {
   const totalAmount = costs.reduce((sum, c) => sum + c.amount, 0);
 
   const trend = Object.entries(byMonth)
-    .sort(([a], [b]) => a.localeCompare(b))
+    .toSorted(([a], [b]) => a.localeCompare(b))
     .map(([month, amount]) => ({ month, amount }));
 
   return {

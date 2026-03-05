@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { Button } from '@/shared/ui/button';
@@ -17,6 +17,7 @@ import { UrlSyncedTabs } from '@/shared/ui/url-synced-tabs';
 import { DataTableToolbar } from '@/shared/ui/data-table-toolbar';
 import { DatePickerWithRange } from '@/shared/ui/date-range-picker';
 import { logger } from '@/shared/lib/logger';
+import { useServerActionQuery } from '@/shared/hooks/use-server-action-query';
 
 // Tab 配置：定义每个 Tab 对应的状态列表
 const QUOTE_TABS = [
@@ -86,43 +87,32 @@ export function QuoteList() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data: session } = useSession();
-  const [quotes, setQuotes] = useState<QuoteListItem[]>([]);
-  const [loading, setLoading] = useState(true);
   const activeTab = searchParams.get('status') || 'ALL';
   const [dialogOpen, setDialogOpen] = useState(false);
   const [creating, setCreating] = useState(false);
 
-  const lastLoadedTabRef = useRef<string | null>(null);
-
+  // 根据 tab 计算对应的状态过滤条件
   const getStatusesForTab = useCallback((tabValue: string): string[] => {
     const tab = QUOTE_TABS.find((t) => t.value === tabValue);
     return tab?.statuses ? [...tab.statuses] : [];
   }, []);
 
-  const loadQuotes = useCallback(async (statuses: string[], tabValue: string) => {
-    if (lastLoadedTabRef.current === tabValue) {
-      return;
+  // 使用 useServerActionQuery 替代手动的 useState+useEffect+loadQuotes
+  // activeTab 变化时 queryKey 变化，react-query 自动重新获取，无需手动管理 loading 状态
+  const statuses = getStatusesForTab(activeTab);
+  const {
+    data: quotesData,
+    isLoading: loading,
+    refetch,
+  } = useServerActionQuery(
+    ['quotes-list', activeTab],
+    () => getQuotes({ statuses: statuses.length > 0 ? statuses : undefined }),
+    {
+      staleTime: 30_000, // 30 秒内数据视为新鲜，避免无意义重新请求
     }
-    lastLoadedTabRef.current = tabValue;
+  );
 
-    setLoading(true);
-    try {
-      const { data } = await getQuotes({
-        statuses: statuses.length > 0 ? statuses : undefined,
-      });
-      setQuotes((data as QuoteListItem[]) || []);
-    } catch (error) {
-      logger.error(error);
-      toast.error('加载失败');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    const statuses = getStatusesForTab(activeTab);
-    loadQuotes(statuses, activeTab);
-  }, [activeTab, loadQuotes, getStatusesForTab]);
+  const quotes: QuoteListItem[] = (quotesData?.data as QuoteListItem[]) ?? [];
 
   /**
    * 点击新建报价按钮，打开客户选择弹窗
@@ -157,12 +147,11 @@ export function QuoteList() {
   const userId = session?.user?.id || '';
   const tenantId = session?.user?.tenantId || '';
 
+  // 手动刷新回调，交给 react-query 的 refetch 执行
   const handleRefresh = useCallback(() => {
-    lastLoadedTabRef.current = null;
-    const statuses = getStatusesForTab(activeTab);
-    loadQuotes(statuses, activeTab);
+    refetch();
     toast.success('已刷新');
-  }, [activeTab, loadQuotes, getStatusesForTab]);
+  }, [refetch]);
 
   return (
     <div className="flex h-full flex-col gap-4 p-4">

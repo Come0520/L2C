@@ -116,7 +116,7 @@ export function ProductTable({ data, onEdit, onToggleStatus, onDelete }: Product
             <TableHead className="text-right">操作</TableHead>
           </TableRow>
         </TableHeader>
-        <TableBody>
+        <TableBody className="content-visibility-auto">
           {data.length === 0 ? (
             <TableRow>
               <TableCell colSpan={8} className="h-24 text-center">

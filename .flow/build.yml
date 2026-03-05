@@ -1,0 +1,29 @@
+version: '2020-04-09'
+
+steps:
+  - name: build
+    type: build
+    step: nodejs
+    inputs:
+      node_version: 20
+      command: |
+        npm install -g pnpm@9
+        pnpm install --frozen-lockfile
+        pnpm run build
+        echo "====================================="
+        echo "检查 .next/standalone/server.js 存在性"
+        ls -la .next/standalone/server.js
+        echo "====================================="
+        echo "开始 Linux 环境云端打包 (规避 Windows 陷阱)"
+        tar -czf next-build.tar.gz .next/standalone .next/static public docker-compose.prod.yml Dockerfile.prebuilt
+        echo "打包完成，文件大小："
+        ls -lh next-build.tar.gz
+
+  - name: artifact
+    type: artifact
+    step: upload
+    inputs:
+      filePath: next-build.tar.gz
+      artifactName: l2c-build-package
+
+# 暂时只做构建和打包，不执行部署动作，方便相公先验证云端产物是否正确

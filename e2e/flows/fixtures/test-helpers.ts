@@ -338,12 +338,17 @@ export async function navigateToModule(
 
 /**
  * 点击 Tab 标签
+ * 注意：使用 domcontentloaded 而非 networkidle，避免 Next.js dev 模式
+ * 的 SSE/轮询连接导致 networkidle 永远无法触发（会造成 1.1min 超时）
  */
 export async function clickTab(page: Page, tabText: string): Promise<void> {
-    const tab = page.locator(`[role="tab"]:has-text("${tabText}")`);
-    if (await tab.isVisible({ timeout: 3000 })) {
+    const tab = page.locator(`[role="tab"]:has-text("${tabText}")`).first();
+    const isVisible = await tab.isVisible({ timeout: 3000 }).catch(() => false);
+    if (isVisible) {
         await tab.click();
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
+    } else {
+        console.log(`ℹ️ Tab "${tabText}" 不可见，跳过`);
     }
 }
 

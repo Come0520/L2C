@@ -34,12 +34,13 @@ export default defineConfig({
         video: 'retain-on-failure',
 
         /* Build 模式超时：standalone 无需 Turbopack 冷编译，响应稳定 */
-        actionTimeout: 15000,    // 单个操作超时 15s（build 模式响应快）
+        actionTimeout: 30000,    // 单个操作超时 30s（详情页 Next.js 路由需要时间）
         navigationTimeout: 30000, // 页面导航超时 30s（standalone 直接响应）
     },
 
-    /* 全局测试超时（build 模式无冷编译，大幅缩短）*/
-    timeout: 60000, // 每个测试最多 60s（build 模式稳定快速）
+    /* 全局测试超时：需覆盖 navigateToModule(~12s) + createLead(~12s) + 断言，
+     * lead-* 等需要创建数据的 spec 在 60s 内无法完成多步骤操作 */
+    timeout: 120000, // 每个测试最多 120s
 
     /* Configure projects for major browsers */
     projects: [

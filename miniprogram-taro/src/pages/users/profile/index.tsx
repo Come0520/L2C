@@ -27,6 +27,7 @@ interface MenuItem {
 const MENU_ITEMS: MenuItem[] = [
   // Worker 专属
   { icon: '💰', label: '收益结算', path: '/packageWorker/settlement/index', roles: ['worker'] },
+  { icon: '🗂️', label: '我的存储', path: '/packageWorker/storage-quota/index', roles: ['worker'] },
   // Customer 专属
   { icon: '📦', label: '我的订单', path: '/packageCustomer/order-track/index', roles: ['customer'] },
   { icon: '🔧', label: '报修服务', path: '/packageCustomer/after-sales/index', roles: ['customer'] },

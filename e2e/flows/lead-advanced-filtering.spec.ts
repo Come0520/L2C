@@ -12,8 +12,8 @@ test.describe('Lead Advanced Filtering', () => {
     });
 
     test('should filter leads by status tabs', async ({ page }) => {
-        // 测试各状态 Tab
-        const tabs = ['全部线索', '公海池', '待跟进', '我的跟进', '已成交', '已作废'];
+        // 测试各状态 Tab（名称需与 leads-filter-bar.tsx 中 LEAD_STATUS_TABS 一致）
+        const tabs = ['全部线索', '公海池', '待跟进', '我的跟进', '已成交', '无效'];
 
         for (const tabName of tabs) {
             await clickTab(page, tabName);
@@ -106,12 +106,12 @@ test.describe('Lead Advanced Filtering', () => {
     });
 
     test('should handle filter persistence across navigation', async ({ page }) => {
+        test.setTimeout(120000); // 120s 超时，覆盖 beforeEach 导航 + reload
         // 切换 Tab
         await clickTab(page, '待跟进');
 
         // 刷新页面
-        await page.reload();
-        await page.waitForLoadState('domcontentloaded');
+        await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 });
 
         // 验证 Tab 状态（可能通过 URL 保持）
         console.log('✅ 筛选持久化测试完成');

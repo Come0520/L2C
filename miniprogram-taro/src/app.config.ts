@@ -64,6 +64,7 @@ export default defineAppConfig({
                 'liability/index',        // 售后判责 - P3 待建
                 'customer-confirm/index', // 客户现场确认 - MIGRATED
                 'engineer/index',         // 工程师工作台 - MIGRATED
+                'storage-quota/index',    // 我的存储 - MIGRATED
                 // 'check-in/index',         // 打卡 - 已有骨架
                 // 'photo-upload/index',     // 拍照上传 - 已有骨架
             ],

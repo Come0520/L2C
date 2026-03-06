@@ -88,7 +88,7 @@ describe('WorkerMeasurePage - 量尺填报', () => {
         })
 
         // 3. Take photo
-        const photoBtn = screen.getByText('📸 拍素材')
+        const photoBtn = screen.getByText('📸 拍照')
         await act(async () => {
             fireEvent.click(photoBtn)
         })
@@ -119,4 +119,82 @@ describe('WorkerMeasurePage - 量尺填报', () => {
         }))
         expect(Taro.navigateBack).toHaveBeenCalled()
     })
+
+    // T3: 拍照按钮只选图片，且使用压缩模式
+    it('T3: 点击"拍照"时只选图片并启用压缩', async () => {
+        await renderAndLoad()
+
+        const photoBtn = screen.getByText('📸 拍照')
+        await act(async () => {
+            fireEvent.click(photoBtn)
+        })
+
+        expect(Taro.chooseMedia).toHaveBeenCalledWith(
+            expect.objectContaining({
+                mediaType: ['image'],
+                sizeType: ['compressed'],
+            })
+        )
+    })
+
+    // T4: 录像按钮只选视频，且 maxDuration 为 30
+    it('T4: 点击"录像"时只选视频且限制30秒', async () => {
+        await renderAndLoad()
+
+        const videoBtn = screen.getByText('🎬 录像')
+        await act(async () => {
+            fireEvent.click(videoBtn)
+        })
+
+        expect(Taro.chooseMedia).toHaveBeenCalledWith(
+            expect.objectContaining({
+                mediaType: ['video'],
+                maxDuration: 30,
+            })
+        )
+    })
+
+    // T5: 录像达到3段后，录像按钮消失
+    it('T5: 录像已达3段后录像按钮不可见', async () => {
+        // 模拟每次点击返回1个视频文件
+        ; (Taro.chooseMedia as jest.Mock).mockImplementation(({ success }) => {
+            success({ tempFiles: [{ tempFilePath: `mock_video_${Date.now()}.mp4` }] })
+        })
+
+        await renderAndLoad()
+
+        // 点击 3 次录像
+        for (let i = 0; i < 3; i++) {
+            const videoBtn = screen.getByText('🎬 录像')
+            await act(async () => {
+                fireEvent.click(videoBtn)
+            })
+        }
+
+        // 第4次：录像按钮应该消失
+        expect(screen.queryByText('🎬 录像')).toBeNull()
+    })
+
+    // T8: 有报价单（hasExistingQuote=true）时，未填备注不能提交
+    it('T8: hasExistingQuote=true 时，未填备注直接提交会弹出提示', async () => {
+        // 通过 taskId 携带 hasExistingQuote 标记（路由参数）
+        await renderAndLoad('task-with-quote')
+
+        // 先打卡
+        const checkInBtn = screen.getByText('实地打卡')
+        await act(async () => { fireEvent.click(checkInBtn) })
+        await act(async () => { await new Promise(r => setTimeout(r, 100)) })
+
+        // 不填备注，直接提交
+        const submitBtn = screen.getByText('一键回传系统报价单')
+        await act(async () => { fireEvent.click(submitBtn) })
+
+        // 应该弹出提示，而不是调用 submitMeasureData
+        expect(Taro.showToast).toHaveBeenCalledWith(
+            expect.objectContaining({ icon: 'none' })
+        )
+        expect(taskService.submitMeasureData).not.toHaveBeenCalled()
+    })
 })
+
+

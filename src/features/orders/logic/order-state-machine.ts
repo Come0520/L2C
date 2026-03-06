@@ -85,6 +85,7 @@ export class OrderStateMachine {
    * 是否可以取消
    */
   static canCancel(current: OrderStatus): boolean {
-    return current !== 'COMPLETED' && current !== 'CANCELLED';
+    // PAUSED 是已废弃的终态（保留在枚举中用于历史数据兼容），同 COMPLETED / CANCELLED 一样不可再取消
+    return current !== 'COMPLETED' && current !== 'CANCELLED' && current !== 'PAUSED';
   }
 }

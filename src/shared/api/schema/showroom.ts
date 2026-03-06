@@ -79,6 +79,7 @@ export const showroomShares = pgTable(
     itemsSnapshot: jsonb('items_snapshot').default([]).notNull(),
 
     allowCustomerShare: integer('allow_customer_share').default(0).notNull(), // 1=Allowed, 0=Not Allowed
+    lockedToUserId: varchar('locked_to_user_id', { length: 255 }), // 首次打开者的系统 userId，用于身份锁定
 
     isActive: integer('is_active').default(1), // 1=Active, 0=Inactive
     expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
@@ -122,5 +123,46 @@ export const showroomSharesRelations = relations(showroomShares, ({ one }) => ({
   customer: one(customers, {
     fields: [showroomShares.customerId],
     references: [customers.id],
+  }),
+}));
+
+// 展厅浏览明细表（客户停留时间上报）
+export const showroomViewLogs = pgTable(
+  'showroom_view_logs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tenantId: uuid('tenant_id')
+      .references(() => tenants.id)
+      .notNull(),
+    shareId: uuid('share_id')
+      .references(() => showroomShares.id)
+      .notNull(),
+    itemId: uuid('item_id')
+      .references(() => showroomItems.id)
+      .notNull(),
+    visitorUserId: uuid('visitor_user_id').references(() => users.id), // 访客系统 ID
+    durationSeconds: integer('duration_seconds').default(0).notNull(), // 停留秒数
+    viewedAt: timestamp('viewed_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    viewLogShareIdx: index('idx_showroom_view_logs_share').on(table.shareId),
+    viewLogItemIdx: index('idx_showroom_view_logs_item').on(table.itemId),
+    viewLogVisitorIdx: index('idx_showroom_view_logs_visitor').on(table.visitorUserId),
+    viewLogTenantIdx: index('idx_showroom_view_logs_tenant').on(table.tenantId),
+  })
+);
+
+export const showroomViewLogsRelations = relations(showroomViewLogs, ({ one }) => ({
+  share: one(showroomShares, {
+    fields: [showroomViewLogs.shareId],
+    references: [showroomShares.id],
+  }),
+  item: one(showroomItems, {
+    fields: [showroomViewLogs.itemId],
+    references: [showroomItems.id],
+  }),
+  visitor: one(users, {
+    fields: [showroomViewLogs.visitorUserId],
+    references: [users.id],
   }),
 }));

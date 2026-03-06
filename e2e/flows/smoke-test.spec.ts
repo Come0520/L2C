@@ -28,16 +28,16 @@ test.describe('L2C 系统烟雾测试', () => {
     for (const module of coreModules) {
         test(`验证核心模块: ${module.name}`, async ({ page }) => {
             console.log(`正在检查模块: ${module.name} (${module.path})...`);
-            // Turbopack 首次编译冷启动可能较慢，使用 120s 超时。
-            // waitUntil: 'domcontentloaded' 兼容所有浏览器（commit 在 Firefox 下不等待内容渲染）
-            const success = await safeGoto(page, module.path, { timeout: 120000, waitUntil: 'domcontentloaded' });
+            // Build 模式（standalone）无冷编译延迟，30s 超时绰绰有余。
+            // waitUntil: 'domcontentloaded' 兼容所有浏览器（commit 在 Firefox 下不等内容渲染）
+            const success = await safeGoto(page, module.path, { timeout: 30000, waitUntil: 'domcontentloaded' });
             if (success) {
-                // 检查页面内容以防白屏，允许最多45秒加载（等待 Server Actions 完成渲染）
-                await expect(page.locator('body')).not.toBeEmpty({ timeout: 45000 });
+                // 检查页面内容以防白屏，build 模式响应稳定，15s 超时即可
+                await expect(page.locator('body')).not.toBeEmpty({ timeout: 15000 });
                 await expect(page).not.toHaveURL(/.*login/);
 
-                // 验证页面包含基本模块标识（Playwright自带自动等待）
-                await expect(page.locator('body')).toContainText(module.expectedText, { timeout: 45000 });
+                // 验证页面包含基本模块标识
+                await expect(page.locator('body')).toContainText(module.expectedText, { timeout: 15000 });
 
                 console.log(`✅ ${module.name} 加载成功`);
             }
@@ -58,7 +58,7 @@ test.describe('L2C 系统烟雾测试', () => {
             test(`验证设置页: ${pageInfo.name}`, async ({ page }) => {
                 const success = await safeGoto(page, pageInfo.path);
                 if (success) {
-                    await expect(page.locator('body')).toContainText(pageInfo.expectedText, { timeout: 30000 });
+                    await expect(page.locator('body')).toContainText(pageInfo.expectedText, { timeout: 15000 });
                     console.log(`✅ 设置页 [${pageInfo.name}] 加载成功`);
                 }
             });

@@ -3,6 +3,7 @@
 import { z } from 'zod';
 import { db } from '@/shared/api/db';
 import { showroomShares, showroomItems } from '@/shared/api/schema/showroom';
+import { notifications } from '@/shared/api/schema/notifications';
 import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import { auth } from '@/shared/lib/auth';
 import { createShareLinkSchema, deactivateShareSchema, getShareContentSchema } from './schema';
@@ -11,7 +12,7 @@ import { AuditService } from '@/shared/services/audit-service';
 import { redis } from '@/shared/lib/redis';
 import { checkRateLimit } from '@/shared/middleware/rate-limit';
 import { headers } from 'next/headers';
-import { } from 'next/cache';
+import {} from 'next/cache';
 import { ShowroomShareItemSnapshot } from '../types';
 import { ShowroomError, ShowroomErrors } from '../errors';
 import { createLogger } from '@/shared/lib/logger';
@@ -31,7 +32,8 @@ export async function createShareLink(input: z.input<typeof createShareLinkSchem
   const session = await auth();
   if (!session?.user?.tenantId) throw new ShowroomError(ShowroomErrors.UNAUTHORIZED);
 
-  const { items, expiresInDays, password, maxViews, allowCustomerShare } = createShareLinkSchema.parse(input);
+  const { items, expiresInDays, password, maxViews, allowCustomerShare } =
+    createShareLinkSchema.parse(input);
 
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + expiresInDays);
@@ -59,10 +61,14 @@ export async function createShareLink(input: z.input<typeof createShareLinkSchem
       action: 'CREATE',
       userId: session.user.id,
       tenantId: session.user.tenantId,
-      newValues: { items, expiresInDays, expiresAt, hasPassword: !!password, maxViews, allowCustomerShare } as Record<
-        string,
-        unknown
-      >,
+      newValues: {
+        items,
+        expiresInDays,
+        expiresAt,
+        hasPassword: !!password,
+        maxViews,
+        allowCustomerShare,
+      } as Record<string, unknown>,
     });
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
@@ -92,7 +98,7 @@ export async function createShareLink(input: z.input<typeof createShareLinkSchem
  * @throws 403/404/429 对应错误
  */
 export async function getShareContent(input: z.input<typeof getShareContentSchema>) {
-  const { shareId, password } = getShareContentSchema.parse(input);
+  const { shareId, password, visitorUserId } = getShareContentSchema.parse(input);
   // 1. 公开限流检查
   const clientHeaders = await headers();
   const ip = clientHeaders.get('x-forwarded-for') || 'anonymous';
@@ -133,6 +139,26 @@ export async function getShareContent(input: z.input<typeof getShareContentSchem
     const inputHash = createHash('sha256').update(password).digest('hex');
     if (inputHash !== share.passwordHash) {
       throw new ShowroomError(ShowroomErrors.INVALID_PASSWORD);
+    }
+  }
+
+  // 身份锁定检查：allowCustomerShare=0 时锁定首个访客
+  if (share.allowCustomerShare === 0 && visitorUserId) {
+    if (!share.lockedToUserId) {
+      // 首次访问：绑定当前用户
+      await db
+        .update(showroomShares)
+        .set({ lockedToUserId: visitorUserId })
+        .where(eq(showroomShares.id, shareId));
+      logger.info('展厅分享身份锁定成功', { shareId, visitorUserId });
+    } else if (share.lockedToUserId !== visitorUserId) {
+      // 非绑定用户：拒绝访问
+      logger.warn('展厅分享身份验证失败，非绑定用户', {
+        shareId,
+        visitorUserId,
+        lockedTo: share.lockedToUserId,
+      });
+      throw new ShowroomError(ShowroomErrors.SHARE_LOCKED);
     }
   }
 
@@ -181,6 +207,30 @@ export async function getShareContent(input: z.input<typeof getShareContentSchem
     });
 
     logger.info('获取展厅共享内容成功', { shareId });
+
+    // 浏览通知：30 分钟冷却去重，向销售发送应用内通知
+    if (redis && visitorUserId) {
+      const notifCdKey = `showroom:notify:cd:${shareId}:${visitorUserId}`;
+      try {
+        const hasNotified = await redis.get(notifCdKey);
+        if (!hasNotified) {
+          await db.insert(notifications).values({
+            tenantId: share.tenantId,
+            userId: share.salesId,
+            title: '客户访问了您的展厅分享',
+            content: `客户正在浏览您的展厅分享内容（分享ID: ${shareId}）`,
+            type: 'SYSTEM',
+            channel: 'IN_APP',
+            metadata: { shareId, visitorUserId },
+          });
+          await redis.setex(notifCdKey, 1800, '1'); // 30 分钟冷却
+          logger.info('展厅浏览通知已发送', { shareId, salesId: share.salesId });
+        }
+      } catch (notifErr) {
+        // 通知失败不影响内容返回
+        logger.warn('展厅浏览通知发送失败（不影响内容访问）', { error: notifErr, shareId });
+      }
+    }
 
     return {
       expired: false,

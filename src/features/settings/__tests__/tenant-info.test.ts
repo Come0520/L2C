@@ -16,8 +16,7 @@ const mocks = vi.hoisted(() => ({
   dbFindFirst: vi.fn(),
   logAudit: vi.fn(),
   revalidatePath: vi.fn(),
-  mkdir: vi.fn(),
-  writeFile: vi.fn(),
+  fileServiceUpload: vi.fn(),
 }));
 
 // Mock next-auth
@@ -38,13 +37,10 @@ vi.mock('@/shared/services/audit-service', () => ({
   AuditService: { log: mocks.logAudit },
 }));
 
-// Mock fs/promises
-vi.mock('fs/promises', () => ({
-  mkdir: mocks.mkdir,
-  writeFile: mocks.writeFile,
-  default: {
-    mkdir: mocks.mkdir,
-    writeFile: mocks.writeFile,
+// Mock file service（OSS 上传服务）
+vi.mock('@/shared/services/file-service', () => ({
+  fileService: {
+    uploadFile: (...args: unknown[]) => mocks.fileServiceUpload(...args),
   },
 }));
 
@@ -92,6 +88,11 @@ describe('Tenant Info Actions', () => {
     vi.clearAllMocks();
     mocks.auth.mockResolvedValue(mockSession);
     mocks.checkPermission.mockResolvedValue(undefined);
+    // 默认 fileService 返回上传成功
+    mocks.fileServiceUpload.mockResolvedValue({
+      success: true,
+      url: '/uploads/logos/test-logo.png',
+    });
   });
 
   describe('getTenantInfo', () => {
@@ -222,6 +223,12 @@ describe('Tenant Info Actions', () => {
 
   describe('uploadTenantLogo', () => {
     it('should upload logo successfully', async () => {
+      // 设置 OSS 上传返回成功，带有 logo URL
+      mocks.fileServiceUpload.mockResolvedValue({
+        success: true,
+        url: '/uploads/logos/tenant-123-123456.png',
+      });
+
       const formData = new FormData();
       const file = new File(['dummy content'], 'logo.png', { type: 'image/png' });
       file.arrayBuffer = vi.fn().mockResolvedValue(new ArrayBuffer(8));
@@ -231,8 +238,7 @@ describe('Tenant Info Actions', () => {
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.logoUrl).toContain('/uploads/logos/');
-        expect(mocks.mkdir).toHaveBeenCalled();
-        expect(mocks.writeFile).toHaveBeenCalled();
+        expect(mocks.fileServiceUpload).toHaveBeenCalled();
       }
     });
 
@@ -293,6 +299,12 @@ describe('Tenant Info Actions', () => {
 
   describe('uploadBusinessLicense', () => {
     it('should upload license successfully', async () => {
+      // 设置 OSS 上传返回成功，带有 license URL
+      mocks.fileServiceUpload.mockResolvedValue({
+        success: true,
+        url: '/uploads/licenses/license_tenant-123_123456.pdf',
+      });
+
       const formData = new FormData();
       const file = new File(['dummy content'], 'lic.pdf', { type: 'application/pdf' });
       file.arrayBuffer = vi.fn().mockResolvedValue(new ArrayBuffer(8));
@@ -302,8 +314,7 @@ describe('Tenant Info Actions', () => {
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.licenseUrl).toContain('/uploads/licenses/');
-        expect(mocks.mkdir).toHaveBeenCalled();
-        expect(mocks.writeFile).toHaveBeenCalled();
+        expect(mocks.fileServiceUpload).toHaveBeenCalled();
       }
     });
 

@@ -19,7 +19,16 @@ import { AuditService } from '@/shared/services/audit-service';
  * - signIn: 服务端/客户端登录函数
  * - signOut: 服务端/客户端注销函数
  */
+/**
+ * 根据 AUTH_URL 协议自动判断是否启用 secure cookie
+ * 在 production + HTTP（如 E2E 测试 localhost）下必须禁用，否则浏览器拒绝存储 __Secure- 前缀的 cookie
+ */
+const authUrl = process.env.AUTH_URL || process.env.NEXTAUTH_URL || '';
+const useSecureCookies = authUrl.startsWith('https://');
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  trustHost: true,
+  useSecureCookies,
   providers: [
     Credentials({
       credentials: {
@@ -291,10 +300,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return token;
     },
   },
-  // 信任反向代理头 (X-Forwarded-Proto, X-Forwarded-Host)
-  // 生产环境使用 nginx 反代 + Docker，必须启用此选项
-  // 否则 Auth.js 的 CSRF 校验会因协议不匹配而失败，导致 session 异常
-  trustHost: true,
   // secret: process.env.AUTH_SECRET, // 通常由 AUTH_SECRET 环境变量自动检测
 });
 

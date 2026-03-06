@@ -33,13 +33,13 @@ export default defineConfig({
         trace: 'on-first-retry',
         video: 'retain-on-failure',
 
-        /* 增加超时配置以提高测试稳定性 */
-        actionTimeout: 30000, // 单个操作超时提升至 30s
-        navigationTimeout: 60000, // 页面导航超时提升至 60s（SSR + 数据库查询较慢）
+        /* Build 模式超时：standalone 无需 Turbopack 冷编译，响应稳定 */
+        actionTimeout: 15000,    // 单个操作超时 15s（build 模式响应快）
+        navigationTimeout: 30000, // 页面导航超时 30s（standalone 直接响应）
     },
 
-    /* 全局测试超时 */
-    timeout: 120000, // 每个测试最多 120s
+    /* 全局测试超时（build 模式无冷编译，大幅缩短）*/
+    timeout: 60000, // 每个测试最多 60s（build 模式稳定快速）
 
     /* Configure projects for major browsers */
     projects: [
@@ -98,8 +98,12 @@ export default defineConfig({
     webServer: {
         command: 'node scripts/start-e2e-server.mjs',
         port: 3004,
-        reuseExistingServer: !process.env.CI,
-        timeout: 300 * 1000,
+        // reuseExistingServer 规则：
+        // - REUSE_SERVER=1（并行子批次模式）：强制复用已有服务器，不再尝试启动新的
+        // - CI=1（真实 CI 环境）：不复用，确保每次 CI run 都启动全新服务器
+        // - 本地默认（无环境变量）：复用，方便本地多次运行不重启服务器
+        reuseExistingServer: process.env.REUSE_SERVER === '1' ? true : !process.env.CI,
+        timeout: 120 * 1000, // standalone 启动只需 2-5s，120s 绰绰有余
         stdout: 'pipe',
     },
 });

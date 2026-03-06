@@ -23,6 +23,10 @@ export const ShowroomErrors = {
     code: 'SHOWROOM_1206',
     message: '分享访问次数已达到上限，阅后即焚已启动',
   },
+  SHARE_LOCKED: {
+    code: 'SHOWROOM_1207',
+    message: '该链接仅限指定客户访问',
+  },
 } as const;
 
 export type ShowroomErrorCode = (typeof ShowroomErrors)[keyof typeof ShowroomErrors]['code'];

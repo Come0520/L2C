@@ -61,6 +61,7 @@ export const createShareLinkSchema = z.object({
 export const getShareContentSchema = z.object({
   shareId: z.string().uuid().describe('分享记录 ID'),
   password: z.string().optional().describe('提取码参数'),
+  visitorUserId: z.string().uuid().optional().describe('访客系统用户 ID（用于身份锁定）'),
 });
 
 /** 停用分享链接参数 */

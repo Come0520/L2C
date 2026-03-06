@@ -17,9 +17,11 @@ export async function createLead(
     } = {}
 ): Promise<string> {
     const timestamp = Date.now();
+    // 引入随机数后缀，确保毫秒级连续调用时手机号唯一（防 DUPLICATE 拦截）
+    const randomSuffix = Math.floor(Math.random() * 90000000 + 10000000).toString();
     const {
         name = `测试客户_${timestamp}`,
-        phone = `138${timestamp.toString().slice(-8)}`,
+        phone = `138${randomSuffix}`,
         intention = '高'
     } = options;
 

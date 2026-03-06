@@ -72,8 +72,10 @@ function createForbiddenResponse(message: string): NextResponse {
  * @param request - 原始请求
  */
 function getSecureTokenOptions(request: NextRequest) {
+  // 与 src/shared/lib/auth.ts 中保持一致：优先判断 AUTH_URL / NEXTAUTH_URL 协议
+  const authUrl = process.env.AUTH_URL || process.env.NEXTAUTH_URL || '';
   const isSecure =
-    process.env.NODE_ENV === 'production' ||
+    authUrl.startsWith('https://') ||
     request.url.startsWith('https://') ||
     request.headers.get('x-forwarded-proto') === 'https';
 

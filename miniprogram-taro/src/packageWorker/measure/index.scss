@@ -1,4 +1,4 @@
-@use '../../styles/variables' as *;
+﻿@use '../../styles/variables' as *;
 
 .worker-measure-page {
     background-color: $bg-base;
@@ -303,4 +303,47 @@
             }
         }
     }
+
+    // ── 存储配额进度条
+    .storage-bar {
+        padding: 12rpx 32rpx 16rpx;
+        background-color: #fff;
+        border-bottom: 1px solid #e5e5ea;
+
+        .storage-info-row {
+            display: flex; align-items: center; gap: 12rpx; margin-bottom: 8rpx;
+            .storage-label { font-size: 22rpx; color: #8e8e93; flex: 1; }
+            .storage-text  { font-size: 22rpx; color: #8e8e93; }
+            .storage-percent { font-size: 22rpx; color: #34c759; font-weight: 600;
+                &.danger { color: #ff3b30; } }
+        }
+        .storage-track {
+            height: 6rpx; background-color: #f2f2f7; border-radius: 100px; overflow: hidden;
+            .storage-fill { height: 100%; background-color: #34c759; border-radius: 100px; transition: width 0.5s;
+                &.warn { background-color: #ff9500; } &.danger { background-color: #ff3b30; } }
+        }
+    }
+
+    // ── 上传状态提示
+    .upload-status-bar {
+        padding: 10rpx 32rpx; background-color: rgba(0,113,227,0.04); border-bottom: 1px solid #e5e5ea;
+        .upload-hint { font-size: 22rpx; display: block;
+            &.syncing { color: #0071e3; } &.success { color: #34c759; } &.fail { color: #ff3b30; } }
+        .upload-failed-row { display: flex; align-items: center; gap: 12rpx;
+            .retry-btn { font-size: 22rpx; color: #0071e3; text-decoration: underline; font-weight: 600; } }
+    }
+
+    // ── 录音区
+    .audio-section {
+        margin-top: 24rpx; padding-top: 24rpx; border-top: 1px dashed #e5e5ea;
+        .section-title-small { font-size: 28rpx; font-weight: 600; color: #1c1c1e; display: block; margin-bottom: 16rpx; }
+        .audio-btn { background-color: #f8f8f8; color: #1c1c1e; border-radius: 100px; height: 72rpx;
+            font-size: 28rpx; font-weight: 500; margin: 0;
+            &::after { border: none; }
+            &.recording { background-color: rgba(255,59,48,0.1); color: #ff3b30; animation: pulse 1.2s ease-in-out infinite; }
+        }
+        .audio-done { font-size: 22rpx; color: #34c759; display: block; margin-top: 8rpx; }
+    }
 }
+
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }

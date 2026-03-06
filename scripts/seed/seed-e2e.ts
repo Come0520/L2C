@@ -1,4 +1,10 @@
-import 'dotenv/config'; // Add this to load .env / .env.local
+// 强制加载 .env.test 确保连接到测试数据库（l2c_test @ 127.0.0.1:5434）
+// 不使用 dotenv/config（会加载 .env 即开发 DB），避免操作错误的数据库
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.resolve(__dirname, '../../.env.test'), override: true });
 import { db } from '../../src/shared/api/db';
 import { tenants, users, tenantMembers } from '../../src/shared/api/schema';
 import { eq } from 'drizzle-orm';
@@ -52,7 +58,10 @@ async function seed() {
                     passwordHash,
                     role: 'ADMIN',
                     isActive: true,
-                    isPlatformAdmin: true,
+                    // 注意：E2E 账号必须是普通租户管理员（非平台超管）
+                    // 若设为 isPlatformAdmin: true，auth.ts 会将 tenantId 设为 '__PLATFORM__'（非法 UUID）
+                    // 导致所有业务 DB 查询触发 PostgreSQL 22P02 错误
+                    isPlatformAdmin: false,
                     lastActiveTenantId: tenant.id,
                 })
                 .returning();
@@ -60,9 +69,9 @@ async function seed() {
             console.log(`    Created new user: ${user.id}`);
         } else {
             console.log(`    Found existing user: ${user.id}`);
-            // Ensure the E2E user password is correct just in case it was messed up
+            // 确保 E2E 账号密码正确，并强制设置为非平台超管
             const passwordHash = await bcrypt.hash(E2E_PASSWORD, 10);
-            await db.update(users).set({ passwordHash, tenantId: tenant.id, role: 'ADMIN', isPlatformAdmin: true }).where(eq(users.id, user.id));
+            await db.update(users).set({ passwordHash, tenantId: tenant.id, role: 'ADMIN', isPlatformAdmin: false }).where(eq(users.id, user.id));
         }
 
         // 3. 关联或更新租户成员关系

@@ -69,5 +69,100 @@ describe('OrderStateMachine', () => {
       expect(OrderStateMachine.canCancel('COMPLETED')).toBe(false);
       expect(OrderStateMachine.canCancel('CANCELLED')).toBe(false);
     });
+
+    it('PAUSED（废弃终态）应不可取消', () => {
+      // PAUSED 是废弃状态，仍保留在枚举中，但逻辑上是终态
+      expect(OrderStateMachine.canCancel('PAUSED')).toBe(false);
+    });
+
+    it('HALTED 叫停状态应允许取消', () => {
+      expect(OrderStateMachine.canCancel('HALTED')).toBe(true);
+    });
+
+    it('PENDING_APPROVAL 审批中状态应允许取消', () => {
+      expect(OrderStateMachine.canCancel('PENDING_APPROVAL')).toBe(true);
+    });
+  });
+
+  describe('validateTransition — 边缘场景', () => {
+    it('PAUSED（废弃终态）不能流转到任何状态', () => {
+      expect(OrderStateMachine.validateTransition('PAUSED', 'DRAFT')).toBe(false);
+      expect(OrderStateMachine.validateTransition('PAUSED', 'IN_PRODUCTION')).toBe(false);
+      expect(OrderStateMachine.validateTransition('PAUSED', 'CANCELLED')).toBe(false);
+    });
+
+    it('PAUSED 自转换（同态）应允许（保持不变）', () => {
+      expect(OrderStateMachine.validateTransition('PAUSED', 'PAUSED')).toBe(true);
+    });
+
+    it('PENDING_APPROVAL 审批通过后可进入生产', () => {
+      expect(OrderStateMachine.validateTransition('PENDING_APPROVAL', 'PENDING_PRODUCTION')).toBe(
+        true
+      );
+    });
+
+    it('PENDING_APPROVAL 可以取消', () => {
+      expect(OrderStateMachine.validateTransition('PENDING_APPROVAL', 'CANCELLED')).toBe(true);
+    });
+
+    it('PENDING_APPROVAL 不可跳转到完成', () => {
+      expect(OrderStateMachine.validateTransition('PENDING_APPROVAL', 'COMPLETED')).toBe(false);
+    });
+
+    it('INSTALLATION_REJECTED 可重新进入安装环节', () => {
+      expect(OrderStateMachine.validateTransition('INSTALLATION_REJECTED', 'PENDING_INSTALL')).toBe(
+        true
+      );
+    });
+
+    it('INSTALLATION_REJECTED 不可直接完成', () => {
+      expect(OrderStateMachine.validateTransition('INSTALLATION_REJECTED', 'COMPLETED')).toBe(
+        false
+      );
+    });
+
+    it('QUOTED 可退回草稿（客户要求重新报价）', () => {
+      expect(OrderStateMachine.validateTransition('QUOTED', 'DRAFT')).toBe(true);
+    });
+
+    it('SIGNED 不可退回到报价阶段', () => {
+      expect(OrderStateMachine.validateTransition('SIGNED', 'QUOTED')).toBe(false);
+    });
+  });
+
+  describe('getAutoTransition()', () => {
+    it('INSTALLATION_COMPLETED 可自动流转到 COMPLETED（T+N 策略）', () => {
+      expect(OrderStateMachine.getAutoTransition('INSTALLATION_COMPLETED')).toBe('COMPLETED');
+    });
+
+    it('PENDING_DELIVERY 无自动流转（需人工操作）', () => {
+      expect(OrderStateMachine.getAutoTransition('PENDING_DELIVERY')).toBeNull();
+    });
+
+    it('其他普通状态无自动流转', () => {
+      expect(OrderStateMachine.getAutoTransition('DRAFT')).toBeNull();
+      expect(OrderStateMachine.getAutoTransition('SIGNED')).toBeNull();
+      expect(OrderStateMachine.getAutoTransition('IN_PRODUCTION')).toBeNull();
+      expect(OrderStateMachine.getAutoTransition('HALTED')).toBeNull();
+      expect(OrderStateMachine.getAutoTransition('CANCELLED')).toBeNull();
+    });
+  });
+
+  describe('getNextStates — 边缘场景', () => {
+    it('PENDING_APPROVAL 的合法后续状态', () => {
+      const next = OrderStateMachine.getNextStates('PENDING_APPROVAL');
+      expect(next).toContain('PENDING_PRODUCTION');
+      expect(next).toContain('CANCELLED');
+      expect(next).not.toContain('COMPLETED');
+    });
+
+    it('INSTALLATION_REJECTED 可重返安装', () => {
+      const next = OrderStateMachine.getNextStates('INSTALLATION_REJECTED');
+      expect(next).toContain('PENDING_INSTALL');
+    });
+
+    it('PAUSED 为空（废弃终态）', () => {
+      expect(OrderStateMachine.getNextStates('PAUSED')).toEqual([]);
+    });
   });
 });

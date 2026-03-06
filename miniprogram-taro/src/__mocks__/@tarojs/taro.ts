@@ -36,12 +36,30 @@ const showModal = jest.fn(() => Promise.resolve({ confirm: true, cancel: false }
 const chooseMedia = jest.fn(() => Promise.resolve({ tempFiles: [] }))
 const uploadFile = jest.fn(() => Promise.resolve({ statusCode: 200, data: '{}' }))
 
+// ---------- 录音 API ----------
+const mockRecorderManager = {
+    start: jest.fn(),
+    stop: jest.fn(),
+    pause: jest.fn(),
+    resume: jest.fn(),
+    onStart: jest.fn(),
+    onStop: jest.fn(),
+    onError: jest.fn(),
+    onPause: jest.fn(),
+}
+const getRecorderManager = jest.fn(() => mockRecorderManager)
+/** 获取内部 mock RecorderManager，供测试中覆盖行为 */
+export function __getMockRecorderManager() {
+    return mockRecorderManager
+}
+
 // ---------- 分享 API ----------
 const shareAppMessage = jest.fn(() => Promise.resolve())
 const showActionSheet = jest.fn(() => Promise.resolve({ tapIndex: 0 }))
 
 // ---------- 网络请求 API ----------
 const request = jest.fn(() => Promise.resolve({ statusCode: 200, data: {} }))
+const getNetworkType = jest.fn(() => Promise.resolve({ networkType: 'wifi' }))
 
 // ---------- 微信登录 API ----------
 const login = jest.fn(() => Promise.resolve({ code: 'mock_wx_code' }))
@@ -83,6 +101,7 @@ const Taro = {
     hideLoading,
     showModal,
     request,
+    getNetworkType,
     login,
     getCurrentPages,
     getSystemInfoSync,
@@ -96,6 +115,7 @@ const Taro = {
     uploadFile,
     shareAppMessage,
     showActionSheet,
+    getRecorderManager,
 }
 
 export {
@@ -127,6 +147,8 @@ export {
     uploadFile,
     shareAppMessage,
     showActionSheet,
+    getRecorderManager,
+    getNetworkType,
 }
 
 export default Taro

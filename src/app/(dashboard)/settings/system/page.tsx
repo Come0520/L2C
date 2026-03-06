@@ -1,8 +1,9 @@
-import dynamic from 'next/dynamic';
+export const dynamic = 'force-dynamic';
+import nextDynamic from 'next/dynamic';
 import { Skeleton } from '@/shared/ui/skeleton';
 
 /** 懒加载：系统设置面板（含 8 类配置） */
-const SystemSettingsPanel = dynamic(
+const SystemSettingsPanel = nextDynamic(
   () =>
     import('@/features/settings/components/system-settings-panel').then(
       (m) => m.SystemSettingsPanel
@@ -33,3 +34,4 @@ export default function SystemParamsPage() {
     </div>
   );
 }
+

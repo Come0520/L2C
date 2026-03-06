@@ -60,9 +60,9 @@ const ProductTableRow = React.memo(function ProductTableRow({
       <TableCell>
         <Badge variant="outline">{getCategoryLabel(item.category)}</Badge>
       </TableCell>
-      <TableCell>¥{item.purchasePrice}</TableCell>
-      <TableCell>¥{item.retailPrice}</TableCell>
-      <TableCell>¥{item.floorPrice}</TableCell>
+      <TableCell className="text-right">¥{item.purchasePrice}</TableCell>
+      <TableCell className="text-right">¥{item.retailPrice}</TableCell>
+      <TableCell className="text-right">¥{item.floorPrice}</TableCell>
       <TableCell>
         <Badge variant={item.isActive ? 'success' : 'secondary'}>
           {item.isActive ? '上架中' : '已下架'}
@@ -109,9 +109,9 @@ export function ProductTable({ data, onEdit, onToggleStatus, onDelete }: Product
             <TableHead>产品名称</TableHead>
             <TableHead>SKU</TableHead>
             <TableHead>品类</TableHead>
-            <TableHead>采购价</TableHead>
-            <TableHead>零售价</TableHead>
-            <TableHead>最低售价</TableHead>
+            <TableHead className="text-right">采购价</TableHead>
+            <TableHead className="text-right">零售价</TableHead>
+            <TableHead className="text-right">最低售价</TableHead>
             <TableHead>状态</TableHead>
             <TableHead className="text-right">操作</TableHead>
           </TableRow>

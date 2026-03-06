@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { DashboardPageHeader } from '@/shared/ui/dashboard-page-header';
 import { getTenantBusinessConfig } from '@/features/settings/actions/tenant-config';
 import { ARConfigForm } from './ar-config-form';
@@ -17,3 +18,4 @@ export default async function ARConfigPage() {
     </div>
   );
 }
+

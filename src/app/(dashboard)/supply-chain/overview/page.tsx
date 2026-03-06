@@ -11,6 +11,14 @@ export default async function OverviewPage() {
   await checkPermission(session, PERMISSIONS.SUPPLY_CHAIN.PO_MANAGE);
 
   // Fetch all DRAFT POs for this tenant
+  if (session.user.tenantId === '__PLATFORM__') {
+    return (
+      <div className="container mx-auto max-w-5xl py-6">
+        <ProcurementDashboard draftPos={[]} />
+      </div>
+    );
+  }
+
   const drafts = await db.query.purchaseOrders.findMany({
     where: and(
       eq(purchaseOrders.tenantId, session.user.tenantId),

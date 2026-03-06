@@ -25,6 +25,11 @@ export async function getFinanceConfig() {
   if (!(await checkPermission(session, PERMISSIONS.FINANCE.AR_VIEW)))
     throw new Error('权限不足：需要财务查看权限');
 
+  const tenantId = session.user.tenantId;
+  if (tenantId === '__PLATFORM__') {
+    return {};
+  }
+
   const getCachedConfig = unstable_cache(
     async () => {
       const configs = await db.query.financeConfigs.findMany({
@@ -133,6 +138,11 @@ export async function getFinanceAccounts() {
   // 权限检查：查看财务账户
   if (!(await checkPermission(session, PERMISSIONS.FINANCE.AR_VIEW)))
     throw new Error('权限不足：需要财务查看权限');
+
+  const tenantId = session.user.tenantId;
+  if (tenantId === '__PLATFORM__') {
+    return [];
+  }
 
   const getCachedAccounts = unstable_cache(
     async () => {

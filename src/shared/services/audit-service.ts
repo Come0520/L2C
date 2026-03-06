@@ -29,6 +29,8 @@ export class AuditService {
     }
   ) {
     try {
+      // __PLATFORM__ 不是合法 UUID，跳过审计日志写入
+      if (params.tenantId === '__PLATFORM__') return;
       let tenantId = params.tenantId;
       let traceId = params.traceId;
       let userAgent = params.userAgent;

@@ -45,6 +45,7 @@ const getLeaderboardAction = createSafeAction(leaderboardSchema, async (params, 
 
   return unstable_cache(
     async () => {
+      if (tenantId === '__PLATFORM__') return [];
       logger.info('获取销售排名开始 (Starting getLeaderboard)', { tenantId, params });
       try {
         const leaderboard = await db

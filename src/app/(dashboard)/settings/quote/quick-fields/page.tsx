@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { QuickQuoteFieldConfig } from '@/features/settings/components/quick-quote-field-config';
 import { DashboardPageHeader } from '@/shared/ui/dashboard-page-header';
 
@@ -16,3 +17,4 @@ export default function QuickQuoteFieldsPage() {
     </div>
   );
 }
+

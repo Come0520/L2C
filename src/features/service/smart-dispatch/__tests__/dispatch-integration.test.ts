@@ -58,7 +58,7 @@ describe('Smart Dispatch Integration', () => {
         score: calculateWorkerScore(w, mockTaskContext),
       }));
 
-      const sorted = scores.sort((a, b) => b.score - a.score);
+      const sorted = [...scores].sort((a, b) => b.score - a.score);
       // 近的师傅(w1)应排在前面
       expect(sorted[0].id).toBe('w1');
     });

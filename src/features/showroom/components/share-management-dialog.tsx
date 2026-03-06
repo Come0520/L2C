@@ -108,8 +108,7 @@ export function ShareManagementDialog() {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button
-          variant="outline"
-          className="glass-liquid gap-2 border-white/20 text-white hover:bg-white/10"
+          className="gap-2 bg-indigo-600 text-white shadow-md transition-all duration-300 hover:bg-indigo-700 hover:shadow-lg hover:-translate-y-0.5"
         >
           <Link className="h-4 w-4" />
           分享管理
@@ -160,8 +159,8 @@ export function ShareManagementDialog() {
                           <Calendar className="h-3 w-3" />
                           {share.createdAt
                             ? format(new Date(share.createdAt), 'yyyy-MM-dd HH:mm', {
-                                locale: zhCN,
-                              })
+                              locale: zhCN,
+                            })
                             : '-'}
                         </span>
                       </div>

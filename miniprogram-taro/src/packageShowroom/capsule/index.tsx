@@ -1,7 +1,7 @@
 /**
  * 展厅分享设置页（Sales 专属）/ 生成品牌分享图
  */
-import { View, Text, Image } from '@tarojs/components'
+import { View, Text, Image, Switch } from '@tarojs/components'
 import Taro, { useLoad } from '@tarojs/taro'
 import { useState } from 'react'
 import { api } from '@/services/api'
@@ -10,10 +10,11 @@ import './index.scss'
 
 export default function CapsulePage() {
   const { userInfo } = useAuthStore()
-  const [itemId, setItemId] = useState('')
+  const [itemIds, setItemIds] = useState<string[]>([])
   const [shareTitle, setShareTitle] = useState('')
   const [shareDesc, setShareDesc] = useState('')
   const [shareImage, setShareImage] = useState('')
+  const [allowCustomerShare, setAllowCustomerShare] = useState(false)
   const [loading, setLoading] = useState(false)
 
   // 模拟租户信息
@@ -21,18 +22,26 @@ export default function CapsulePage() {
   const tenantLogo = userInfo?.avatarUrl || 'https://images.unsplash.com/photo-1542382257-80da354bf52c?w=100&q=80'
 
   useLoad(async (params) => {
-    setItemId(params.id || '')
-    const type = params.type || 'product' // product | case | article
-    try {
-      // 模拟根据类型获取分享数据
-      const res = await api.get(`/showroom/${type}/${params.id}`).catch(() => ({ success: true, data: {} }))
-      if (res.success) {
-        // Mock 兜底数据
-        setShareTitle(res.data.title || '春晓雅筑现代极简全屋整装')
-        setShareDesc(res.data.description?.substring(0, 50) || '为你提供最专业的全屋定制与装修服务')
-        setShareImage(res.data.images?.[0] || res.data.coverUrl || 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&q=80')
-      }
-    } catch (_) { }
+    const ids = params.ids ? params.ids.split(',') : (params.id ? [params.id] : [])
+    setItemIds(ids)
+
+    if (ids.length > 1) {
+      setShareTitle('精选展厅合集')
+      setShareDesc(`为您精选了 ${ids.length} 项优质展示内容，欢迎随邀品鉴`)
+      setShareImage(tenantLogo) // Fallback for collection
+    } else if (ids.length === 1) {
+      const type = params.type || 'product' // product | case | article
+      try {
+        // 模拟根据类型获取分享数据
+        const res = await api.get(`/showroom/${type}/${ids[0]}`).catch(() => ({ success: true, data: {} }))
+        if (res.success) {
+          // Mock 兜底数据
+          setShareTitle(res.data.title || '春晓雅筑现代极简全屋整装')
+          setShareDesc(res.data.description?.substring(0, 50) || '为你提供最专业的全屋定制与装修服务')
+          setShareImage(res.data.images?.[0] || res.data.coverUrl || 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&q=80')
+        }
+      } catch (_) { }
+    }
   })
 
   // 模拟保存海报到相册
@@ -48,11 +57,14 @@ export default function CapsulePage() {
 
   // 微信转发（模拟）
   const handleShareWx = () => {
-    Taro.showToast({ title: '请点击右上角转发', icon: 'none' })
+    // 真实业务中，此处应调用 API 生成 ShareLink，并附带 allowCustomerShare
+    Taro.showToast({ title: '参数已保存，请点击右上角转发', icon: 'none' })
   }
 
   const handleCopyLink = async () => {
-    await Taro.setClipboardData({ data: `https://l2c.asia/share/${itemId}` })
+    // 真实业务中，此处应调用 API 生成 ShareLink 拿到 shareId
+    const shareId = itemIds.join('-')
+    await Taro.setClipboardData({ data: `https://l2c.asia/share/${shareId}?allowReshare=${allowCustomerShare}` })
     Taro.showToast({ title: '链接已复制', icon: 'success' })
   }
 
@@ -90,6 +102,20 @@ export default function CapsulePage() {
       </View>
 
       <View className='action-panel'>
+        <View className='config-panel'>
+          <View className='config-item'>
+            <View className='config-info'>
+              <Text className='config-title'>允许客户二次分享</Text>
+              <Text className='config-desc'>开启后，客户可以将此链接转发给其他好友</Text>
+            </View>
+            <Switch
+              checked={allowCustomerShare}
+              onChange={(e) => setAllowCustomerShare(e.detail.value)}
+              color='#10a37f'
+            />
+          </View>
+        </View>
+
         <Text className='panel-title'>分享给客户</Text>
 
         <View className='action-grid'>

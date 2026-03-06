@@ -1,0 +1,136 @@
+@use '../../styles/variables' as *;
+
+.collection-page {
+    background: $bg-base;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+
+    &.loading,
+    &.error {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: $text-secondary;
+        font-size: $font-base;
+    }
+
+    .header {
+        background: #fff;
+        padding: $spacing-xl $spacing-md;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: $spacing-md;
+
+        .sales-info {
+            display: flex;
+            align-items: center;
+            gap: $spacing-sm;
+            margin-bottom: $spacing-sm;
+
+            .avatar {
+                width: 48rpx;
+                height: 48rpx;
+                border-radius: $radius-full;
+                background: $apple-blue;
+            }
+
+            .name {
+                font-size: $font-lg;
+                font-weight: 600;
+                color: $text-title;
+            }
+        }
+
+        .desc {
+            font-size: $font-sm;
+            color: $text-secondary;
+        }
+    }
+
+    .items-list {
+        flex: 1;
+        padding: 0 $spacing-md;
+
+        .card-grid {
+            display: flex;
+            flex-direction: column;
+            gap: $spacing-md;
+            padding-bottom: $spacing-xl;
+
+            .card {
+                background: #fff;
+                border-radius: $radius-lg;
+                overflow: hidden;
+                box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.04);
+                display: flex;
+                flex-direction: column;
+
+                .cover {
+                    width: 100%;
+                    height: 360rpx;
+                    background-color: #f5f5f5;
+                }
+
+                .card-body {
+                    padding: $spacing-md;
+
+                    .meta {
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        margin-bottom: 8rpx;
+
+                        .badge {
+                            font-size: 20rpx;
+                            padding: 2px 8px;
+                            border-radius: $radius-sm;
+
+                            &--article {
+                                background: rgba(64, 158, 255, 0.15);
+                                color: #409eff;
+                            }
+
+                            &--case {
+                                background: rgba(103, 194, 58, 0.15);
+                                color: $apple-green;
+                            }
+
+                            &--product {
+                                background: rgba(230, 180, 80, 0.15);
+                                color: $apple-blue;
+                            }
+                        }
+
+                        .price {
+                            font-size: $font-base;
+                            font-weight: 600;
+                            color: $apple-red;
+                        }
+                    }
+
+                    .title {
+                        font-size: $font-md;
+                        font-weight: 600;
+                        color: $text-title;
+                        margin-bottom: 4rpx;
+                        display: -webkit-box;
+                        -webkit-line-clamp: 2;
+                        -webkit-box-orient: vertical;
+                        overflow: hidden;
+                    }
+
+                    .description {
+                        font-size: $font-sm;
+                        color: $text-secondary;
+                        white-space: nowrap;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                    }
+                }
+            }
+        }
+    }
+}

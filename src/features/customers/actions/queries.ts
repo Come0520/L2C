@@ -40,6 +40,14 @@ export async function getCustomers(params: z.input<typeof getCustomersSchema>): 
         const parsedArgs = getCustomersSchema.parse(params);
         const { page, search, level, assignedSalesId, lifecycleStage, pipelineStatus } = parsedArgs;
         const safePageSize = Math.min(parsedArgs.pageSize, 100);
+
+        if (tenantId === '__PLATFORM__') {
+          return {
+            data: [],
+            pagination: { page, pageSize: safePageSize, total: 0, totalPages: 0 },
+          };
+        }
+
         const offset = (page - 1) * safePageSize;
 
         // 首先添加租户隔离条件
@@ -161,6 +169,9 @@ export const getCustomerDetail = cache(async (id: string): Promise<CustomerDetai
   return unstable_cache(
     async () => {
       const startTime = Date.now();
+
+      if (tenantId === '__PLATFORM__') return undefined;
+
       const customer = await db.query.customers.findFirst({
         where: and(eq(customers.id, id), eq(customers.tenantId, tenantId)),
         with: {
@@ -206,6 +217,10 @@ const getCustomerProfileActionInternal = createSafeAction(
     if (!session.user.tenantId)
       throw new AppError('Unauthorized', ERROR_CODES.PERMISSION_DENIED, 401);
     const tenantId = session.user.tenantId;
+
+    if (tenantId === '__PLATFORM__') {
+      throw new AppError('Customer not found', ERROR_CODES.CUSTOMER_NOT_FOUND, 404);
+    }
 
     const startTime = Date.now();
 
@@ -349,6 +364,10 @@ const getReferralChainActionInternal = createSafeAction(
       throw new AppError('Unauthorized', ERROR_CODES.PERMISSION_DENIED, 401);
     const tenantId = session.user.tenantId;
 
+    if (tenantId === '__PLATFORM__') {
+      return { error: '客户不存在' };
+    }
+
     const customer = await db.query.customers.findFirst({
       where: and(eq(customers.id, customerId), eq(customers.tenantId, tenantId)),
       with: {
@@ -373,9 +392,9 @@ const getReferralChainActionInternal = createSafeAction(
       },
       referrer: customer.referrer
         ? {
-            id: customer.referrer.id,
-            name: customer.referrer.name,
-          }
+          id: customer.referrer.id,
+          name: customer.referrer.name,
+        }
         : null,
       referrals: (customer.referrals || []).map((r: (typeof customer.referrals)[0]) => ({
         id: r.id,

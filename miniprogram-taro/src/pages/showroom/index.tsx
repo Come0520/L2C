@@ -42,6 +42,7 @@ export default function ShowroomPage() {
   const { currentRole } = useAuthStore()
   const [activeTab, setActiveTab] = useState<ShowroomTab>('all')
   const [items, setItems] = useState<ShowroomItem[]>([])
+  const [selectedItems, setSelectedItems] = useState<ShowroomItem[]>([])
   const [loading, setLoading] = useState(false)
 
   const isSales = currentRole === 'sales'
@@ -81,10 +82,29 @@ export default function ShowroomPage() {
     Taro.navigateTo({ url: `/packageShowroom/product-detail/index?id=${item.id}` })
   }
 
-  /** Sales：分享展厅内容 */
+  /** Sales：直接分享单项 */
   const handleShare = (item: ShowroomItem) => {
     Taro.navigateTo({
       url: `/packageShowroom/capsule/index?id=${item.id}&mode=share`,
+    })
+  }
+
+  /** Sales：加入/移出选品包 (多选) */
+  const toggleSelect = (item: ShowroomItem) => {
+    const isSelected = selectedItems.some((i) => i.id === item.id)
+    if (isSelected) {
+      setSelectedItems(selectedItems.filter((i) => i.id !== item.id))
+    } else {
+      setSelectedItems([...selectedItems, item])
+    }
+  }
+
+  /** Sales：打包分享 */
+  const handleShareMultiple = () => {
+    if (selectedItems.length === 0) return
+    const ids = selectedItems.map((i) => i.id).join(',')
+    Taro.navigateTo({
+      url: `/packageShowroom/capsule/index?ids=${ids}&mode=share`,
     })
   }
 
@@ -152,16 +172,27 @@ export default function ShowroomPage() {
                     <Text className='card-desc text-ellipsis'>{item.description}</Text>
                   )}
 
-                  {/* Sales 分享按钮 */}
+                  {/* Sales 操作区 */}
                   {isSales && (
-                    <View
-                      className='btn-share'
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleShare(item)
-                      }}
-                    >
-                      <Text>分享</Text>
+                    <View className='sales-actions'>
+                      <View
+                        className={`btn-select ${selectedItems.some(i => i.id === item.id) ? 'btn-select--active' : ''}`}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          toggleSelect(item)
+                        }}
+                      >
+                        <Text>{selectedItems.some(i => i.id === item.id) ? '不选' : '加入展包'}</Text>
+                      </View>
+                      <View
+                        className='btn-share'
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleShare(item)
+                        }}
+                      >
+                        <Text>分享</Text>
+                      </View>
                     </View>
                   )}
                 </View>
@@ -176,6 +207,19 @@ export default function ShowroomPage() {
           </View>
         )}
       </ScrollView>
+
+      {/* 底部悬浮分享购物车（Sales） */}
+      {isSales && selectedItems.length > 0 && (
+        <View className='share-cart-bar'>
+          <View className='cart-info'>
+            <Text className='cart-count'>已选 {selectedItems.length} 项</Text>
+            <Text className='cart-clear' onClick={() => setSelectedItems([])}>清空</Text>
+          </View>
+          <View className='cart-btn' onClick={handleShareMultiple}>
+            <Text>打包分享</Text>
+          </View>
+        </View>
+      )}
 
       <TabBar selected='/pages/showroom/index' />
     </View>

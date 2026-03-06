@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { AttributeTemplateManager } from '@/features/products/components/attribute-template-manager';
 
 export default function AttributeTemplatesPage() {
@@ -13,3 +14,4 @@ export default function AttributeTemplatesPage() {
     </div>
   );
 }
+

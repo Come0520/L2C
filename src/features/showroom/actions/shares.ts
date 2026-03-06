@@ -11,7 +11,7 @@ import { AuditService } from '@/shared/services/audit-service';
 import { redis } from '@/shared/lib/redis';
 import { checkRateLimit } from '@/shared/middleware/rate-limit';
 import { headers } from 'next/headers';
-import {} from 'next/cache';
+import { } from 'next/cache';
 import { ShowroomShareItemSnapshot } from '../types';
 import { ShowroomError, ShowroomErrors } from '../errors';
 import { createLogger } from '@/shared/lib/logger';
@@ -31,7 +31,7 @@ export async function createShareLink(input: z.input<typeof createShareLinkSchem
   const session = await auth();
   if (!session?.user?.tenantId) throw new ShowroomError(ShowroomErrors.UNAUTHORIZED);
 
-  const { items, expiresInDays, password, maxViews } = createShareLinkSchema.parse(input);
+  const { items, expiresInDays, password, maxViews, allowCustomerShare } = createShareLinkSchema.parse(input);
 
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + expiresInDays);
@@ -47,9 +47,10 @@ export async function createShareLink(input: z.input<typeof createShareLinkSchem
         expiresAt: expiresAt,
         passwordHash: password ? createHash('sha256').update(password).digest('hex') : null,
         maxViews: maxViews || null,
+        allowCustomerShare: allowCustomerShare ? 1 : 0,
         isActive: 1,
       })
-      .returning({ id: showroomShares.id });
+      .returning({ id: showroomShares.id, allowCustomerShare: showroomShares.allowCustomerShare });
 
     // 记录审计日志
     await AuditService.log(db, {
@@ -58,7 +59,7 @@ export async function createShareLink(input: z.input<typeof createShareLinkSchem
       action: 'CREATE',
       userId: session.user.id,
       tenantId: session.user.tenantId,
-      newValues: { items, expiresInDays, expiresAt, hasPassword: !!password, maxViews } as Record<
+      newValues: { items, expiresInDays, expiresAt, hasPassword: !!password, maxViews, allowCustomerShare } as Record<
         string,
         unknown
       >,
@@ -184,6 +185,7 @@ export async function getShareContent(input: z.input<typeof getShareContentSchem
     return {
       expired: false,
       items,
+      allowCustomerShare: share.allowCustomerShare === 1,
       sales: share.sales,
     };
   } catch (error) {

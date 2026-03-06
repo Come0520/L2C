@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { DashboardPageHeader } from '@/shared/ui/dashboard-page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/shared/ui/card';
 import { Switch } from '@/shared/ui/switch';
@@ -35,3 +36,4 @@ export default function RemindersPage() {
     </div>
   );
 }
+

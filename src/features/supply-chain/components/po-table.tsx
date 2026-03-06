@@ -21,7 +21,7 @@ export function POTable({ data }: POTableProps) {
           <TableRow>
             <TableHead>PO No</TableHead>
             <TableHead>Supplier</TableHead>
-            <TableHead>Total Amount</TableHead>
+            <TableHead className="text-right">Total Amount</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Created At</TableHead>
             <TableHead className="text-right">Actions</TableHead>
@@ -39,7 +39,7 @@ export function POTable({ data }: POTableProps) {
               <TableRow key={index}>
                 <TableCell className="font-medium">{item.poNo}</TableCell>
                 <TableCell>{item.supplierName}</TableCell>
-                <TableCell>{item.totalAmount}</TableCell>
+                <TableCell className="text-right">{item.totalAmount}</TableCell>
                 <TableCell>
                   <StatusBadge status={item.status || 'DRAFT'} />
                 </TableCell>

@@ -11,11 +11,11 @@ import Monitor from 'lucide-react/dist/esm/icons/monitor';
 import Sparkles from 'lucide-react/dist/esm/icons/sparkles';
 import Scroll from 'lucide-react/dist/esm/icons/scroll';
 import Palette from 'lucide-react/dist/esm/icons/palette';
-import Heart from 'lucide-react/dist/esm/icons/heart';
+import Box from 'lucide-react/dist/esm/icons/box';
 import { useStyle, type VisualStyle } from '@/shared/providers/style-provider';
 import { Separator } from '@/shared/ui/separator';
 
-const emptySubscribe = () => () => {};
+const emptySubscribe = () => () => { };
 
 export function ThemeSettings() {
   const { theme, setTheme } = useTheme();
@@ -114,7 +114,7 @@ export function ThemeSettings() {
               { value: 'glass', label: '水晶玻璃', icon: Sparkles, desc: '沉浸式透明感' },
               { value: 'parchment', label: '羊皮卷轴', icon: Scroll, desc: '典雅古风护眼' },
               { value: 'clay', label: '软陶拟物', icon: Palette, desc: '温馨柔和圆润' },
-              { value: 'cute', label: '马卡龙色', icon: Heart, desc: '活泼明亮可爱' },
+              { value: 'spatial', label: '深空随影', icon: Box, desc: '悬浮三维未来' },
             ].map((option) => (
               <div key={option.value}>
                 <RadioGroupItem

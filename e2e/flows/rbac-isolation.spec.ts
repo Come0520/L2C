@@ -35,11 +35,9 @@ test.describe('权限与角色越权隔离拦截 (RBAC Security)', () => {
     });
 
     test('P1-2: 数据级隔离 - 模拟工人请求仅返回属于自己的派单', async ({ request }) => {
-        const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-
         // 使用一个测试工人身份调用 API，验证返回的数据是否混入了他人任务
         // 假设头部要求传递 authorization，这在某些框架/测试环境中可能通过直接传 token
-        const res = await request.get(`${BASE_URL}/api/miniprogram/engineer/tasks`, {
+        const res = await request.get(`/api/miniprogram/engineer/tasks`, {
             headers: {
                 // mock 某个工人的标识，或者系统通过 cookies/session
                 'x-mock-role': 'WORKER',

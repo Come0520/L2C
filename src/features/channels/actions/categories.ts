@@ -34,6 +34,8 @@ export async function getChannelCategories(_params?: {
   // P3 Fix: Add permission check
   await checkPermission(session, PERMISSIONS.CHANNEL.VIEW);
 
+  if (tenantId === '__PLATFORM__') return [];
+
   return await db.query.channelCategories.findMany({
     where: eq(channelCategories.tenantId, tenantId),
     orderBy: [asc(channelCategories.sortOrder), asc(channelCategories.createdAt)],
@@ -55,6 +57,8 @@ export async function getActiveChannelCategories() {
 
   // P3 Fix: Add permission check
   await checkPermission(session, PERMISSIONS.CHANNEL.VIEW);
+
+  if (tenantId === '__PLATFORM__') return [];
 
   return await db.query.channelCategories.findMany({
     where: and(eq(channelCategories.tenantId, tenantId), eq(channelCategories.isActive, true)),
@@ -79,6 +83,8 @@ export async function getChannelCategoryById(id: string) {
 
   // P3 Fix: Add permission check
   await checkPermission(session, PERMISSIONS.CHANNEL.VIEW);
+
+  if (tenantId === '__PLATFORM__') return undefined;
 
   return await db.query.channelCategories.findFirst({
     where: and(eq(channelCategories.id, id), eq(channelCategories.tenantId, tenantId)),

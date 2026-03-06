@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs';
 import { BusinessRulesConfig } from '@/features/settings/components/business-rules-config';
 import { getMyQuoteConfig } from '@/features/quotes/actions/config-actions';
@@ -45,3 +46,4 @@ export default async function ApprovalsSettingsPage() {
     </div>
   );
 }
+

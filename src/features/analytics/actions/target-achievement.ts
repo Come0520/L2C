@@ -23,6 +23,10 @@ export async function getTargetAchievementOverview(params: { year: number; month
     const { year, month } = params;
     const tenantId = session.user.tenantId;
 
+    if (tenantId === '__PLATFORM__') {
+      return { success: true, data: { totalTarget: 0, totalAchieved: 0, totalRate: 0, details: [] } };
+    }
+
     await AuditService.log(db, {
       tableName: 'analytics',
       action: 'VIEW_REPORT',
@@ -130,6 +134,10 @@ export async function getTargetCompletionTrend(params: { year: number; month: nu
     const tenantId = session.user.tenantId;
     const { year, month } = params;
 
+    if (tenantId === '__PLATFORM__') {
+      return { success: true, data: [] };
+    }
+
     await AuditService.log(db, {
       tableName: 'analytics',
       action: 'VIEW_REPORT',
@@ -232,6 +240,10 @@ export async function getTargetRiskWarnings(params: { year: number; month: numbe
 
     const { year, month } = params;
     const tenantId = session.user.tenantId;
+
+    if (tenantId === '__PLATFORM__') {
+      return { success: true, data: [] };
+    }
 
     await AuditService.log(db, {
       tableName: 'analytics',

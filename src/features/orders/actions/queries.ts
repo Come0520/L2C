@@ -42,9 +42,17 @@ const getOrdersInternal = createSafeAction(getOrdersSchema, async (params, { ses
   const offset = (page - 1) * pageSize;
   const tenantId = session.user.tenantId;
 
+  if (tenantId === '__PLATFORM__') {
+    return {
+      data: [],
+      total: 0,
+      totalPages: 0,
+    };
+  }
+
   // Cache key needs to include all filter parameters
   const statusKey = Array.isArray(params.status)
-    ? params.status.sort().join(',')
+    ? [...params.status].sort().join(',')
     : params.status || 'all';
   const salesIdKey = params.salesId || 'all';
   const channelIdKey = params.channelId || 'all';
@@ -139,6 +147,10 @@ const getOrderByIdInternal = createSafeAction(getOrderByIdSchema, async (params,
   // 权限检查：需要订单查看权限
   await checkPermission(session, PERMISSIONS.ORDER.VIEW);
 
+  if (session.user.tenantId === '__PLATFORM__') {
+    throw new Error('Order not found');
+  }
+
   const order = await db.query.orders.findFirst({
     where: and(eq(orders.id, params.id), eq(orders.tenantId, session.user.tenantId)),
     with: {
@@ -174,6 +186,10 @@ export const getOrderItems = cache(async (orderId: string) => {
   const session = await auth();
   if (!session) throw new Error('Unauthorized');
 
+  if (session.user.tenantId === '__PLATFORM__') {
+    return { success: true, data: [] };
+  }
+
   // 权限检查省略...
   const getCachedItems = unstable_cache(
     async () => {
@@ -207,6 +223,10 @@ export const getOrderItems = cache(async (orderId: string) => {
 export const getOrderPaymentSchedules = cache(async (orderId: string) => {
   const session = await auth();
   if (!session) throw new Error('Unauthorized');
+
+  if (session.user.tenantId === '__PLATFORM__') {
+    return { success: true, data: [] };
+  }
 
   const getCachedSchedules = unstable_cache(
     async () => {

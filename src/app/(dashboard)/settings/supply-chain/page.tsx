@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { DashboardPageHeader } from '@/shared/ui/dashboard-page-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
 import { Package, Users } from 'lucide-react';
@@ -48,3 +49,4 @@ export default function SupplyChainSettingsPage() {
     </div>
   );
 }
+

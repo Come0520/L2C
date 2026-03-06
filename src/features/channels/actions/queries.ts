@@ -35,6 +35,9 @@ export async function getChannels(params: GetChannelsParams) {
   await checkPermission(session, PERMISSIONS.CHANNEL.VIEW);
 
   const tenantId = session.user.tenantId;
+  if (tenantId === '__PLATFORM__') {
+    return { data: [], totalPages: 0, totalItems: 0, currentPage: params.page || 1, pageSize: Math.min(Math.max(params.pageSize || 20, 1), 100) };
+  }
 
   logger.info('[channels] Fetching channels list', { userId: session.user.id, params });
 
@@ -100,13 +103,13 @@ async function _getChannelsInternal(params: GetChannelsParams, tenantId: string)
         eq(
           channels.channelType,
           type as
-            | 'DECORATION_CO'
-            | 'DESIGNER'
-            | 'CROSS_INDUSTRY'
-            | 'DOUYIN'
-            | 'XIAOHONGSHU'
-            | 'STORE'
-            | 'OTHER'
+          | 'DECORATION_CO'
+          | 'DESIGNER'
+          | 'CROSS_INDUSTRY'
+          | 'DOUYIN'
+          | 'XIAOHONGSHU'
+          | 'STORE'
+          | 'OTHER'
         )
       ) as typeof whereClause;
     }
@@ -209,6 +212,7 @@ const getCachedChannelTree = (tenantId: string) =>
 export async function getChannelTree() {
   const session = await auth();
   if (!session?.user?.tenantId) throw new Error('Unauthorized');
+  if (session.user.tenantId === '__PLATFORM__') return [];
 
   logger.info('[channels] Fetching channel tree', { userId: session.user.id });
 
@@ -233,6 +237,7 @@ export const getChannelById = cache(async (id: string) => {
   await checkPermission(session, PERMISSIONS.CHANNEL.VIEW);
 
   const tenantId = session.user.tenantId;
+  if (tenantId === '__PLATFORM__') return null;
 
   return await db.query.channels.findFirst({
     where: and(eq(channels.id, id), eq(channels.tenantId, tenantId)),
@@ -262,6 +267,7 @@ export const getChannelByCode = cache(async (channelNo: string) => {
   await checkPermission(session, PERMISSIONS.CHANNEL.VIEW);
 
   const tenantId = session.user.tenantId;
+  if (tenantId === '__PLATFORM__') return null;
 
   return await db.query.channels.findFirst({
     where: and(eq(channels.channelNo, channelNo), eq(channels.tenantId, tenantId)),
@@ -281,6 +287,7 @@ export const getChannelContacts = cache(async (channelId: string) => {
   await checkPermission(session, PERMISSIONS.CHANNEL.VIEW);
 
   const tenantId = session.user.tenantId;
+  if (tenantId === '__PLATFORM__') return [];
 
   return await db.query.channelContacts.findMany({
     where: and(eq(channelContacts.channelId, channelId), eq(channelContacts.tenantId, tenantId)),

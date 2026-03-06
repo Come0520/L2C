@@ -123,6 +123,36 @@
         padding: $spacing-lg $spacing-md calc($spacing-lg + env(safe-area-inset-bottom));
         box-shadow: 0 -4rpx 16rpx rgba(0, 0, 0, 0.05);
 
+        .config-panel {
+            margin-bottom: $spacing-xl;
+            padding: 0 16rpx;
+
+            .config-item {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: $spacing-md 0;
+                border-bottom: 1px solid $border-separator;
+
+                .config-info {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 8rpx;
+
+                    .config-title {
+                        font-size: $font-md;
+                        font-weight: 500;
+                        color: $text-title;
+                    }
+
+                    .config-desc {
+                        font-size: 22rpx;
+                        color: $text-secondary;
+                    }
+                }
+            }
+        }
+
         .panel-title {
             font-size: $font-md;
             font-weight: 600;

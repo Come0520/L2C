@@ -22,7 +22,7 @@ test.describe('师傅端收支台账 API (Engineer Settlement API)', () => {
 
     test('P0-1: 师傅结算列表 API 应正常响应', async ({ request }) => {
         // 调用管理端查询师傅结算的 API
-        const response = await request.get(`${BASE_URL}/api/finance/ap?type=LABOR`, {
+        const response = await request.get(`/api/finance/ap?type=LABOR`, {
             headers: {
                 'Content-Type': 'application/json',
             }
@@ -44,7 +44,7 @@ test.describe('师傅端收支台账 API (Engineer Settlement API)', () => {
 
     test('P0-2: 小程序师傅任务列表 API 应有工费字段', async ({ request }) => {
         // 测试小程序工程师任务 API（无 Auth 模拟）
-        const response = await request.get(`${BASE_URL}/api/miniprogram/engineer/tasks`, {
+        const response = await request.get(`/api/miniprogram/engineer/tasks`, {
             headers: {
                 'Content-Type': 'application/json',
                 // E2E 环境下如有测试 Token 可在此添加

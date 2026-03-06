@@ -54,6 +54,7 @@ export const createShareLinkSchema = z.object({
   expiresInDays: z.number().int().min(1).max(365).default(15).describe('有效天数'),
   password: z.string().min(4).max(6).optional().describe('访问提取码 (可选)'),
   maxViews: z.number().int().min(1).max(9999).optional().describe('最大访问次数 (选填阅后即焚)'),
+  allowCustomerShare: z.boolean().optional().default(false).describe('是否允许客户二次转发'),
 });
 
 /** 获取分享内容验证参数 */

@@ -245,6 +245,10 @@ export class QuoteConfigService {
    * @returns 合并后的完整配置对象
    */
   static async getMergedConfig(tenantId: string, userId: string): Promise<QuoteConfig> {
+    if (tenantId === '__PLATFORM__') {
+      return SYSTEM_DEFAULT_CONFIG;
+    }
+
     // 命中缓存则直接返回
     const cacheKey = `${tenantId}:${userId}`;
     const cached = this._cache.get(cacheKey);
@@ -324,12 +328,12 @@ export class QuoteConfigService {
         // 警告阈值可由租户自定义，但不能超过硬限制
         heightWarning: Math.min(
           tenantSettings.dimensionLimits?.heightWarning ??
-            SYSTEM_DEFAULT_CONFIG.dimensionLimits!.heightWarning,
+          SYSTEM_DEFAULT_CONFIG.dimensionLimits!.heightWarning,
           SYSTEM_DEFAULT_CONFIG.dimensionLimits!.heightMax
         ),
         widthWarning: Math.min(
           tenantSettings.dimensionLimits?.widthWarning ??
-            SYSTEM_DEFAULT_CONFIG.dimensionLimits!.widthWarning,
+          SYSTEM_DEFAULT_CONFIG.dimensionLimits!.widthWarning,
           SYSTEM_DEFAULT_CONFIG.dimensionLimits!.widthMax
         ),
         enabled:
@@ -372,6 +376,10 @@ export class QuoteConfigService {
    * @returns 租户配置（如未配置则返回系统默认）
    */
   static async getTenantConfig(tenantId: string): Promise<QuoteConfig> {
+    if (tenantId === '__PLATFORM__') {
+      return SYSTEM_DEFAULT_CONFIG;
+    }
+
     const tenantData = await db.query.quoteConfig.findFirst({
       where: and(eq(quoteConfig.type, 'TENANT'), eq(quoteConfig.entityId, tenantId)),
     });
@@ -400,12 +408,12 @@ export class QuoteConfigService {
         widthMax: SYSTEM_DEFAULT_CONFIG.dimensionLimits!.widthMax,
         heightWarning: Math.min(
           tenantSettings.dimensionLimits?.heightWarning ??
-            SYSTEM_DEFAULT_CONFIG.dimensionLimits!.heightWarning,
+          SYSTEM_DEFAULT_CONFIG.dimensionLimits!.heightWarning,
           SYSTEM_DEFAULT_CONFIG.dimensionLimits!.heightMax
         ),
         widthWarning: Math.min(
           tenantSettings.dimensionLimits?.widthWarning ??
-            SYSTEM_DEFAULT_CONFIG.dimensionLimits!.widthWarning,
+          SYSTEM_DEFAULT_CONFIG.dimensionLimits!.widthWarning,
           SYSTEM_DEFAULT_CONFIG.dimensionLimits!.widthMax
         ),
         enabled:
@@ -458,6 +466,8 @@ export class QuoteConfigService {
    * @security 🔒 仅限管理员调用
    */
   static async updateTenantConfig(tenantId: string, config: Partial<QuoteConfig>) {
+    if (tenantId === '__PLATFORM__') return;
+
     const existing = await db.query.quoteConfig.findFirst({
       where: and(eq(quoteConfig.type, 'TENANT'), eq(quoteConfig.entityId, tenantId)),
     });
@@ -530,6 +540,10 @@ export class QuoteConfigService {
    * 优先返回租户自定义配置，否则返回系统默认配置
    */
   static async getRoomGroups(tenantId: string): Promise<RoomGroup[]> {
+    if (tenantId === '__PLATFORM__') {
+      return SYSTEM_DEFAULT_CONFIG.roomGroups!;
+    }
+
     const tenantData = await db.query.quoteConfig.findFirst({
       where: and(eq(quoteConfig.type, 'TENANT'), eq(quoteConfig.entityId, tenantId)),
     });
@@ -543,6 +557,8 @@ export class QuoteConfigService {
    * 仅限管理员操作
    */
   static async updateRoomGroups(tenantId: string, roomGroups: RoomGroup[]) {
+    if (tenantId === '__PLATFORM__') return;
+
     const existing = await db.query.quoteConfig.findFirst({
       where: and(eq(quoteConfig.type, 'TENANT'), eq(quoteConfig.entityId, tenantId)),
     });

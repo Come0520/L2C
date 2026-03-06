@@ -17,7 +17,7 @@ import { Logger } from '@/utils/logger'
  * 如果需要真机调试，请将 localhost 改为您电脑的局域网 IP（例如 192.168.x.x）。
  */
 const BASE_URL = process.env.NODE_ENV === 'development'
-    ? 'http://localhost:3000/api/miniprogram'
+    ? 'http://localhost:3004/api/miniprogram'
     : 'https://l2c.asia/api/miniprogram'
 
 /** 通用响应结构 */

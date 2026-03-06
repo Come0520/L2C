@@ -59,6 +59,14 @@ export const getSettingsByCategory = cache(async (category: string) => {
   if (!session?.user?.tenantId) throw new Error('未授权');
 
   try {
+    if (session.user.tenantId === '__PLATFORM__') {
+      const result: Record<string, unknown> = {};
+      for (const setting of DEFAULT_SYSTEM_SETTINGS.filter(s => s.category === category)) {
+        result[setting.key] = parseSettingValue(setting.value, setting.valueType);
+      }
+      return result;
+    }
+
     const settings = await db.query.systemSettings.findMany({
       where: and(
         eq(systemSettings.tenantId, session.user.tenantId),
@@ -91,6 +99,14 @@ export const getSettingsByCategory = cache(async (category: string) => {
  */
 export const getSettingInternal = cache(async (key: string, tenantId: string): Promise<unknown> => {
   try {
+    if (tenantId === '__PLATFORM__') {
+      const defaultSetting = DEFAULT_SYSTEM_SETTINGS.find((s) => s.key === key);
+      if (defaultSetting) {
+        return parseSettingValue(defaultSetting.value, defaultSetting.valueType);
+      }
+      return null;
+    }
+
     const setting = await db.query.systemSettings.findFirst({
       where: and(eq(systemSettings.tenantId, tenantId), eq(systemSettings.key, key)),
     });
@@ -151,6 +167,10 @@ async function updateSettingInternal(
   tenantId: string,
   userId: string
 ) {
+  if (tenantId === '__PLATFORM__') {
+    throw new Error('平台管理员无法修改租户配置');
+  }
+
   const existing = await tx.query.systemSettings.findFirst({
     where: and(eq(systemSettings.tenantId, tenantId), eq(systemSettings.key, key)),
   });
@@ -268,6 +288,10 @@ export async function batchUpdateSettings(settings: Record<string, unknown>) {
  */
 export async function initTenantSettings(tenantId: string) {
   try {
+    if (tenantId === '__PLATFORM__') {
+      return { success: true, message: '平台租户跳过配置初始化' };
+    }
+
     await db.transaction(async (tx) => {
       const existing = await tx.query.systemSettings.findFirst({
         where: eq(systemSettings.tenantId, tenantId),
@@ -306,6 +330,15 @@ export async function initTenantSettings(tenantId: string) {
 const getCachedAllSettings = (tenantId: string) =>
   unstable_cache(
     async () => {
+      if (tenantId === '__PLATFORM__') {
+        const grouped: Record<string, Record<string, unknown>> = {};
+        for (const setting of DEFAULT_SYSTEM_SETTINGS) {
+          if (!grouped[setting.category]) grouped[setting.category] = {};
+          grouped[setting.category][setting.key] = parseSettingValue(setting.value, setting.valueType);
+        }
+        return grouped;
+      }
+
       const allSettings = await db.query.systemSettings.findMany({
         where: eq(systemSettings.tenantId, tenantId),
         limit: 500, // [P2防御]

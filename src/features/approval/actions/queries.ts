@@ -15,6 +15,7 @@ const getPendingApprovalsInternal = createSafeAction(
     try {
       const { page = 1, pageSize = 10 } = params;
       const offset = (page - 1) * pageSize;
+      if (session.user.tenantId === '__PLATFORM__') return { tasks: [], pagination: { total: 0, page, pageSize, totalPages: 0 } };
 
       const whereClause = and(
         eq(approvalTasks.tenantId, session.user.tenantId),
@@ -85,6 +86,7 @@ const getProcessedApprovalsInternal = createSafeAction(
     try {
       const { page = 1, pageSize = 10 } = params;
       const offset = (page - 1) * pageSize;
+      if (session.user.tenantId === '__PLATFORM__') return { tasks: [], pagination: { total: 0, page, pageSize, totalPages: 0 } };
 
       const whereClause = and(
         eq(approvalTasks.tenantId, session.user.tenantId),
@@ -161,6 +163,7 @@ const getApprovalHistoryInternal = createSafeAction(
     try {
       const { page = 1, pageSize = 10 } = params;
       const offset = (page - 1) * pageSize;
+      if (session.user.tenantId === '__PLATFORM__') return { success: true, data: { approvals: [], pagination: { total: 0, page, pageSize, totalPages: 0 } } };
 
       const whereClause = and(
         eq(approvals.tenantId, session.user.tenantId),
@@ -220,6 +223,7 @@ const getApprovalDetailsInternal = createSafeAction(
   getApprovalDetailsSchema,
   async (params, { session }) => {
     try {
+      if (session.user.tenantId === '__PLATFORM__') return { success: false, error: 'Not found' };
       const [approval, tasks] = await Promise.all([
         db.query.approvals.findFirst({
           where: and(eq(approvals.id, params.id), eq(approvals.tenantId, session.user.tenantId)),
@@ -253,6 +257,7 @@ const getApprovalDetailsInternal = createSafeAction(
 
 const getApprovalFlowsInternal = createSafeAction(emptySchema, async (_params, { session }) => {
   try {
+    if (session.user.tenantId === '__PLATFORM__') return { success: true, data: [] };
     const flows = await db.query.approvalFlows.findMany({
       where: eq(approvalFlows.tenantId, session.user.tenantId),
       orderBy: [desc(approvalFlows.updatedAt)],

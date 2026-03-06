@@ -201,9 +201,9 @@ export function AppSidebar() {
           </div>
 
           {/* 分组导航链接 */}
-          <div className="mt-4 flex-1 overflow-x-hidden overflow-y-auto px-1">
+          <div className="mt-2 flex-1 overflow-x-hidden overflow-y-auto px-2 py-2">
             {displayGroups.map((group, groupIndex) => (
-              <div key={group.title} className={groupIndex > 0 ? 'mt-4' : ''}>
+              <div key={group.title} className={cn("flex flex-col gap-1", groupIndex > 0 ? 'mt-6' : '')}>
                 {/* 分组标题 - 仅侧边栏展开时显示 */}
                 <motion.div
                   animate={{
@@ -240,7 +240,7 @@ export function AppSidebar() {
         </div>
 
         {/* 底部用户信息 - 指向独立的用户设置页面 */}
-        <div className="border-border/50 mt-auto border-t pt-4 dark:border-white/5">
+        <div className="border-border/50 mt-auto border-t pt-4 pb-2 px-2 dark:border-white/5">
           <NavLink
             href="/profile/settings"
             label="个人设置"
@@ -316,16 +316,16 @@ function NavLink({
         'group/sidebar flex items-center rounded-xl px-3 py-2.5 transition-all duration-300 active:scale-95',
         animate && !open ? 'justify-center' : 'justify-start gap-3',
         isActive
-          ? 'bg-primary/10 text-primary ring-primary/20 dark:bg-primary-500/20 dark:text-primary-400 font-semibold shadow-sm ring-1'
-          : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground dark:text-neutral-200 dark:hover:bg-white/5'
+          ? 'bg-primary-500 text-white shadow-md shadow-primary-500/20 font-semibold ring-1 ring-primary-500/50 dark:bg-primary-500 dark:ring-primary-500/40'
+          : 'text-neutral-500 hover:bg-neutral-100/80 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-white/10 dark:hover:text-neutral-100'
       )}
     >
       <Icon
         className={cn(
           'h-5 w-5 shrink-0 transition-colors',
           isActive
-            ? 'text-primary-600 dark:text-primary-400'
-            : 'text-neutral-500 dark:text-neutral-400'
+            ? 'text-white'
+            : 'text-neutral-500 group-hover/sidebar:text-neutral-900 dark:text-neutral-400 dark:group-hover/sidebar:text-neutral-100'
         )}
       />
       <motion.span
@@ -335,7 +335,7 @@ function NavLink({
         }}
         className={cn(
           'text-base font-medium whitespace-pre transition duration-150 group-hover/sidebar:translate-x-1',
-          isActive ? 'text-primary-600 dark:text-primary-400' : ''
+          isActive ? 'text-white' : ''
         )}
       >
         {label}

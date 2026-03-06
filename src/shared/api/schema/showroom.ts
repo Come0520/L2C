@@ -78,6 +78,8 @@ export const showroomShares = pgTable(
     // Structure: [{ itemId: uuid, overridePrice: number, ... }]
     itemsSnapshot: jsonb('items_snapshot').default([]).notNull(),
 
+    allowCustomerShare: integer('allow_customer_share').default(0).notNull(), // 1=Allowed, 0=Not Allowed
+
     isActive: integer('is_active').default(1), // 1=Active, 0=Inactive
     expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
 

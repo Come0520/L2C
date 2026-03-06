@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { getTestimonialsList } from './actions';
 import { TestimonialsClient } from './components/testimonials-client';
 
@@ -26,3 +27,4 @@ export default async function TestimonialsPage() {
     </div>
   );
 }
+

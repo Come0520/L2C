@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { DashboardPageHeader } from '@/shared/ui/dashboard-page-header';
 import { auth } from '@/shared/lib/auth';
 import { getPermissionMatrix } from '@/features/settings/actions/role-override-actions';
@@ -64,3 +65,4 @@ export default async function RolesSettingsPage() {
     </div>
   );
 }
+

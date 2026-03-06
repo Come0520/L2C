@@ -20,6 +20,15 @@ export async function getQuarterlyComparison(params: { year: number }) {
 
     const { year } = params;
     const tenantId = session.user.tenantId;
+    if (tenantId === '__PLATFORM__') {
+      const initialData = [
+        { name: 'Q1', target: 0, achieved: 0, rate: 0 },
+        { name: 'Q2', target: 0, achieved: 0, rate: 0 },
+        { name: 'Q3', target: 0, achieved: 0, rate: 0 },
+        { name: 'Q4', target: 0, achieved: 0, rate: 0 },
+      ];
+      return { success: true, data: initialData };
+    }
 
     await AuditService.log(db, {
       tableName: 'analytics',
@@ -110,6 +119,9 @@ export async function getAnnualTargetProgress(params: { year: number }) {
 
     const { year } = params;
     const tenantId = session.user.tenantId;
+    if (tenantId === '__PLATFORM__') {
+      return { success: true, data: { year, totalTarget: 0, totalAchieved: 0, completionRate: 0 } };
+    }
 
     await AuditService.log(db, {
       tableName: 'analytics',

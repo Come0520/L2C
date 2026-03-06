@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { DashboardPageHeader } from '@/shared/ui/dashboard-page-header';
 import { LaborPricingConfig } from '@/features/settings/components/labor-pricing-config';
 
@@ -14,3 +15,4 @@ export default function LaborPricingPage() {
     </div>
   );
 }
+

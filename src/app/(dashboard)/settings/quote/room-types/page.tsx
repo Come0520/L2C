@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { RoomTypesConfig } from '@/features/settings/components/room-types-config';
 import { DashboardPageHeader } from '@/shared/ui/dashboard-page-header';
 
@@ -16,3 +17,4 @@ export default function RoomTypesSettingsPage() {
     </div>
   );
 }
+

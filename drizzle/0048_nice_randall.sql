@@ -1,0 +1,1 @@
+ALTER TABLE "showroom_shares" ADD COLUMN "allow_customer_share" integer DEFAULT 0 NOT NULL;

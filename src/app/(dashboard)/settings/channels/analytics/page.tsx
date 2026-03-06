@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { Metadata } from 'next';
 import { ChannelAnalytics } from '@/features/channels/components/channel-analytics';
 
@@ -20,3 +21,4 @@ export default function ChannelAnalyticsPage() {
     </div>
   );
 }
+

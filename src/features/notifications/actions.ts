@@ -64,18 +64,18 @@ export async function getNotificationsPure(
       onlyUnread ? eq(notifications.isRead, false) : undefined,
       type && type !== 'ALL'
         ? eq(
-            notifications.type,
-            type as
-              | 'SYSTEM'
-              | 'ORDER_STATUS'
-              | 'APPROVAL'
-              | 'ALERT'
-              | 'MENTION'
-              | 'INFO'
-              | 'SUCCESS'
-              | 'WARNING'
-              | 'ERROR'
-          )
+          notifications.type,
+          type as
+          | 'SYSTEM'
+          | 'ORDER_STATUS'
+          | 'APPROVAL'
+          | 'ALERT'
+          | 'MENTION'
+          | 'INFO'
+          | 'SUCCESS'
+          | 'WARNING'
+          | 'ERROR'
+        )
         : undefined
     );
 
@@ -141,6 +141,10 @@ const getUnreadCountActionInternal = createSafeAction(
     const tenantId = session.user.tenantId;
     const userId = session.user.id;
 
+    if (tenantId === '__PLATFORM__') {
+      return { success: true, data: { count: 0 } };
+    }
+
     const [{ count }] = await db
       .select({ count: sql<number>`cast(count(*) as int)` })
       .from(notifications)
@@ -174,6 +178,7 @@ const markAsReadActionInternal = createSafeAction(markAsReadSchema, async (param
   const userId = session.user.id;
 
   if (ids.length === 0) return { success: true };
+  if (session.user.tenantId === '__PLATFORM__') return { success: true };
 
   await db
     .update(notifications)
@@ -206,6 +211,8 @@ const markAllAsReadActionInternal = createSafeAction(
   async (params, { session }) => {
     const userId = session.user.id;
 
+    if (session.user.tenantId === '__PLATFORM__') return { success: true };
+
     await db
       .update(notifications)
       .set({ isRead: true, readAt: new Date() })
@@ -216,18 +223,18 @@ const markAllAsReadActionInternal = createSafeAction(
           eq(notifications.isRead, false),
           params.type && params.type !== 'ALL'
             ? eq(
-                notifications.type,
-                params.type as
-                  | 'SYSTEM'
-                  | 'ORDER_STATUS'
-                  | 'APPROVAL'
-                  | 'ALERT'
-                  | 'MENTION'
-                  | 'INFO'
-                  | 'SUCCESS'
-                  | 'WARNING'
-                  | 'ERROR'
-              )
+              notifications.type,
+              params.type as
+              | 'SYSTEM'
+              | 'ORDER_STATUS'
+              | 'APPROVAL'
+              | 'ALERT'
+              | 'MENTION'
+              | 'INFO'
+              | 'SUCCESS'
+              | 'WARNING'
+              | 'ERROR'
+            )
             : undefined
         )
       );
@@ -306,6 +313,17 @@ const getNotificationPreferencesActionInternal = createSafeAction(
   async (params, { session }) => {
     const userId = session.user.id;
 
+    if (session.user.tenantId === '__PLATFORM__') {
+      return {
+        success: true,
+        data: {
+          preferences: {},
+          notificationTypes: NOTIFICATION_TYPES,
+          channels: NOTIFICATION_CHANNELS,
+        },
+      };
+    }
+
     const prefs = await db.query.notificationPreferences.findMany({
       where: and(
         eq(notificationPreferences.userId, userId),
@@ -355,6 +373,8 @@ const updateNotificationPreferenceActionInternal = createSafeAction(
   async (data, { session }) => {
     const userId = session.user.id;
     const tenantId = session.user.tenantId;
+
+    if (tenantId === '__PLATFORM__') return { success: true };
 
     // 确保 IN_APP 始终开启（站内通知不可关闭）
     const channels = data.channels.includes('IN_APP')
@@ -409,6 +429,8 @@ const batchUpdateNotificationPreferencesActionInternal = createSafeAction(
   async (data, { session }) => {
     const userId = session.user.id;
     const tenantId = session.user.tenantId;
+
+    if (tenantId === '__PLATFORM__') return { success: true };
 
     // P1 优化：使用 onConflictDoUpdate 批量 upsert，消除 N+1 查询
     await db.transaction(async (tx) => {

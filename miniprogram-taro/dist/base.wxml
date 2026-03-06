@@ -85,6 +85,10 @@
   </picker>
 </template>
 
+<template name="tmpl_0_77">
+  <switch checked="{{xs.b(i.p0,!1)}}" disabled="{{i.p2}}" type="{{i.p4||'switch'}}" color="{{i.p1||'#04BE02'}}" bindchange="eh" name="{{i.p3}}" style="{{i.st}}" class="{{i.cl}}" bindtap="eh"  id="{{i.uid||i.sid}}" data-sid="{{i.sid}}"></switch>
+</template>
+
 <template name="tmpl_0_79">
   <template is="{{xs.c(i, 'tmpl_0_')}}" data="{{i:i,c:c}}" />
 </template>

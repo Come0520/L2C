@@ -50,13 +50,11 @@ test.describe('退换货与退单 (Returns and Refunds)', () => {
     });
 
     test('P1-2: 生成逆向退款单或核减对应 AR 账单 (冲销)', async ({ page, request }) => {
-        const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-
         // 尝试测试通过 API 提交一笔退款审批操作
         const mockRefundId = 'REF-001';
 
         // P1 FIXME: 退款审核 API `POST /api/finance/refunds/[id]/approve` 已 TDD 修复，可以正常执行。
-        const refundAPIRes = await request.post(`${BASE_URL}/api/finance/refunds/${mockRefundId}/approve`, {
+        const refundAPIRes = await request.post(`/api/finance/refunds/${mockRefundId}/approve`, {
             data: { approved: true }
         }).catch(() => null);
 

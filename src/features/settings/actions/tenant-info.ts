@@ -7,8 +7,7 @@ import { PERMISSIONS } from '@/shared/config/permissions';
 import { eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { writeFile, mkdir } from 'fs/promises';
-import { join } from 'path';
+import { fileService } from '@/shared/services/file-service';
 import { AuditService } from '@/shared/services/audit-service';
 import { logger } from '@/shared/lib/logger';
 
@@ -257,25 +256,19 @@ export async function uploadTenantLogo(
     const tenantId = session.user.tenantId;
     const extension = file.name.split('.').pop() || 'png';
     const fileName = `${tenantId}-${Date.now()}.${extension}`;
+    const objectName = `tenants/${tenantId}/logos/${fileName}`;
 
-    /**
-     * [!WARNING]
-     * 生产环境架构建议：
-     * 当前实现使用本地文件系统 (fs) 存储 Logo。在 Serverless (如 Vercel) 或负载均衡环境下，
-     * 本地存储是临时且非共享的。
-     * 建议：在生产环境中，请将此处的逻辑替换为阿里云 OSS、S3 或其他分布式对象存储，
-     * 并通过 CDN 分发文件。
-     */
-    const uploadDir = join(process.cwd(), 'public', 'uploads', 'logos');
-    await mkdir(uploadDir, { recursive: true });
-
-    // 保存文件
-    const filePath = join(uploadDir, fileName);
+    // 上传到 OSS
     const bytes = await file.arrayBuffer();
-    await writeFile(filePath, Buffer.from(bytes));
+    const uploadResult = await fileService.uploadFile(objectName, Buffer.from(bytes), {
+      mime: file.type,
+    });
 
-    // 生成可访问的 URL
-    const logoUrl = `/uploads/logos/${fileName}`;
+    if (!uploadResult.success) {
+      return { success: false, error: uploadResult.error || '上传至云端失败' };
+    }
+
+    const logoUrl = uploadResult.url as string;
 
     // 更新数据库
     await db
@@ -335,17 +328,19 @@ export async function uploadLandingCover(
     const tenantId = session.user.tenantId;
     const extension = file.name.split('.').pop() || 'png';
     const fileName = `landing-cover-${tenantId}-${Date.now()}.${extension}`;
+    const objectName = `tenants/${tenantId}/covers/${fileName}`;
 
-    const uploadDir = join(process.cwd(), 'public', 'uploads', 'covers');
-    await mkdir(uploadDir, { recursive: true });
-
-    // 保存文件
-    const filePath = join(uploadDir, fileName);
+    // 上传到 OSS
     const bytes = await file.arrayBuffer();
-    await writeFile(filePath, Buffer.from(bytes));
+    const uploadResult = await fileService.uploadFile(objectName, Buffer.from(bytes), {
+      mime: file.type,
+    });
 
-    // 生成可访问的 URL
-    const landingCoverUrl = `/uploads/covers/${fileName}`;
+    if (!uploadResult.success) {
+      return { success: false, error: uploadResult.error || '上传至云端失败' };
+    }
+
+    const landingCoverUrl = uploadResult.url as string;
 
     // 更新数据库
     await db
@@ -380,9 +375,9 @@ export async function uploadLandingCover(
  */
 export async function getVerificationStatus(): Promise<
   | {
-      success: true;
-      data: VerificationInfo;
-    }
+    success: true;
+    data: VerificationInfo;
+  }
   | { success: false; error: string }
 > {
   try {
@@ -536,9 +531,9 @@ export async function submitVerification(data: {
  */
 export async function uploadBusinessLicense(formData: FormData): Promise<
   | {
-      success: true;
-      licenseUrl: string;
-    }
+    success: true;
+    licenseUrl: string;
+  }
   | { success: false; error: string }
 > {
   try {
@@ -580,18 +575,19 @@ export async function uploadBusinessLicense(formData: FormData): Promise<
     };
     const ext = typeMap[file.type] || 'png';
     const fileName = `license_${session.user.tenantId}_${Date.now()}.${ext}`;
+    const objectName = `tenants/${session.user.tenantId}/licenses/${fileName}`;
 
-    // 确保目录存在
-    const uploadDir = join(process.cwd(), 'public', 'uploads', 'licenses');
-    await mkdir(uploadDir, { recursive: true });
-
-    // 保存文件
-    const filePath = join(uploadDir, fileName);
+    // 上传到 OSS
     const bytes = await file.arrayBuffer();
-    await writeFile(filePath, Buffer.from(bytes));
+    const uploadResult = await fileService.uploadFile(objectName, Buffer.from(bytes), {
+      mime: file.type,
+    });
 
-    // 生成可访问的 URL
-    const licenseUrl = `/uploads/licenses/${fileName}`;
+    if (!uploadResult.success) {
+      return { success: false, error: uploadResult.error || '上传至云端失败' };
+    }
+
+    const licenseUrl = uploadResult.url as string;
 
     return { success: true, licenseUrl };
   } catch (error) {
@@ -638,16 +634,19 @@ export async function uploadWechatQrcode(
     const tenantId = session.user.tenantId;
     const extension = file.name.split('.').pop() || 'png';
     const fileName = `wechat-qr-${tenantId}-${Date.now()}.${extension}`;
+    const objectName = `tenants/${tenantId}/qrcodes/${fileName}`;
 
-    // 存储到 public/uploads/qrcodes 目录
-    const uploadDir = join(process.cwd(), 'public', 'uploads', 'qrcodes');
-    await mkdir(uploadDir, { recursive: true });
-
-    const filePath = join(uploadDir, fileName);
+    // 上传到 OSS
     const bytes = await file.arrayBuffer();
-    await writeFile(filePath, Buffer.from(bytes));
+    const uploadResult = await fileService.uploadFile(objectName, Buffer.from(bytes), {
+      mime: file.type,
+    });
 
-    const qrcodeUrl = `/uploads/qrcodes/${fileName}`;
+    if (!uploadResult.success) {
+      return { success: false, error: uploadResult.error || '上传至云端失败' };
+    }
+
+    const qrcodeUrl = uploadResult.url as string;
 
     // 将 URL 存入 settings.wechatQrcodeUrl
     await db.transaction(async (tx) => {

@@ -1,4 +1,5 @@
 import { auth } from '@/shared/lib/auth';
+export const dynamic = 'force-dynamic';
 import { redirect } from 'next/navigation';
 import { AppSidebar } from '../../widgets/layout/sidebar';
 import { Header } from '../../widgets/layout/header';
@@ -66,7 +67,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <div className="bg-background relative flex flex-1 flex-col overflow-hidden">
         <Header session={session} />
         <main className="flex-1 overflow-x-hidden overflow-y-auto px-4 py-6 md:p-8">
-          <div className="mx-auto w-full max-w-7xl">{children}</div>
+          <div className="mx-auto w-full max-w-[1600px]">{children}</div>
         </main>
       </div>
 

@@ -6,6 +6,7 @@ import { Badge } from '@/shared/ui/badge';
 import { Plus, Eye, CheckCircle2, XCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import Link from 'next/link';
+import { cn } from '@/shared/utils';
 
 import { type InferSelectModel } from 'drizzle-orm';
 import { reconciliations } from '@/shared/api/schema/finance';
@@ -88,8 +89,8 @@ export function ReconciliationTable({ data }: ReconciliationTableProps) {
               <TableHead>对账单号</TableHead>
               <TableHead>类型</TableHead>
               <TableHead>对账单位/人</TableHead>
-              <TableHead>核对金额</TableHead>
-              <TableHead>差异金额</TableHead>
+              <TableHead className="text-right">核对金额</TableHead>
+              <TableHead className="text-right">差异金额</TableHead>
               <TableHead>状态</TableHead>
               <TableHead>日期</TableHead>
               <TableHead className="text-right">操作</TableHead>
@@ -108,11 +109,12 @@ export function ReconciliationTable({ data }: ReconciliationTableProps) {
                   <TableCell className="font-medium">{item.reconciliationNo}</TableCell>
                   <TableCell>{getTypeLabel(item.reconciliationType)}</TableCell>
                   <TableCell>{item.targetName}</TableCell>
-                  <TableCell>¥{parseFloat(item.totalAmount).toLocaleString()}</TableCell>
+                  <TableCell className="text-right">¥{parseFloat(item.totalAmount).toLocaleString()}</TableCell>
                   <TableCell
-                    className={
+                    className={cn(
+                      'text-right',
                       parseFloat(item.unmatchedAmount) !== 0 ? 'font-semibold text-red-500' : ''
-                    }
+                    )}
                   >
                     ¥{parseFloat(item.unmatchedAmount).toLocaleString()}
                   </TableCell>

@@ -85,6 +85,24 @@ describe('createShareLink() Action', () => {
     await createShareLink(input);
     expect(mocks.insert).toHaveBeenCalled();
   });
+
+  it('应成功解析 allowCustomerShare 以及多商品数组并落库', async () => {
+    const input = {
+      items: [
+        { itemId: UUID_ITEM, overridePrice: 100 },
+        { itemId: '55555555-5555-5555-8555-555555555555', overridePrice: 200 }
+      ],
+      expiresInDays: 7,
+      allowCustomerShare: true,
+    };
+    await createShareLink(input);
+    expect(mocks.insert).toHaveBeenCalled();
+    // 验证调用中包含了 allowCustomerShare: true
+    expect(mocks.returning).toHaveBeenCalled();
+    const insertValues = mocks.insert.mock.results[0].value.values.mock.calls[0][0];
+    expect(insertValues).toHaveProperty('allowCustomerShare', 1);
+    expect(insertValues.itemsSnapshot).toHaveLength(2);
+  });
 });
 
 describe('getShareContent() Action', () => {
@@ -126,6 +144,20 @@ describe('getShareContent() Action', () => {
     const result = await getShareContent({ shareId: UUID_SHARE });
     expect(result.expired).toBe(false);
     expect(result.items[0].overridePrice).toBe(99);
+  });
+
+  it('获取详情时，应包含 allowCustomerShare 权限配置', async () => {
+    mocks.findFirst.mockResolvedValue({
+      id: UUID_SHARE,
+      isActive: 1,
+      expiresAt: new Date(Date.now() + 100000),
+      itemsSnapshot: [{ itemId: UUID_ITEM, overridePrice: 99 }],
+      allowCustomerShare: 1,
+    });
+    mocks.findMany.mockResolvedValue([{ id: UUID_ITEM, title: '素材A' }]);
+
+    const result = await getShareContent({ shareId: UUID_SHARE });
+    expect(result).toHaveProperty('allowCustomerShare', true);
   });
 
   it('应处理 Redis 采样回写逻辑', async () => {

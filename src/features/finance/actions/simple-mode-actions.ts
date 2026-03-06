@@ -27,6 +27,10 @@ export async function getFinanceMode() {
 
   const tenantId = session.user.tenantId;
 
+  if (tenantId === '__PLATFORM__') {
+    return { success: true, mode: 'simple' as 'simple' | 'professional' };
+  }
+
   try {
     const config = await db.query.financeConfigs.findFirst({
       where: and(
@@ -62,6 +66,10 @@ export async function toggleFinanceMode(newMode: 'simple' | 'professional') {
   }
 
   const tenantId = session.user.tenantId;
+
+  if (tenantId === '__PLATFORM__') {
+    return { error: '平台管理员无法切换财务模式' };
+  }
 
   try {
     const config = await db.query.financeConfigs.findFirst({
@@ -185,6 +193,10 @@ export async function addSimpleTransaction(data: SimpleTransactionInput) {
   const { type, amount, expenseDate, description } = parseResult.data;
   const tenantId = session.user.tenantId;
 
+  if (tenantId === '__PLATFORM__') {
+    return { error: '平台管理员无法新增流水' };
+  }
+
   if (type === 'INCOME' && !(await checkPermission(session, PERMISSIONS.FINANCE.AR_CREATE))) {
     return { error: '权限不足：需要收款单创建权限' };
   }
@@ -245,6 +257,10 @@ export async function getSimpleTransactions(yearMonthQuery: string) {
   }
 
   const tenantId = session.user.tenantId;
+
+  if (tenantId === '__PLATFORM__') {
+    return { success: true, data: [] };
+  }
 
   try {
     /**

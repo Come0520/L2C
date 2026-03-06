@@ -32,26 +32,9 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: '2mb',
     },
-    optimizePackageImports: [
-      'lucide-react',
-      'date-fns',
-      '@radix-ui/react-icons',
-      'zod',
-      '@tanstack/react-table',
-      'react-hook-form',
-      '@/shared/ui',
-      '@/features',
-      '@radix-ui/react-popover',
-      '@radix-ui/react-dialog',
-      '@radix-ui/react-select',
-      '@radix-ui/react-dropdown-menu',
-      'sonner',
-      'recharts',
-      '@tanstack/react-query',
-    ],
   },
-
   turbopack: {},
+
 
   webpack: (config, { isServer }) => {
     if (!isServer && config.watchOptions) {

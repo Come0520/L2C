@@ -261,6 +261,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.role = token.role;
         session.user.roles = token.roles || [token.role];
         session.user.isPlatformAdmin = token.isPlatformAdmin;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        session.user.preferences = token.preferences as any;
       }
       return session;
     },
@@ -280,6 +282,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.role = user.role;
         token.roles = user.roles;
         token.isPlatformAdmin = user.isPlatformAdmin;
+
+        // NextAuth User interface doesn't natively include preferences without extending AdapterUser,
+        // but we pass it from DB in authorize. Use unknown casting to avoid any.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        token.preferences = (user as unknown as { preferences?: any }).preferences;
       }
       return token;
     },
@@ -381,6 +388,11 @@ export const checkPermission = async (
 const checkRolePermission = async (session: Session, permissionName: string): Promise<boolean> => {
   const getRolePermissions = unstable_cache(
     async (roleCode: string, tenantId: string) => {
+      // 1. 对于平台管理员角色，或者处于平台租户环境，直接跳过查库（因为 tenantId 为非 UUID 格式的 __PLATFORM__ 会导致 Postgres 报错）
+      if (roleCode === 'PLATFORM_ADMIN' || tenantId === '__PLATFORM__') {
+        return ['**']; // 返回包含所有权限的通配符
+      }
+
       const role = await db.query.roles.findFirst({
         where: and(eq(roles.code, roleCode), eq(roles.tenantId, tenantId)),
         columns: {

@@ -20,7 +20,7 @@ test.describe('数据仪表盘基础功能', () => {
 
     test('应正确渲染仪表盘核心组件', async ({ page }) => {
         // 验证页面标题
-        const heading = page.getByRole('heading', { name: /数据|分析|Dashboard|Analytics/i });
+        const heading = page.getByRole('heading', { name: /数据|分析|Dashboard|Analytics/i }).first();
         await expect(heading).toBeVisible();
 
         // 验证关键指标卡片 (StatCards) 是否存在

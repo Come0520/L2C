@@ -12,11 +12,10 @@ import { test, expect } from '@playwright/test';
 test.describe('电子验收签字与验证 (Acceptance E-Signature)', () => {
 
     test('P0-1: 小程序端验收保存应支持 signatureBase64 参数', async ({ request }) => {
-        const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
         const mockTaskId = 'TASK-ACCEPTANCE-MOCK';
 
         // TDD验证：检查服务端是否对 signature 字段有定义与接收处理
-        const submitResponse = await request.post(`${BASE_URL}/api/miniprogram/tasks/${mockTaskId}/acceptance`, {
+        const submitResponse = await request.post(`/api/miniprogram/tasks/${mockTaskId}/acceptance`, {
             data: {
                 rating: 5,
                 comment: '非常满意',

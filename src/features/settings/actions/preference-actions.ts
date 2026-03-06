@@ -15,6 +15,8 @@ import { logger } from '@/shared/lib/logger';
  */
 export interface UserPreferences {
   quoteMode?: 'PRODUCT_FIRST' | 'SPACE_FIRST';
+  avatarBgColor?: string;
+  avatarText?: string;
 }
 
 /**
@@ -60,6 +62,8 @@ export async function getUserPreferences(): Promise<UserPreferences> {
  */
 const updatePreferencesSchema = z.object({
   quoteMode: z.enum(['PRODUCT_FIRST', 'SPACE_FIRST']).optional(),
+  avatarBgColor: z.string().optional(),
+  avatarText: z.string().max(2).optional(),
 });
 
 const updateUserPreferencesActionInternal = createSafeAction(

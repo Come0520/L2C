@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { redirect } from 'next/navigation';
 
 /**
@@ -7,3 +8,4 @@ import { redirect } from 'next/navigation';
 export default async function SettingsPage() {
   redirect('/settings/general');
 }
+

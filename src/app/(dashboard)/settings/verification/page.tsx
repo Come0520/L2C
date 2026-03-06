@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { Suspense } from 'react';
 import { DashboardPageHeader } from '@/shared/ui/dashboard-page-header';
 import { getTenantInfo, canEditTenantInfo } from '@/features/settings/actions/tenant-info';
@@ -39,3 +40,4 @@ async function VerificationDataWrapper() {
     />
   );
 }
+

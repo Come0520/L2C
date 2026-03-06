@@ -63,15 +63,15 @@ const globalSearchSchema = z.object({
 type SearchResultItem = {
   /** 结果类型，决定了 UI 上的图标和跳转链接 */
   type:
-    | 'customer'
-    | 'lead'
-    | 'order'
-    | 'quote'
-    | 'product'
-    | 'ticket'
-    | 'channel'
-    | 'finance'
-    | 'history';
+  | 'customer'
+  | 'lead'
+  | 'order'
+  | 'quote'
+  | 'product'
+  | 'ticket'
+  | 'channel'
+  | 'finance'
+  | 'history';
   /** 实体 ID 或历史记录 Key */
   id: string;
   /** 主要显示标题（如客户姓名、单号） */
@@ -293,7 +293,7 @@ async function performDbSearch(
 
       return results;
     },
-    [`search-full-${tenantId}`, query, scope, String(limit), permissions.sort().join('_')],
+    [`search-full-${tenantId}`, query, scope, String(limit), [...permissions].sort().join('_')],
     { revalidate: 60, tags: [`search-${tenantId}`] }
   )();
 }

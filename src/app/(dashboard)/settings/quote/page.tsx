@@ -1,19 +1,20 @@
+export const dynamic = 'force-dynamic';
 import Link from 'next/link';
-import dynamic from 'next/dynamic';
+import nextDynamic from 'next/dynamic';
 import { DashboardPageHeader } from '@/shared/ui/dashboard-page-header';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/shared/ui/card';
 import { ChevronRight, LayoutGrid, Settings2 } from 'lucide-react';
 import { Skeleton } from '@/shared/ui/skeleton';
 
 /** 懒加载：系统参数配置组件 */
-const SystemParamsConfig = dynamic(
+const SystemParamsConfig = nextDynamic(
   () =>
     import('@/features/settings/components/system-params-config').then((m) => m.SystemParamsConfig),
   { loading: () => <Skeleton className="h-[280px] w-full rounded-lg" /> }
 );
 
 /** 懒加载：窗帘计算参数配置组件 */
-const CurtainCalcConfig = dynamic(
+const CurtainCalcConfig = nextDynamic(
   () =>
     import('@/features/settings/components/curtain-calc-config').then((m) => m.CurtainCalcConfig),
   { loading: () => <Skeleton className="h-[200px] w-full rounded-lg" /> }

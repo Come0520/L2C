@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { DashboardPageHeader } from '@/shared/ui/dashboard-page-header';
 import { UsersSettingsClient } from '@/features/settings/components/users-settings-client';
 import { db } from '@/shared/api/db';
@@ -74,3 +75,4 @@ export default async function UsersSettingsPage(props: {
     </div>
   );
 }
+

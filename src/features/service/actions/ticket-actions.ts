@@ -28,6 +28,8 @@ export async function getServiceTickets(filters: TicketFilters = {}) {
   const session = await auth();
   if (!session || !session.user?.tenantId)
     return { success: false, error: 'Unauthorized', data: [], total: 0 };
+  if (session.user.tenantId === '__PLATFORM__')
+    return { success: true, data: [], total: 0, page: filters.page || 1, totalPages: 0 };
 
   const { page = 1, pageSize = 20, search, status } = filters;
   const offset = (page - 1) * pageSize;

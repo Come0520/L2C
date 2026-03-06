@@ -1,9 +1,10 @@
-import dynamic from 'next/dynamic';
+export const dynamic = 'force-dynamic';
+import nextDynamic from 'next/dynamic';
 import { DashboardPageHeader } from '@/shared/ui/dashboard-page-header';
 import { Skeleton } from '@/shared/ui/skeleton';
 
 /** 懒加载：租户功能开关组件 */
-const TenantFeatureControl = dynamic(
+const TenantFeatureControl = nextDynamic(
   () =>
     import('@/features/settings/components/tenant-feature-control').then(
       (m) => m.TenantFeatureControl
@@ -24,3 +25,4 @@ export default function FeatureFlagsPage() {
     </div>
   );
 }
+

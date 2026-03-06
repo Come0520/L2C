@@ -50,6 +50,17 @@ const getDashboardStatsAction = createSafeAction(
 
     return unstable_cache(
       async () => {
+        // __PLATFORM__ 不是合法 UUID，返回空统计数据
+        if (tenantId === '__PLATFORM__') {
+          return {
+            totalSales: '0',
+            orderCount: 0,
+            newLeads: 0,
+            conversionRate: '0',
+            pendingReceivables: '0',
+            pendingPayables: '0',
+          };
+        }
         logger.info('获取仪表盘核心统计数据开始 (Starting getDashboardStats)', {
           tenantId,
           params,

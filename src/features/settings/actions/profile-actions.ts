@@ -21,6 +21,8 @@ const updateProfileSchema = z.object({
     .optional()
     .or(z.literal('')),
   image: z.string().url('头像链接无效').optional().or(z.literal('')),
+  avatarText: z.string().max(2, '最多2个字符').optional().or(z.literal('')),
+  avatarBgColor: z.string().optional(),
 });
 
 /**
@@ -42,11 +44,11 @@ export const updateProfile = createSafeAction(updateProfileSchema, async (data, 
       }),
       data.phone
         ? db.query.users.findFirst({
-            where: and(
-              eq(users.phone, data.phone),
-              ne(users.id, userId) // 排除自己
-            ),
-          })
+          where: and(
+            eq(users.phone, data.phone),
+            ne(users.id, userId) // 排除自己
+          ),
+        })
         : Promise.resolve(null),
     ]);
 
@@ -65,6 +67,11 @@ export const updateProfile = createSafeAction(updateProfileSchema, async (data, 
         name: data.name,
         phone: data.phone || undefined, // undefined prevents Drizzle from updating if empty
         avatarUrl: data.image || null,
+        preferences: {
+          ...(currentUser.preferences as Record<string, unknown> || {}),
+          avatarText: data.avatarText || '',
+          avatarBgColor: data.avatarBgColor || 'bg-primary-500',
+        },
         updatedAt: new Date(),
       })
       .where(eq(users.id, userId));

@@ -57,6 +57,12 @@ const getSalesFunnelAction = createSafeAction(salesFunnelSchema, async (params, 
 
   return unstable_cache(
     async () => {
+      if (tenantId === '__PLATFORM__') {
+        return {
+          stages: [],
+          summary: { overallConversion: '0', avgCycleTime: '0' },
+        };
+      }
       try {
         logger.info('销售漏斗分析查询开始', { tenantId, salesId, startDate, endDate });
 

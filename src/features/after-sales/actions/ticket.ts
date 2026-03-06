@@ -41,6 +41,10 @@ export const getAfterSalesTickets = cache(
     }
     const tenantId = session.user.tenantId;
 
+    if (tenantId === '__PLATFORM__') {
+      return { success: true, data: [], total: 0 };
+    }
+
     const page = params?.page || 1;
     const pageSize = params?.pageSize || 10;
     const offset = (page - 1) * pageSize;
@@ -94,10 +98,10 @@ export const getAfterSalesTickets = cache(
       ...ticket,
       customer: ticket.customer
         ? {
-            ...ticket.customer,
-            phone: maskPhoneNumber(ticket.customer.phone),
-            phoneSecondary: maskPhoneNumber(ticket.customer.phoneSecondary),
-          }
+          ...ticket.customer,
+          phone: maskPhoneNumber(ticket.customer.phone),
+          phoneSecondary: maskPhoneNumber(ticket.customer.phoneSecondary),
+        }
         : null,
     }));
 
@@ -110,6 +114,10 @@ export const getAfterSalesTickets = cache(
  * 执行订单所属权验证、工单号生成及审计记录。
  */
 const createAfterSalesTicketAction = createSafeAction(createTicketSchema, async (data, ctx) => {
+  if (ctx.session.user.tenantId === '__PLATFORM__') {
+    return { success: false, message: '平台管理员不能创建工单' };
+  }
+
   try {
     const newTicket = await db.transaction(async (tx) => {
       // P0 FIX (AS-01): 添加租户隔离，防止跨租户工单注入
@@ -196,6 +204,8 @@ const getAfterSalesTicketDetailAction = createSafeAction(
   async ({ id }, { session }) => {
     const tenantId = session.user.tenantId;
 
+    if (tenantId === '__PLATFORM__') return { success: false, message: '平台管理员不能查看工单详情' };
+
     // 1. 获取核心单据及直接的一对一关联数据
     const ticketPromise = db.query.afterSalesTickets.findFirst({
       where: and(
@@ -281,6 +291,8 @@ export const getTicketDetail = cache(async (ticketId: string) => {
 const updateTicketStatusAction = createSafeAction(updateStatusSchema, async (data, { session }) => {
   const tenantId = session.user.tenantId;
 
+  if (tenantId === '__PLATFORM__') return { success: false, message: '平台管理员不能操作工单' };
+
   // 安全校验：确保工单属于当前租户
   const ticket = await db.query.afterSalesTickets.findFirst({
     where: and(eq(afterSalesTickets.id, data.ticketId), eq(afterSalesTickets.tenantId, tenantId)),
@@ -350,6 +362,7 @@ export async function updateTicketStatus(data: z.infer<typeof updateStatusSchema
 export const getTicketLogs = cache(async (ticketId: string) => {
   const session = await auth();
   if (!session?.user?.tenantId) return { success: false, message: '未授权' };
+  if (session.user.tenantId === '__PLATFORM__') return { success: true, data: [] };
 
   const logs = await db.query.auditLogs.findMany({
     where: and(
@@ -376,6 +389,7 @@ export const getTicketLogs = cache(async (ticketId: string) => {
 export async function closeResolutionCostClosure(ticketId: string) {
   const session = await auth();
   if (!session?.user?.id || !session?.user?.tenantId) return { success: false, error: '未授权' };
+  if (session.user.tenantId === '__PLATFORM__') return { success: false, error: '平台管理员不能操作工单' };
 
   try {
     const ticket = await db.query.afterSalesTickets.findFirst({
@@ -436,6 +450,7 @@ export async function closeResolutionCostClosure(ticketId: string) {
 export const checkTicketFinancialClosure = cache(async (ticketId: string) => {
   const session = await auth();
   if (!session?.user?.tenantId) return { success: false, error: '未授权' };
+  if (session.user.tenantId === '__PLATFORM__') return { success: true, isClosed: true, message: '平台管理员无需校验' };
 
   const notices = await db.query.liabilityNotices.findMany({
     where: and(
@@ -471,6 +486,7 @@ export const checkTicketFinancialClosure = cache(async (ticketId: string) => {
 export async function createExchangeOrder(ticketId: string) {
   const session = await auth();
   if (!session?.user?.tenantId) return { success: false, error: '未授权' };
+  if (session.user.tenantId === '__PLATFORM__') return { success: false, error: '平台管理员不能操作工单' };
 
   const ticket = await db.query.afterSalesTickets.findFirst({
     where: and(

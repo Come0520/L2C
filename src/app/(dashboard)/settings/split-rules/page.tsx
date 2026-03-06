@@ -1,11 +1,12 @@
-import dynamic from 'next/dynamic';
+export const dynamic = 'force-dynamic';
+import nextDynamic from 'next/dynamic';
 import { DashboardPageHeader } from '@/shared/ui/dashboard-page-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
 import { Scissors } from 'lucide-react';
 import { Skeleton } from '@/shared/ui/skeleton';
 
 /** 懒加载：拆单规则配置组件 */
-const SplitRulesConfig = dynamic(
+const SplitRulesConfig = nextDynamic(
   () => import('@/features/settings/components/split-rules-config').then((m) => m.SplitRulesConfig),
   { loading: () => <Skeleton className="h-[300px] w-full rounded-lg" /> }
 );

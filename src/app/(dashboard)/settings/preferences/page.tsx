@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { DashboardPageHeader } from '@/shared/ui/dashboard-page-header';
 import { UserPreferenceSettings } from '@/features/settings/components/user-preference-settings';
 import { getUserPreferences } from '@/features/settings/actions/preference-actions';
@@ -17,3 +18,4 @@ export default async function PreferencesSettingsPage() {
     </div>
   );
 }
+

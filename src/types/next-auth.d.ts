@@ -14,6 +14,13 @@ declare module 'next-auth' {
       role: string; // @deprecated: Use roles instead
       roles: string[]; // Multi-role support
       isPlatformAdmin: boolean;
+      preferences?: {
+        avatarBgColor?: string;
+        avatarText?: string;
+        quoteMode?: 'PRODUCT_FIRST' | 'SPACE_FIRST';
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        [key: string]: any;
+      };
     } & DefaultSession['user'];
   }
 
@@ -22,6 +29,13 @@ declare module 'next-auth' {
     role: string;
     roles: string[];
     isPlatformAdmin: boolean;
+    preferences?: {
+      avatarBgColor?: string;
+      avatarText?: string;
+      quoteMode?: 'PRODUCT_FIRST' | 'SPACE_FIRST';
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      [key: string]: any;
+    };
   }
 }
 

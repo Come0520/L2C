@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { Suspense } from 'react';
 import { ListSkeleton } from '@/shared/ui/skeleton-variants';
 import { DashboardPageHeader } from '@/shared/ui/dashboard-page-header';
@@ -42,3 +43,4 @@ async function ChannelProductsDataWrapper() {
     <ChannelProductPool channelProducts={channelProducts} availableProducts={availableProducts} />
   );
 }
+

@@ -11,6 +11,7 @@ import { Badge } from '@/shared/ui/badge';
 import { markAsReadAction, markAllAsReadAction, getNotificationsAction } from '../actions';
 import { toast } from 'sonner';
 import { Notification } from '../types';
+import { AceternityTabs } from '@/shared/ui/aceternity-tabs';
 
 /**
  * 局部错误边界组件
@@ -198,30 +199,28 @@ export function NotificationList({ initialNotifications, total }: NotificationLi
     <div className="space-y-4">
       {/* 增强：分类筛选与全部已读操作区 */}
       <div className="flex flex-col justify-between gap-4 px-2 sm:flex-row sm:items-center">
-        <div className="flex flex-wrap gap-2">
-          {FILTER_TYPES.map((type) => (
-            <button
-              key={type.value}
-              onClick={() => setFilter(type.value)}
-              className={cn(
-                'rounded-full border px-3 py-1 text-xs font-medium transition-all',
-                filter === type.value
-                  ? 'bg-primary text-primary-foreground border-primary shadow-sm'
-                  : 'bg-background text-muted-foreground border-input hover:border-primary/50'
-              )}
-            >
-              {type.label}
-              {filter === type.value && (
-                <Badge
-                  variant="secondary"
-                  className="bg-primary-foreground/20 ml-1.5 h-4 border-none px-1 text-white"
-                >
-                  {list.length}
-                </Badge>
-              )}
-            </button>
-          ))}
-        </div>
+        <AceternityTabs
+          tabs={FILTER_TYPES.map(type => ({
+            value: type.value,
+            title: (
+              <span className="flex items-center gap-1.5">
+                {type.label}
+                {filter === type.value && (
+                  <Badge
+                    variant="secondary"
+                    className="bg-primary/10 text-primary h-4 border-none px-1 py-0 text-[10px] font-medium"
+                  >
+                    {list.length}
+                  </Badge>
+                )}
+              </span>
+            )
+          }))}
+          activeTab={filter}
+          onTabChange={(value) => setFilter(value)}
+          containerClassName="w-auto"
+          tabClassName="px-4 py-2"
+        />
 
         <Button
           variant="ghost"

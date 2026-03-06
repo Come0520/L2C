@@ -102,11 +102,11 @@ const APStatementTableRow = React.memo(function APStatementTableRow({
     <TableRow key={item.id}>
       <TableCell className="font-medium">{item.statementNo}</TableCell>
       {renderSecondaryField()}
-      <TableCell>¥{parseFloat(item.totalAmount).toLocaleString()}</TableCell>
-      <TableCell className="text-blue-600">
+      <TableCell className="text-right">¥{parseFloat(item.totalAmount).toLocaleString()}</TableCell>
+      <TableCell className="text-right text-blue-600">
         ¥{parseFloat(item.paidAmount).toLocaleString()}
       </TableCell>
-      <TableCell className="font-semibold text-orange-600">
+      <TableCell className="text-right font-semibold text-orange-600">
         ¥{parseFloat(item.pendingAmount).toLocaleString()}
       </TableCell>
       <TableCell>
@@ -179,9 +179,9 @@ export function APStatementTable({ data, type }: APStatementTableProps) {
                 <TableHead>账单编号</TableHead>
                 <TableHead>{type === 'SUPPLIER' ? '供应商' : '安装工'}</TableHead>
                 <TableHead>期间/订单</TableHead>
-                <TableHead>总额</TableHead>
-                <TableHead>已付</TableHead>
-                <TableHead>待付</TableHead>
+                <TableHead className="text-right">总额</TableHead>
+                <TableHead className="text-right">已付</TableHead>
+                <TableHead className="text-right">待付</TableHead>
                 <TableHead>状态</TableHead>
                 <TableHead>日期</TableHead>
                 <TableHead className="text-right">操作</TableHead>

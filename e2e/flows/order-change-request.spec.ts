@@ -93,10 +93,8 @@ test.describe('增减项与订单变更申请 (Order Change Orders)', () => {
     });
 
     test('P1-3: 变更单审批通过后，应体现对应的新明细总金额', async ({ page, request }) => {
-        const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-
         // 直接测试后端 API 处理变更单批准后的金额重新计算（或者仅仅看是否暴露了审批接口）
-        const approveResponse = await request.post(`${BASE_URL}/api/change-orders/CO-001/approve`, {
+        const approveResponse = await request.post(`/api/change-orders/CO-001/approve`, {
             data: { reason: '同意减项' }
         }).catch(() => null);
 

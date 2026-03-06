@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { getFinanceConfig, getFinanceAccounts } from '@/features/finance/actions/config';
 import { FinanceSettingsForm } from '@/features/finance/components/FinanceSettingsForm';
 import { AccountList } from '@/features/finance/components/AccountList';
@@ -27,3 +28,4 @@ export default async function FinanceSettingsPage() {
     </div>
   );
 }
+

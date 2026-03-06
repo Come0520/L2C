@@ -14,11 +14,10 @@ test.describe('安装照片回传链路 (Install Photo Upload)', () => {
 
     test('P0-1: 师傅端完成任务 API 应检查/包含图片凭证', async ({ request }) => {
         // 由于是 E2E，我们通过发送请求测试包含/不包含图片的校验逻辑 (TDD风格)
-        const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
         const mockTaskId = 'TASK-MOCK-PHOTO';
 
         // 模拟无图片的完工打卡请求 (预期应该是失败或被拦截，或至少验证接口存在)
-        const responseNoPhoto = await request.post(`${BASE_URL}/api/miniprogram/engineer/tasks/${mockTaskId}/complete`, {
+        const responseNoPhoto = await request.post(`/api/miniprogram/engineer/tasks/${mockTaskId}/complete`, {
             data: {
                 notes: '完工了',
                 photos: [] // 空列表

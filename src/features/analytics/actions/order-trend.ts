@@ -42,6 +42,7 @@ const getOrderTrendAction = createSafeAction(orderTrendSchema, async (params, { 
 
   return unstable_cache(
     async () => {
+      if (tenantId === '__PLATFORM__') return [];
       logger.info('获取订单趋势分析开始 (Starting getOrderTrend)', { tenantId, params });
       try {
         let dateTruncate: SQL;

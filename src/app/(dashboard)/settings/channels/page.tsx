@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { Suspense } from 'react';
 import { getChannels } from '@/features/channels/actions/queries';
 import { getChannelCategories } from '@/features/channels/actions/categories';
@@ -104,3 +105,4 @@ async function GradeDiscountConfigTab() {
   const gradeDiscounts = await getChannelGradeDiscounts();
   return <GradeDiscountConfigForm initialData={gradeDiscounts} />;
 }
+

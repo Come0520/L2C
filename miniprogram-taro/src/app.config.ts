@@ -91,6 +91,7 @@ export default defineAppConfig({
                 'article-detail/index',   // 知识文章 - P1 待建
                 'favorites/index',        // 我的收藏 - P1 待建
                 'capsule/index',          // 分享胶囊 - MIGRATED
+                'collection/index',       // 精选合集 - MIGRATED
             ],
         },
     ],

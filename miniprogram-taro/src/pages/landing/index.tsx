@@ -19,17 +19,18 @@
  * - 分享卡片：path 携带 ?tc=CODE
  * - 小程序码：scene 携带 tc=CODE
  */
-import { View, Text, Image, Button } from '@tarojs/components'
+import { View, Text, Image, Button, Swiper, SwiperItem, ScrollView } from '@tarojs/components'
 import Taro, { useLoad, useShareAppMessage } from '@tarojs/taro'
 import { useCallback } from 'react'
 import { useAuthStore, ROLE_HOME, UserRole } from '@/stores/auth'
 import { useTenantLandingStore } from '@/stores/tenant-landing'
+import { danmakuItems, trustStats, testimonialItems, pricingPlans } from '@/constants/landing-data'
 import './index.scss'
 
 /**
  * ⚠️ 开发调试开关 — 上线前改为 false 即可隐藏角色切换面板
  */
-const __DEV_ROLE_SWITCHER__ = true
+const __DEV_ROLE_SWITCHER__ = false
 
 /** 调试用：四大角色快速入口配置 */
 const DEV_ROLES: { role: UserRole; label: string; icon: string; desc: string; color: string }[] = [
@@ -231,34 +232,93 @@ export default function LandingPage() {
 
   // ========== L2C 官方推广页（默认/降级） ==========
   return (
-    <View className='landing-page'>
+    <View className='landing-page default-landing-page'>
       <View className='landing-hero'>
-        <Text className='hero-logo'>L2C</Text>
-        <Text className='hero-title'>窗帘全流程管理大师</Text>
-        <Text className='hero-desc'>从线索到安装，全链路数字化管理</Text>
+        <Text className='hero-logo'>让窗帘生意</Text>
+        <Text className='hero-title-gradient'>回归简单</Text>
+        <Text className='hero-desc'>从线索到收款，一站式管理</Text>
+        <View className='landing-actions'>
+          <Button className='btn-primary' onClick={goRegister}>免费开始</Button>
+          <Button className='btn-secondary' onClick={goLogin}>老用户登录</Button>
+        </View>
       </View>
 
-      <View className='landing-actions'>
-        <Button className='apple-btn-primary' onClick={goLogin}>立即登录</Button>
-        <View style={{ height: 16 }} />
-        <Button className='apple-btn-secondary' onClick={goRegister}>申请入驻</Button>
+      <View className='section pain-points'>
+        <View className='section-header'>
+          <Text className='section-title'>为什么选择 L2C？</Text>
+          <Text className='section-desc'>告别传统手工账，数字化管理</Text>
+        </View>
+        <Swiper className='pain-swiper' vertical autoplay circular interval={2500} displayMultipleItems={3}>
+          {danmakuItems.map(item => (
+            <SwiperItem key={item.id}>
+              <View className='pain-card'>
+                <View className='pain-tag'>{item.category}</View>
+                <Text className='pain-text'>"{item.pain}"</Text>
+              </View>
+            </SwiperItem>
+          ))}
+        </Swiper>
       </View>
 
-      <View className='features'>
-        {[
-          { icon: '📋', title: '线索管理', desc: '录入、分配、跟进全流程' },
-          { icon: '📄', title: '快速报价', desc: '按房间和产品自动计算' },
-          { icon: '📐', title: '量尺调度', desc: '工人接单，客户实时确认' },
-          { icon: '🏠', title: '云展厅', desc: '一键分享产品给客户浏览' },
-        ].map((f) => (
-          <View key={f.title} className='feature-item'>
-            <View className='feature-icon-wrap'>
-              <Text className='feature-icon'>{f.icon}</Text>
+      <View className='section stats-wrapper'>
+        <View className='stats-grid'>
+          {trustStats.map(stat => (
+            <View key={stat.label} className='stat-item'>
+              <Text className='stat-value'>{stat.value}{stat.suffix}</Text>
+              <Text className='stat-label'>{stat.label}</Text>
             </View>
-            <Text className='feature-title'>{f.title}</Text>
-            <Text className='feature-desc'>{f.desc}</Text>
+          ))}
+        </View>
+      </View>
+
+      <View className='section testimonials'>
+        <View className='section-header'>
+          <Text className='section-title'>同行都在用</Text>
+          <Text className='section-desc'>听听大家的真实反馈</Text>
+        </View>
+        <ScrollView className='testimonials-scroll' scrollX>
+          <View className='testimonials-list'>
+            {testimonialItems.map(t => (
+              <View key={t.id} className='testimonial-card'>
+                <Text className='t-content'>"{t.content}"</Text>
+                <View className='t-author'>
+                  <View className='t-avatar' style={{ backgroundColor: t.avatarColor }}>
+                    <Text>{t.author[0]}</Text>
+                  </View>
+                  <View className='t-info'>
+                    <Text className='t-name'>{t.author}</Text>
+                    <Text className='t-role'>{t.company} · {t.role}</Text>
+                  </View>
+                </View>
+              </View>
+            ))}
           </View>
-        ))}
+        </ScrollView>
+      </View>
+
+      <View className='section pricing'>
+        <View className='section-header'>
+          <Text className='section-title'>基础版永久免费</Text>
+          <Text className='section-desc'>无隐藏费用，随时升级</Text>
+        </View>
+        <View className='pricing-cards'>
+          {pricingPlans.map(plan => (
+            <View key={plan.id} className={`pricing-card ${plan.highlighted ? 'highlight' : ''}`}>
+              {plan.highlighted && <View className='p-badge'>推荐</View>}
+              <Text className='p-name'>{plan.name}</Text>
+              <Text className='p-price'>{plan.price}<Text className='p-period'>{plan.period}</Text></Text>
+              <Text className='p-desc'>{plan.description}</Text>
+              <View className='p-features'>
+                {plan.features.slice(0, 4).map(f => (
+                  <View key={f.text} className={`p-feature ${f.included ? 'included' : 'excluded'}`}>
+                    <Text className={`f-icon ${f.included ? 'included' : 'excluded'}`}>{f.included ? '✓' : '○'}</Text>
+                    <Text className='f-text'>{f.text}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          ))}
+        </View>
       </View>
 
       {/* ========== 🔧 调试面板：角色快速切换 ========== */}

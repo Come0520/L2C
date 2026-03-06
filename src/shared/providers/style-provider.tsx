@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState, useSyncExternalStore } from 'react';
 
-export type VisualStyle = 'glass' | 'clay' | 'cute' | 'parchment';
+export type VisualStyle = 'glass' | 'clay' | 'spatial' | 'parchment';
 
 interface StyleContextType {
   style: VisualStyle;
@@ -11,7 +11,7 @@ interface StyleContextType {
 
 const StyleContext = createContext<StyleContextType | undefined>(undefined);
 
-const emptySubscribe = () => () => {};
+const emptySubscribe = () => () => { };
 
 export default function StyleProvider({ children }: { children: React.ReactNode }) {
   const mounted = useSyncExternalStore(
@@ -23,8 +23,12 @@ export default function StyleProvider({ children }: { children: React.ReactNode 
 
   useEffect(() => {
     if (!mounted) return;
-    const savedStyle = localStorage.getItem('l2c-ui-style') as VisualStyle;
-    if (savedStyle && ['glass', 'clay', 'cute', 'parchment'].includes(savedStyle)) {
+    let savedStyle = localStorage.getItem('l2c-ui-style') as VisualStyle | 'cute';
+    if (savedStyle === 'cute') {
+      savedStyle = 'spatial';
+      localStorage.setItem('l2c-ui-style', 'spatial');
+    }
+    if (savedStyle && ['glass', 'clay', 'spatial', 'parchment'].includes(savedStyle)) {
       document.documentElement.setAttribute('data-style', savedStyle);
     }
   }, [mounted]);

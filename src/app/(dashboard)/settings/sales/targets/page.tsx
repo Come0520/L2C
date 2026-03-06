@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { Metadata } from 'next';
 import { Suspense } from 'react';
 import { TargetsClientPage } from './client';
@@ -61,3 +62,4 @@ async function SalesTargetsDataWrapper({
     />
   );
 }
+

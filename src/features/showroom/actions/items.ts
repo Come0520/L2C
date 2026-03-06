@@ -36,6 +36,12 @@ export async function getShowroomItems(input: z.input<typeof getShowroomItemsSch
   const session = await auth();
   if (!session?.user?.tenantId) throw new ShowroomError(ShowroomErrors.UNAUTHORIZED);
 
+  // __PLATFORM__ 是平台级租户，非普通商户，跳过数据库查询直接返回空列表
+  // 防止无效 UUID 语法错误传递至 PostgreSQL
+  if (session.user.tenantId === '__PLATFORM__') {
+    return { data: [], pagination: { total: 0, page: 1, pageSize: 20, totalPages: 0 } };
+  }
+
   const { page, pageSize, search, type, status, minScore, sortBy, categoryId } =
     getShowroomItemsSchema.parse(input);
   const offset = (page - 1) * pageSize;

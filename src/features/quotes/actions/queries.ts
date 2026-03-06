@@ -26,6 +26,7 @@ export async function getQuoteVersions(rootId: string) {
     throw new Error('未授权访问');
   }
   const tenantId = session.user.tenantId;
+  if (tenantId === '__PLATFORM__') return [];
 
   return getCachedQuoteVersions(rootId, tenantId);
 }
@@ -76,6 +77,9 @@ export async function getQuotes(
     throw new Error('未授权访问');
   }
   const tenantId = session.user.tenantId;
+  if (tenantId === '__PLATFORM__') {
+    return { data: [], meta: { page: params.page || 1, pageSize: params.pageSize || 10, total: 0, totalPages: 0 } };
+  }
 
   return getCachedQuotes(tenantId, params);
 }
@@ -200,6 +204,9 @@ export const getQuote = cache(async (id: string) => {
     throw new Error('未授权访问');
   }
   const tenantId = session.user.tenantId;
+  if (tenantId === '__PLATFORM__') {
+    return { data: undefined };
+  }
 
   return getCachedQuote(id, tenantId);
 });
@@ -297,6 +304,9 @@ export const getQuoteBundleById = cache(async ({ id }: { id: string }) => {
     return { success: false as const, message: '未授权访问' };
   }
   const tenantId = session.user.tenantId;
+  if (tenantId === '__PLATFORM__') {
+    return { success: false as const, message: '平台级不支持此查询' };
+  }
 
   return getCachedQuoteBundleById(id, tenantId);
 });
@@ -361,6 +371,7 @@ export const getQuoteAuditLogs = cache(async (quoteId: string) => {
     throw new Error('未授权访问');
   }
   const tenantId = session.user.tenantId;
+  if (tenantId === '__PLATFORM__') return [];
 
   // 先验证报价单存在且属于当前租户
   const quote = await db.query.quotes.findFirst({

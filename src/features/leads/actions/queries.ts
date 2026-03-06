@@ -33,6 +33,10 @@ export async function getLeads(input: z.infer<typeof leadFilterSchema>) {
     throw new Error('Unauthorized: 未登录或缺少租户信息');
   }
   const tenantId = session.user.tenantId;
+  if (tenantId === '__PLATFORM__') {
+    const filters = leadFilterSchema.parse(input);
+    return { data: [], total: 0, page: filters.page, pageSize: filters.pageSize, totalPages: 0 };
+  }
   const filters = leadFilterSchema.parse(input);
 
   // 使用稳定排序的缓存键，避免属性顺序不同导致缓存未命中
@@ -226,6 +230,7 @@ export async function getLeadTimeline(input: z.infer<typeof getLeadTimelineLogsS
     throw new Error('Unauthorized: 未登录或缺少租户信息');
   }
   const tenantId = session.user.tenantId;
+  if (tenantId === '__PLATFORM__') return [];
   const { leadId } = input;
 
   // 先验证线索归属（在缓存外执行，避免缓存 miss 时双查询）
@@ -280,6 +285,7 @@ export async function getChannels(parentId?: string) {
     throw new Error('Unauthorized: 未登录或缺少租户信息');
   }
   const tenantId = session.user.tenantId;
+  if (tenantId === '__PLATFORM__') return [];
 
   const start = Date.now();
   return unstable_cache(
@@ -322,6 +328,7 @@ export async function getSalesUsers() {
     throw new Error('Unauthorized');
   }
   const tenantId = session.user.tenantId;
+  if (tenantId === '__PLATFORM__') return [];
 
   const start = Date.now();
   return unstable_cache(
@@ -370,6 +377,7 @@ export async function getLeadFunnelStats(input?: z.infer<typeof analyticsDateRan
     throw new Error('Unauthorized: 未登录或缺少租户信息');
   }
   const tenantId = session.user.tenantId;
+  if (tenantId === '__PLATFORM__') return [];
   const range = input ? analyticsDateRangeSchema.parse(input) : {};
 
   const start = Date.now();

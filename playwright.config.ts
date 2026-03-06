@@ -1,4 +1,10 @@
 import { defineConfig, devices } from '@playwright/test';
+import dotenv from 'dotenv';
+import path from 'path';
+
+// 加载测试环境变量，确保 webServer 启动时获取正确的 DATABASE_URL (如 127.0.0.1:5434)
+dotenv.config({ path: path.resolve(__dirname, '.env.test'), override: true });
+
 
 /**
  * See https://playwright.dev/docs/test-configuration.
@@ -90,17 +96,10 @@ export default defineConfig({
 
     /* 在测试前自动启动 standalone server */
     webServer: {
-        command: 'node .next/standalone/server.js',
+        command: 'node scripts/start-e2e-server.mjs',
         port: 3004,
         reuseExistingServer: !process.env.CI,
         timeout: 300 * 1000,
         stdout: 'pipe',
-        env: {
-            PORT: '3004',
-            HOSTNAME: 'localhost',
-            AUTH_TRUST_HOST: 'true',
-            AUTH_URL: process.env.BASE_URL || 'http://localhost:3004',
-            NEXTAUTH_URL: process.env.BASE_URL || 'http://localhost:3004',
-        },
     },
 });

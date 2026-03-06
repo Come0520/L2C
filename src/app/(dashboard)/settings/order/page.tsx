@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { DashboardPageHeader } from '@/shared/ui/dashboard-page-header';
 import { SystemParamsConfig } from '@/features/settings/components/system-params-config';
 
@@ -14,3 +15,4 @@ export default function OrderSettingsPage() {
     </div>
   );
 }
+

@@ -11,6 +11,7 @@
  */
 
 import { GoogleGenAI } from '@google/genai';
+import aiPromptsConfig from '../../../../config/ai-prompts.json';
 
 // ==================== 款式 Prompt 映射 ====================
 
@@ -106,17 +107,22 @@ export function buildPrompt(params: BuildPromptParams): string {
     const { curtainStyleName, curtainStylePrompt, fabricDescription, userNotes, cameraAngle } =
         params;
 
-    const lines = [
-        `Generate a photorealistic interior design rendering showing ${curtainStyleName} curtains.`,
-        `Curtain style: ${curtainStylePrompt}`,
-        `Fabric: ${fabricDescription}`,
-        `Requirements: maintain the original room structure and furniture, only replace or add curtains,`,
-        `high-quality interior photography, natural lighting, 4K resolution.`,
-    ];
+    // 从 JSON 配置文件读取 Prompt 模板（相公可直接编辑 config/ai-prompts.json 调教效果）
+    const template = aiPromptsConfig.promptTemplate
+        .replace('{curtainStyleName}', curtainStyleName)
+        .replace('{curtainStylePrompt}', curtainStylePrompt)
+        .replace('{fabricDescription}', fabricDescription);
+
+    const lines = [template];
+
+    // 追加反向限制提示词
+    if (aiPromptsConfig.negativePrompt) {
+        lines.push(aiPromptsConfig.negativePrompt);
+    }
 
     // 有用户备注时添加额外指引
     if (userNotes) {
-        lines.push(`Additional client notes: ${userNotes}`);
+        lines.push(`${aiPromptsConfig.userNotesPrefix}${userNotes}`);
     }
 
     // 有视角信息时添加视角说明
@@ -168,7 +174,11 @@ export async function generateRendering(
 
     const { originalImageBase64, prompt, fabricImageBase64 } = params;
 
-    const ai = new GoogleGenAI({ apiKey });
+    const ai = new GoogleGenAI({
+        apiKey,
+        // 支持国内反代/中转：配置 GEMINI_BASE_URL 即可绕过 GFW
+        ...(process.env.GEMINI_BASE_URL ? { httpOptions: { baseUrl: process.env.GEMINI_BASE_URL } } : {}),
+    });
 
     // 构建多模态内容部分（图像 + 文本）
     const contents: {
@@ -197,12 +207,14 @@ export async function generateRendering(
             { text: prompt },
         ];
 
-    // 调用 Gemini 图像生成
+    // 调用 Gemini 图像生成（模型和参数从 JSON 配置读取）
     const response = await ai.models.generateContent({
-        model: 'gemini-2.0-flash-exp-image-generation',
+        model: aiPromptsConfig.modelConfig.model,
         contents: [{ role: 'user', parts: contents }],
         config: {
-            responseModalities: ['IMAGE', 'TEXT'],
+            responseModalities: aiPromptsConfig.modelConfig.responseModalities as ('IMAGE' | 'TEXT')[],
+            // 注入 System Prompt（相公可在 config/ai-prompts.json 中修改系统指令）
+            systemInstruction: aiPromptsConfig.systemPrompt,
         },
     });
 

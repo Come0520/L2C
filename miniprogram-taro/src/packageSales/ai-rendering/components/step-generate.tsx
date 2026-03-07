@@ -15,6 +15,8 @@ interface WizardState {
     fabricDescription: string;
     originalImageBase64: string | null;
     userNotes: string;
+    /** Phase 2: 合成了标注的图片 base64（Canvas 涂鸦后导出） */
+    annotationDataUrl: string | null;
     curtainStyleId: string;
     curtainStyleName: string;
 }
@@ -48,7 +50,8 @@ export function StepGenerate({ wizardState, onBack, onRestart }: StepGeneratePro
 
         try {
             const result = await generateRendering({
-                originalImageBase64: wizardState.originalImageBase64,
+                // 优先用 Canvas 标注合成图，无则回退原图
+                originalImageBase64: wizardState.annotationDataUrl || wizardState.originalImageBase64,
                 curtainStyleId: wizardState.curtainStyleId,
                 fabricDescription: wizardState.fabricDescription,
                 fabricSource: wizardState.fabricSource,

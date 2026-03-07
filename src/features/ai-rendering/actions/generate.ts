@@ -19,7 +19,7 @@
  */
 
 import { db } from '@/shared/api/db';
-import { aiRenderings } from '@/shared/api/schema';
+import { aiRenderings, aiCurtainStyleTemplates } from '@/shared/api/schema';
 import { eq } from 'drizzle-orm';
 import { revalidateTag } from 'next/cache';
 import { auth } from '@/shared/lib/auth';
@@ -111,10 +111,26 @@ export async function generateAiRendering(
     }
   }
 
-  // === Step 4: 解析款式 Prompt ===
-  const styleEntry = CURTAIN_STYLE_PROMPT_MAP[input.curtainStyleId];
-  const curtainStyleName = styleEntry?.name ?? input.curtainStyleId;
-  const curtainStylePrompt = styleEntry?.prompt ?? input.curtainStyleId;
+  // === Step 4: 解析款式 Prompt（优先从数据库读取，回退到硬编码 Map） ===
+  let curtainStyleName: string;
+  let curtainStylePrompt: string;
+
+  // 尝试从数据库读取（平台管理页面配置的模板）
+  const [dbTemplate] = await db
+    .select({ name: aiCurtainStyleTemplates.name, promptFragment: aiCurtainStyleTemplates.promptFragment })
+    .from(aiCurtainStyleTemplates)
+    .where(eq(aiCurtainStyleTemplates.id, input.curtainStyleId))
+    .limit(1);
+
+  if (dbTemplate) {
+    curtainStyleName = dbTemplate.name;
+    curtainStylePrompt = dbTemplate.promptFragment ?? dbTemplate.name;
+  } else {
+    // 回退到代码内置的款式映射（兼容旧数据）
+    const styleEntry = CURTAIN_STYLE_PROMPT_MAP[input.curtainStyleId];
+    curtainStyleName = styleEntry?.name ?? input.curtainStyleId;
+    curtainStylePrompt = styleEntry?.prompt ?? input.curtainStyleId;
+  }
 
   // === Step 5: 创建渲染记录（PENDING 状态）===
   let renderingId: string | undefined;

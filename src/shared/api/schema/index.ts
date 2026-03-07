@@ -36,3 +36,4 @@ export * from './showroom';
 export * from './onboarding-profiles';
 export * from './landing-testimonials';
 export * from './traceability';
+export * from './ai-rendering';

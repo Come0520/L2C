@@ -178,6 +178,13 @@ export default function WorkbenchPage() {
                                     <Text className='quick-action-icon'>👥</Text>
                                     <Text className='quick-action-text'>客户</Text>
                                 </View>
+                                <View
+                                    className='quick-action card'
+                                    onClick={() => Taro.navigateTo({ url: '/packageSales/ai-rendering/index' })}
+                                >
+                                    <Text className='quick-action-icon'>✨</Text>
+                                    <Text className='quick-action-text'>效果图</Text>
+                                </View>
                             </View>
 
                             {/* 今日待办 */}

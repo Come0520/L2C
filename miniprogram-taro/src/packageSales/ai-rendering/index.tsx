@@ -28,6 +28,8 @@ interface WizardState {
     originalImageBase64: string | null;
     /** Step 2: 用户备注 */
     userNotes: string;
+    /** Step 2: 合成了标注的图片 base64（Canvas 涂鸦后导出，优先用于 AI 生成） */
+    annotationDataUrl: string | null;
     /** Step 3: 选中的款式 ID */
     curtainStyleId: string;
     /** Step 3: 款式名称（显示用） */
@@ -47,6 +49,7 @@ const INITIAL_STATE: WizardState = {
     fabricDescription: '',
     originalImageBase64: null,
     userNotes: '',
+    annotationDataUrl: null,
     curtainStyleId: '',
     curtainStyleName: '',
 };
@@ -128,6 +131,7 @@ export default function AiRenderingPage() {
                         value={{
                             originalImageBase64: wizardState.originalImageBase64,
                             userNotes: wizardState.userNotes,
+                            annotationDataUrl: wizardState.annotationDataUrl,
                         }}
                         onChange={(patch) => updateState(patch)}
                         onNext={() => goNext('style')}

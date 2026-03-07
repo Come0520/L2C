@@ -5,8 +5,9 @@
  * 展示模板列表，支持创建/编辑/删除/状态切换
  * TODO: Phase 2 实现完整的表单弹窗和图片上传
  */
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useCallback } from 'react';
 import { toggleTemplateStatus, deleteTemplate } from '../actions/template-actions';
+import { TemplateFormDialog } from './template-form-dialog';
 
 interface Template {
   id: string;
@@ -35,6 +36,13 @@ const CATEGORY_LABELS: Record<string, string> = {
 export function TemplateManager({ initialTemplates }: TemplateManagerProps) {
   const [templates, setTemplates] = useState(initialTemplates);
   const [isPending, startTransition] = useTransition();
+  const [showDialog, setShowDialog] = useState(false);
+
+  /** 弹窗保存成功后刷新列表 */
+  const handleCreateSuccess = useCallback(() => {
+    // 简单方案：刷新整个页面以获取最新数据
+    window.location.reload();
+  }, []);
 
   /** 切换启用状态 */
   const handleToggle = (id: string, current: number) => {
@@ -56,11 +64,17 @@ export function TemplateManager({ initialTemplates }: TemplateManagerProps) {
 
   return (
     <div>
-      {/* TODO: 新建模板按钮（Phase 2 实现表单弹窗） */}
+      {/* 新增弹窗 */}
+      <TemplateFormDialog
+        open={showDialog}
+        onClose={() => setShowDialog(false)}
+        onSuccess={handleCreateSuccess}
+      />
+
       <div className="mb-4 flex justify-end">
         <button
           className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-          onClick={() => alert('Phase 2: 表单弹窗上传参考图')}
+          onClick={() => setShowDialog(true)}
         >
           + 新增款式模板
         </button>

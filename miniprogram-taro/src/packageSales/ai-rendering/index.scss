@@ -445,8 +445,13 @@ $spacing: 24rpx;
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .result-area {
@@ -467,5 +472,76 @@ $spacing: 24rpx;
   .result-actions {
     display: flex;
     gap: $spacing;
+  }
+}
+
+// ==================== Step 2 Canvas 涂鸦标注 ====================
+
+.canvas-container {
+  position: relative;
+  width: 100%;
+  border-radius: 20rpx;
+  overflow: hidden;
+  margin-bottom: 24rpx;
+  background: #000;
+
+  // 底图铺满
+  .room-img-canvas-bg {
+    width: 100%;
+    display: block;
+  }
+
+  // Canvas 画板：绝对定位叠加在底图上
+  .annotation-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10;
+    // 透明背景，不遮挡底图
+    background: transparent;
+  }
+
+  // 工具栏（悬浮在底部）
+  .canvas-toolbar {
+    position: absolute;
+    bottom: 16rpx;
+    right: 16rpx;
+    display: flex;
+    gap: 12rpx;
+    z-index: 20;
+
+    .toolbar-btn {
+      background: rgba(0, 0, 0, 0.6);
+      border-radius: 32rpx;
+      padding: 10rpx 20rpx;
+      display: flex;
+      align-items: center;
+
+      text {
+        font-size: 22rpx;
+        color: #fff;
+      }
+
+      &.toolbar-btn--danger {
+        background: rgba($danger, 0.8);
+      }
+    }
+  }
+
+  // 操作引导提示
+  .canvas-hint {
+    position: absolute;
+    top: 16rpx;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.55);
+    color: #fff;
+    font-size: 22rpx;
+    border-radius: 20rpx;
+    padding: 8rpx 20rpx;
+    white-space: nowrap;
+    z-index: 20;
   }
 }

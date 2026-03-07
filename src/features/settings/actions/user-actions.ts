@@ -5,12 +5,18 @@ import type { Session } from 'next-auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
 import { db } from '@/shared/api/db';
 import { users } from '@/shared/api/schema';
-import { eq, and, ne } from 'drizzle-orm';
+import { leads } from '@/shared/api/schema/leads';
+import { eq, and, ne, isNull } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { AuditService } from '@/shared/services/audit-service';
 import { updateUserManagementSchema } from '../schema';
 import { verificationCodes } from '@/shared/api/schema';
 import { v4 as uuidv4 } from 'uuid';
+import {
+  togglesToRoles,
+  togglesToPermissionFlags,
+  type BaseMemberToggles,
+} from '@/features/settings/lib/base-member-toggles';
 
 import { logger } from '@/shared/lib/logger';
 
@@ -463,3 +469,185 @@ export async function generateUserMagicLink(targetUserId: string): Promise<{
     };
   }
 }
+
+/**
+ * 基础版专用：通过虚拟积木开关更新用户权限
+ *
+ * @description 将 5 个虚拟开关状态转换为实际的 roles 数组和 permissions 标志，
+ * 然后调用底层的 updateUser 完成更新。只有 Base Plan 的租户才应调用此接口。
+ *
+ * @param userId 目标用户 ID
+ * @param name 用户名（同时更新）
+ * @param toggles 虚拟开关状态（5 个直观开关）
+ * @returns 操作结果
+ */
+export async function updateUserWithToggles(
+  userId: string,
+  name: string,
+  toggles: BaseMemberToggles
+): Promise<{ success: boolean; error?: string }> {
+  const session = await auth();
+  const { isAdmin, tenantId } = await checkAdmin(session);
+  if (!isAdmin || !tenantId) {
+    return { success: false, error: '无权限执行此操作' };
+  }
+
+  // 将虚拟开关映射到角色和自定义权限标志
+  const roles = togglesToRoles(toggles);
+  const permissionFlags = togglesToPermissionFlags(toggles);
+
+  logger.info(`[Base Plan] 用户 ${session?.user?.id} 正在更新成员权限开关`, {
+    targetUserId: userId,
+    toggles,
+    resolvedRoles: roles,
+    permissionFlags,
+  });
+
+  try {
+    // 1. 更新 roles（通过通用 updateUser action）
+    const result = await updateUser(userId, { name, roles });
+    if (!result.success) return result;
+
+    // 2. 更新自定义 permissions 标志（view:all_data 等）
+    await db
+      .update(users)
+      .set({ permissions: permissionFlags, updatedAt: new Date() })
+      .where(and(eq(users.id, userId), eq(users.tenantId, tenantId)));
+
+    revalidatePath('/settings/users');
+    return { success: true };
+  } catch (error) {
+    logger.error('[Base Plan] 更新成员权限开关失败:', error);
+    return { success: false, error: '更新失败，请重试' };
+  }
+}
+
+/**
+ * 基础版专用：携带资产交接的员工停用操作
+ *
+ * @description 在停用员工账号（is_active = false）之前，强制将其名下所有未结
+ * 线索（leads）的 assignedSalesId 转移给指定的接管人（默认为当前 Boss）。
+ * 整个操作在单个数据库事务中完成，确保原子性。
+ *
+ * @param userId 要停用的员工 ID
+ * @param handoverToUserId 接管人 ID（必须是同租户下的活跃用户）
+ * @returns 操作结果，包含已交接资产的统计数字
+ */
+export async function deactivateUserWithHandover(
+  userId: string,
+  handoverToUserId: string
+): Promise<{ success: boolean; error?: string; transferredLeadsCount?: number }> {
+  const session = await auth();
+  const { isAdmin, tenantId, currentUserId } = await checkAdmin(session);
+
+  if (!isAdmin || !tenantId) {
+    return { success: false, error: '无权限操作' };
+  }
+
+  if (userId === currentUserId) {
+    return { success: false, error: '不能停用自己的账号' };
+  }
+
+  if (userId === handoverToUserId) {
+    return { success: false, error: '停用员工和接管人不能是同一个人' };
+  }
+
+  try {
+    // 1. 验证目标用户存在
+    const targetUser = await db.query.users.findFirst({
+      where: and(eq(users.id, userId), eq(users.tenantId, tenantId)),
+      columns: { id: true, name: true, isActive: true, role: true, roles: true },
+    });
+
+    if (!targetUser) {
+      return { success: false, error: '用户不存在' };
+    }
+
+    if (!targetUser.isActive) {
+      return { success: false, error: '该账号已经处于停用状态' };
+    }
+
+    // 2. 验证接管人存在且活跃
+    const handoverUser = await db.query.users.findFirst({
+      where: and(eq(users.id, handoverToUserId), eq(users.tenantId, tenantId), eq(users.isActive, true)),
+      columns: { id: true, name: true },
+    });
+
+    if (!handoverUser) {
+      return { success: false, error: '指定的接管人不存在或已停用' };
+    }
+
+    // 3. 防止移除最后一个管理员
+    const isCurrentlyAdmin =
+      (targetUser.role as string) === 'ADMIN' ||
+      ((targetUser.roles as string[]) || []).includes('ADMIN');
+
+    if (isCurrentlyAdmin) {
+      const lastAdmin = await isLastAdmin(tenantId, userId);
+      if (lastAdmin) {
+        return { success: false, error: '不能停用最后一位管理员，请先指定其他管理员' };
+      }
+    }
+
+    // 4. 在事务中：交接线索 + 停用账号
+    let transferredLeadsCount = 0;
+
+    await db.transaction(async (tx) => {
+      // 4a. 将该员工名下所有未结线索转给接管人
+      const transferResult = await tx
+        .update(leads)
+        .set({
+          assignedSalesId: handoverToUserId,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(leads.tenantId, tenantId),
+            eq(leads.assignedSalesId, userId),
+            isNull(leads.deletedAt) // 只转移未删除的线索
+          )
+        )
+        .returning({ id: leads.id });
+
+      transferredLeadsCount = transferResult.length;
+
+      // 4b. 停用账号
+      await tx
+        .update(users)
+        .set({ isActive: false, updatedAt: new Date() })
+        .where(and(eq(users.id, userId), eq(users.tenantId, tenantId)));
+
+      // 4c. 记录审计日志
+      await AuditService.log(tx, {
+        tableName: 'users',
+        recordId: userId,
+        action: 'DELETE',
+        userId: session!.user.id,
+        tenantId,
+        oldValues: { isActive: true },
+        newValues: { isActive: false },
+        details: {
+          handoverToUserId,
+          handoverToUserName: handoverUser.name,
+          transferredLeadsCount,
+          reason: '员工离职/停用，资产已交接',
+        },
+      });
+    });
+
+    logger.info(
+      `[Base Plan] 员工 ${userId} 已停用，${transferredLeadsCount} 条线索已交接给 ${handoverToUserId}`,
+      { tenantId, operatorId: currentUserId }
+    );
+
+    revalidatePath('/settings/users');
+    return {
+      success: true,
+      transferredLeadsCount,
+    };
+  } catch (error) {
+    logger.error('[Base Plan] 员工停用+交接操作失败:', error);
+    return { success: false, error: '操作失败，请重试' };
+  }
+}
+

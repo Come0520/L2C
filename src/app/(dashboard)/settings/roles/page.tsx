@@ -1,5 +1,9 @@
 export const dynamic = 'force-dynamic';
 import { DashboardPageHeader } from '@/shared/ui/dashboard-page-header';
+import { db } from '@/shared/api/db';
+import { tenants } from '@/shared/api/schema';
+import { eq } from 'drizzle-orm';
+import { isPlanFeatureEnabled } from '@/features/billing/lib/plan-limits';
 import { auth } from '@/shared/lib/auth';
 import { getPermissionMatrix } from '@/features/settings/actions/role-override-actions';
 import { getRolesAction } from '@/features/settings/actions/roles-management';
@@ -36,12 +40,21 @@ export default async function RolesSettingsPage() {
   let matrixData = null;
   let rolesData: Awaited<ReturnType<typeof getRolesAction>> = [];
   let error = null;
+  let isBasePlan = false;
 
   if (tenantId) {
     try {
       const [matrix, roles] = await Promise.all([getPermissionMatrix(), getRolesAction()]);
       matrixData = matrix;
       rolesData = roles;
+
+      const tenant = await db.query.tenants.findFirst({
+        where: eq(tenants.id, tenantId),
+        columns: { planType: true },
+      });
+      if (tenant?.planType) {
+        isBasePlan = !isPlanFeatureEnabled(tenant.planType as 'base' | 'pro' | 'enterprise', 'fineGrainedRbac');
+      }
     } catch (e) {
       console.error('获取角色数据失败:', e);
       error = '加载数据失败';
@@ -60,7 +73,7 @@ export default async function RolesSettingsPage() {
           <p className="text-lg font-medium">{error}</p>
         </div>
       ) : (
-        <RolesPageTabs rolesData={rolesData} matrixData={matrixData} />
+        <RolesPageTabs rolesData={rolesData} matrixData={matrixData} isBasePlan={isBasePlan} />
       )}
     </div>
   );

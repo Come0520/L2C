@@ -28,10 +28,14 @@ import { toast } from 'sonner';
  * 横轴：角色（7个）
  * 纵轴：权限（按模块分组，可折叠）
  * 单元格：三态复选框
+ *
+ * @param isBasePlan 若为 true，则矩阵进入只读模式（Base 版用户无法编辑）
  */
 
 interface PermissionMatrixProps {
   data: PermissionMatrixData;
+  /** 是否为基础版租户（true = 矩阵只读展示，用作升级引导） */
+  isBasePlan?: boolean;
 }
 
 // 内部状态类型：roleCode -> permission -> TriState
@@ -133,7 +137,7 @@ function PermissionInfoBubble({ code }: { code: string }) {
   );
 }
 
-export function PermissionMatrix({ data }: PermissionMatrixProps) {
+export function PermissionMatrix({ data, isBasePlan = false }: PermissionMatrixProps) {
   // 折叠状态：groupKey -> boolean
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => {
     // 默认展开前3个分组
@@ -324,34 +328,69 @@ export function PermissionMatrix({ data }: PermissionMatrixProps) {
 
   return (
     <div className="space-y-4">
-      {/* 工具栏 */}
-      <div className="flex items-center justify-between">
+      {/* Base 版只读锁定横幅 */}
+      {isBasePlan && (
+        <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+          <span className="text-lg">🔒</span>
+          <div>
+            <p className="text-sm font-medium text-amber-800">权限矩阵为只读模式</p>
+            <p className="mt-0.5 text-xs text-amber-700">
+              基础版仅可查看各角色的默认权限分配。升级至
+              <strong>专业版 (Pro)</strong>
+              后，您可以自由调整每个角色的详细权限。
+            </p>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            className="ml-auto shrink-0 border-amber-300 text-amber-800 hover:bg-amber-100"
+            onClick={() => window.open('/pricing', '_blank')}
+          >
+            了解升级
+          </Button>
+        </div>
+      )}
+
+      {/* 工具栏（仅 Pro 版可用） */}
+      {!isBasePlan && (
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <span className="text-muted-foreground text-sm">图例：</span>
+            <TriStateLabel state="EDIT" />
+            <TriStateLabel state="VIEW" />
+            <TriStateLabel state="NONE" />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handleRestoreDefaults} disabled={isSaving}>
+              恢复推荐配置
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleReset}
+              disabled={!hasChanges || isSaving}
+            >
+              <RotateCcw className="mr-1 h-4 w-4" />
+              放弃更改
+            </Button>
+            <Button size="sm" onClick={handleSave} disabled={!hasChanges || isSaving}>
+              <Save className="mr-1 h-4 w-4" />
+              {isSaving ? '保存中...' : '保存更改'}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Base 版图例（只读，不显示操作按钮） */}
+      {isBasePlan && (
         <div className="flex items-center gap-4">
           <span className="text-muted-foreground text-sm">图例：</span>
           <TriStateLabel state="EDIT" />
           <TriStateLabel state="VIEW" />
           <TriStateLabel state="NONE" />
         </div>
-
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleRestoreDefaults} disabled={isSaving}>
-            恢复推荐配置
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleReset}
-            disabled={!hasChanges || isSaving}
-          >
-            <RotateCcw className="mr-1 h-4 w-4" />
-            放弃更改
-          </Button>
-          <Button size="sm" onClick={handleSave} disabled={!hasChanges || isSaving}>
-            <Save className="mr-1 h-4 w-4" />
-            {isSaving ? '保存中...' : '保存更改'}
-          </Button>
-        </div>
-      </div>
+      )}
 
       {/* 矩阵表格 */}
       <div className="overflow-auto rounded-lg border">
@@ -413,8 +452,8 @@ export function PermissionMatrix({ data }: PermissionMatrixProps) {
                                 handlePermissionChange(role.roleCode, perm.code, value)
                               }
                               isModified={isModified(role.roleCode, perm.code)}
-                              // 超级权限角色（ADMIN / BOSS）不允许在矩阵中修改
-                              disabled={role.roleCode === 'ADMIN' || role.roleCode === 'ADMIN'}
+                              // 超级权限角色（ADMIN / BOSS）或 Base 版不允许在矩阵中修改
+                              disabled={role.roleCode === 'ADMIN' || role.roleCode === 'BOSS' || isBasePlan}
                             />
                           </div>
                         </td>

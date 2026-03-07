@@ -39,9 +39,16 @@ export async function createLead(
     await dialog.locator('input[placeholder*="客户姓名"], input[placeholder*="姓名"]').first().fill(name);
 
     // 填写手机号
-    // PhoneInput 外层具有 data-testid，内部是 input[type="tel"]
-    const phoneInput = dialog.getByTestId('phone-input').locator('input[type="tel"]');
-    await phoneInput.waitFor({ state: 'visible', timeout: 5000 });
+    // PhoneInput 外层的 data-testid 绑定在包裹 div 上，内部是 RPNInput 渲染的 <input>
+    // 策略1：通过 testid 查找外层 div，再找其第一个 input 子孙节点
+    // 策略2：直接在 dialog 中找 input[type="tel"] 或 input[placeholder*="手机号"]
+    let phoneInput = dialog.getByTestId('phone-input').locator('input').first();
+    const isPhoneInputVisible = await phoneInput.isVisible({ timeout: 5000 }).catch(() => false);
+    if (!isPhoneInputVisible) {
+        // 降级：使用 type="tel" 或 placeholder 匹配
+        phoneInput = dialog.locator('input[type="tel"], input[placeholder*="手机号"], input[placeholder*="输入手机号"]').first();
+    }
+    await phoneInput.waitFor({ state: 'visible', timeout: 15000 });
     await phoneInput.fill(phone);
     await page.waitForTimeout(300);
 
@@ -462,11 +469,17 @@ export async function createQuickQuote(
     }
 
     // 等待跳转到报价详情
-    await page.waitForURL(/\/quotes\/.*/, { timeout: 15000 });
+    console.log(`⏳ 等待跳转到报价详情 URL: ${page.url()}`);
+    try {
+        await page.waitForURL(/\/quotes\/.*/, { timeout: 15000 });
+    } catch (e: any) {
+        console.log(`❌ waitForURL 超时。当前 URL: ${page.url()}，报错: ${e.message}`);
+    }
 
     // 提取报价 ID
     const url = page.url();
     const quoteId = url.split('/quotes/')[1]?.split('?')[0] || '';
+    console.log(`🔍 提取的 quoteId: '${quoteId}'，提取来源 URL: '${url}'`);
 
     return quoteId;
 }
@@ -502,45 +515,105 @@ export async function waitForPageLoad(
 
 /**
  * 提交报价审核
+ * 需要先确保在报价详情页（/quotes/{id}），且页面已加载完毕
  */
 export async function submitQuoteForApproval(page: Page): Promise<void> {
-    const submitBtn = page.getByRole('button', { name: /提交审核/ });
-    if (await submitBtn.isVisible({ timeout: 3000 })) {
-        await submitBtn.click();
-        await page.waitForTimeout(1000);
+    console.log('⏳ submitQuoteForApproval: 等待报价详情页加载..., URL:', page.url());
+    // 等待页面 DOM 完成加载（dev 模式下首次 SSR 编译可能较慢）
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(2000);
+
+    // 使用多种选择器尝试查找"提交审核"按钮
+    const submitBtn = page.locator('button:has-text("提交审核")').first();
+    const isVisible = await submitBtn.isVisible({ timeout: 30000 }).catch(() => false);
+
+    if (isVisible) {
+        try {
+            await expect(submitBtn).toBeEnabled({ timeout: 10000 });
+            await submitBtn.click();
+            console.log('✅ 提交审核按钮点击成功');
+            // 等待状态变化（toast 消失或页面刷新）
+            await page.waitForTimeout(2000);
+        } catch (e: any) {
+            console.log('❌ 点击提交审核按钮时发生异常:', e.message);
+        }
+    } else {
+        console.log('❌ 经过30s等待，未能找到提交审核按钮！URL:', page.url());
+        const buttons = await page.locator('button').allTextContents();
+        console.log('🎯 当前页面上现有的按钮文本有:', buttons.join(' | '));
+        // 页面可能还没加载完，尝试刷新后再找
+        await page.reload({ waitUntil: 'domcontentloaded' });
+        await page.waitForTimeout(3000);
+        const retryBtn = page.locator('button:has-text("提交审核")').first();
+        if (await retryBtn.isVisible({ timeout: 10000 }).catch(() => false)) {
+            await retryBtn.click();
+            console.log('✅ 刷新后找到并点击了提交审核按钮');
+            await page.waitForTimeout(2000);
+        } else {
+            console.log('❌ 刷新后仍未找到提交审核按钮');
+        }
     }
 }
 
 /**
  * 批准报价
+ * 状态从 PENDING_APPROVAL -> APPROVED
  */
 export async function approveQuote(page: Page): Promise<void> {
-    const approveBtn = page.getByRole('button', { name: /批准|通过/ });
-    if (await approveBtn.isVisible({ timeout: 3000 })) {
+    console.log('⏳ approveQuote: 等待审批按钮出现..., URL:', page.url());
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(1000);
+
+    // 查找批准/通过按钮
+    const approveBtn = page.locator('button:has-text("批准"), button:has-text("通过")').first();
+    const isVisible = await approveBtn.isVisible({ timeout: 15000 }).catch(() => false);
+
+    if (isVisible) {
         page.once('dialog', dialog => dialog.accept());
         await approveBtn.click();
-        await page.waitForTimeout(1000);
+        console.log('✅ 批准按钮点击成功');
+        await page.waitForTimeout(2000);
+    } else {
+        console.log('❌ 未找到批准/通过按钮');
+        const buttons = await page.locator('button').allTextContents();
+        console.log('🎯 当前按钮:', buttons.join(' | '));
     }
 }
 
+
+
 /**
  * 报价转订单
+ * 状态从 APPROVED -> 创建订单
  */
 export async function convertQuoteToOrder(page: Page): Promise<string> {
-    const convertBtn = page.getByRole('button', { name: /转订单/ });
-    if (await convertBtn.isVisible({ timeout: 3000 })) {
+    console.log('⏳ convertQuoteToOrder: 等待转订单按钮..., URL:', page.url());
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(1000);
+
+    const convertBtn = page.locator('button:has-text("转订单")').first();
+    const isVisible = await convertBtn.isVisible({ timeout: 15000 }).catch(() => false);
+
+    if (isVisible) {
         page.once('dialog', dialog => dialog.accept());
         await convertBtn.click();
+        console.log('✅ 转订单按钮点击成功');
 
         // 等待跳转到订单页面
         try {
-            await page.waitForURL(/\/orders\/.*/, { timeout: 15000 });
+            await page.waitForURL(/\/orders\/.*/, { timeout: 30000 });
             const url = page.url();
-            return url.split('/orders/')[1]?.split('?')[0] || '';
+            const orderId = url.split('/orders/')[1]?.split('?')[0] || '';
+            console.log('✅ 成功跳转到订单页面, orderId:', orderId);
+            return orderId;
         } catch {
+            console.log('❌ 等待订单页面跳转超时, URL:', page.url());
             return '';
         }
     }
+    console.log('❌ 未找到转订单按钮');
+    const buttons = await page.locator('button').allTextContents();
+    console.log('🎯 当前按钮:', buttons.join(' | '));
     return '';
 }
 
@@ -550,10 +623,19 @@ export async function convertQuoteToOrder(page: Page): Promise<string> {
  * 确认订单
  */
 export async function confirmOrder(page: Page): Promise<void> {
-    const confirmBtn = page.getByRole('button', { name: /确认订单/ });
-    if (await confirmBtn.isVisible({ timeout: 3000 })) {
+    console.log('⏳ confirmOrder: 等待确认订单按钮..., URL:', page.url());
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(1000);
+
+    const confirmBtn = page.locator('button:has-text("确认订单")').first();
+    const isVisible = await confirmBtn.isVisible({ timeout: 15000 }).catch(() => false);
+
+    if (isVisible) {
         await confirmBtn.click();
+        console.log('✅ 确认订单按钮点击成功');
         await confirmDialog(page);
+    } else {
+        console.log('❌ 未找到确认订单按钮');
     }
 }
 

@@ -21,6 +21,7 @@ import { cn } from '@/shared/lib/utils';
 
 import { LeadData } from './lead-table-constants';
 import { LeadTableRow } from './lead-table-row';
+import { LeadMobileCard } from './lead-mobile-card';
 
 /**
  * 线索表格组件属性
@@ -178,7 +179,7 @@ export const LeadTable = React.memo(function LeadTable({
 
       <div
         ref={parentRef}
-        className="bg-card overflow-x-hidden overflow-y-auto rounded-md border"
+        className="bg-card overflow-x-hidden overflow-y-auto rounded-md border hidden md:block"
         style={{ height: '600px', position: 'relative' }}
       >
         <Table className="grid min-w-full">
@@ -268,6 +269,36 @@ export const LeadTable = React.memo(function LeadTable({
             )}
           </TableBody>
         </Table>
+      </div>
+
+      {/* 移动端卡片流视图 (Mobile View) */}
+      <div className="block md:hidden overflow-y-auto space-y-3 pb-2" style={{ maxHeight: '600px' }}>
+        {data.length === 0 ? (
+          <div className="flex h-[300px] w-full items-center justify-center">
+            <div className="animate-in fade-in slide-in-from-bottom-4 flex flex-col items-center duration-500">
+              <EmptyUI message="暂无符合条件的线索数据" />
+              <div className="mt-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => router.push('/leads')}
+                  className="rounded-full shadow-sm transition-all hover:shadow-md"
+                >
+                  重置筛选条件
+                </Button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          data.map((lead) => (
+            <LeadMobileCard
+              key={lead.id}
+              lead={lead}
+              isManager={isManager}
+              handleAction={handleAction}
+            />
+          ))
+        )}
       </div>
 
       {/* 分页控件 */}

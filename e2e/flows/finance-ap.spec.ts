@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { skipOnDataLoadError } from '../helpers/test-utils';
+import { seedFinanceAPData } from './fixtures/finance-data-seed';
 
 /**
  * P1: 供应商对账 (AP) E2E 测试
@@ -12,12 +13,26 @@ import { skipOnDataLoadError } from '../helpers/test-utils';
  */
 
 test.describe('供应商对账 (Finance AP)', () => {
+    test.describe.configure({ mode: 'serial' });
+
+    test('如果无数据，预先生成测试所需应付数据', async ({ page }) => {
+        await page.goto('/finance/ap', { waitUntil: 'commit', timeout: 60000 });
+        const pendingRow = page.locator('table tbody tr').first();
+        if (!(await pendingRow.isVisible({ timeout: 5000 }).catch(() => false))) {
+            console.log('ℹ️ 未检测到应付账单，开始模拟采购下单以生成 AP 记录...');
+            const success = await seedFinanceAPData(page);
+            expect(success).toBeTruthy();
+        } else {
+            console.log('✅ 系统已有应付数据，跳过前置造数据环节');
+        }
+    });
+
     test.beforeEach(async ({ page: _page }) => {
         // 预留钩子
     });
 
     test('应在应付账单列表页正常显示数据', async ({ page }) => {
-        await page.goto('/finance/ap', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.goto('/finance/ap', { waitUntil: 'commit', timeout: 60000 });
 
         // 检测数据加载错误
         if (await skipOnDataLoadError(page)) return;
@@ -31,7 +46,7 @@ test.describe('供应商对账 (Finance AP)', () => {
     });
 
     test('应支持批量生成对账单', async ({ page }) => {
-        await page.goto('/finance/ap', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.goto('/finance/ap', { waitUntil: 'commit', timeout: 60000 });
         if (await skipOnDataLoadError(page)) return;
 
         const generateBtn = page.getByRole('button', { name: /生成对账单|批量合并/ });
@@ -54,7 +69,7 @@ test.describe('供应商对账 (Finance AP)', () => {
     });
 
     test('应支持开票登记', async ({ page }) => {
-        await page.goto('/finance/ap', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.goto('/finance/ap', { waitUntil: 'commit', timeout: 60000 });
         if (await skipOnDataLoadError(page)) return;
 
         const pendingRow = page.locator('table tbody tr').first();
@@ -81,7 +96,7 @@ test.describe('供应商对账 (Finance AP)', () => {
     });
 
     test('应支持付款登记', async ({ page }) => {
-        await page.goto('/finance/ap', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.goto('/finance/ap', { waitUntil: 'commit', timeout: 60000 });
         if (await skipOnDataLoadError(page)) return;
 
         const pendingPayRow = page.locator('table tbody tr').first();

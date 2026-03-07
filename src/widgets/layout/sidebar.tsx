@@ -164,27 +164,29 @@ export function AppSidebar() {
       }))
       .filter((group) => group.items.length > 0); // 移除空分组
 
-    // 平台管理员额外显示租户管理（追加到系统分组）
+    // 平台管理员额外显示独立的"租户管理"和"套餐配置"子菜单入口
     if (session?.user?.isPlatformAdmin) {
       const systemGroup = filtered.find((g) => g.title === '系统');
-      if (systemGroup) {
-        systemGroup.items.push({
+      const platformItems = [
+        {
           label: '租户管理',
-          href: '/admin/tenants',
+          href: '/platform/tenants',
           icon: Building2,
           requiredPermission: null,
-        });
+        },
+        {
+          label: '套餐配置',
+          href: '/platform/plans',
+          icon: DollarSign,
+          requiredPermission: null,
+        },
+      ];
+      if (systemGroup) {
+        systemGroup.items.push(...platformItems);
       } else {
         filtered.push({
-          title: '系统',
-          items: [
-            {
-              label: '租户管理',
-              href: '/admin/tenants',
-              icon: Building2,
-              requiredPermission: null,
-            },
-          ],
+          title: '平台管理',
+          items: platformItems,
         });
       }
     }

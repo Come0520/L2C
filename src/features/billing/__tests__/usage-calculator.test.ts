@@ -29,12 +29,12 @@ describe('checkLimit + 用量组合场景', () => {
   });
 
   describe('免费版多维度组合', () => {
-    it('用户4/5 → 允许', () => {
-      expect(checkLimit('base', 'users', 4).allowed).toBe(true);
+    it('用户2/3 → 允许', () => {
+      expect(checkLimit('base', 'users', 2).allowed).toBe(true);
     });
 
-    it('用户5/5 → 拒绝（已满）', () => {
-      expect(checkLimit('base', 'users', 5).allowed).toBe(false);
+    it('用户3/3 → 拒绝（已满）', () => {
+      expect(checkLimit('base', 'users', 3).allowed).toBe(false);
     });
 
     it('客户199/200 → 允许', () => {
@@ -101,11 +101,12 @@ describe('checkLimit + 用量组合场景', () => {
       'ordersPerMonth',
       'showroomProducts',
       'storageBytes',
+      'aiRenderingCredits',
     ];
 
     for (const resource of resources) {
       it(`企业版 ${resource} 用量极大也应 allowed=true`, () => {
-        expect(checkLimit('enterprise', resource, 10_000_000).allowed).toBe(true);
+        expect(checkLimit({ planType: 'enterprise' }, resource, 10_000_000).allowed).toBe(true);
       });
     }
   });
@@ -120,12 +121,13 @@ describe('getUsageSummary 格式检查（结构验证）', () => {
       'ordersPerMonth',
       'showroomProducts',
       'storageBytes',
+      'aiRenderingCredits',
     ];
     // 确保类型定义包含所有期望的资源类型
-    expect(expectedResources).toHaveLength(6);
+    expect(expectedResources).toHaveLength(7);
     // 每个资源均可用于 checkLimit
     for (const resource of expectedResources) {
-      const result = checkLimit('base', resource, 0);
+      const result = checkLimit({ planType: 'base' }, resource, 0);
       expect(result).toMatchObject({
         allowed: true,
         current: 0,

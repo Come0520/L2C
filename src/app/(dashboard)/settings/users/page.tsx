@@ -2,12 +2,13 @@ export const dynamic = 'force-dynamic';
 import { DashboardPageHeader } from '@/shared/ui/dashboard-page-header';
 import { UsersSettingsClient } from '@/features/settings/components/users-settings-client';
 import { db } from '@/shared/api/db';
-import { users } from '@/shared/api/schema';
+import { users, tenants } from '@/shared/api/schema';
 import { eq, sql } from 'drizzle-orm';
 import { auth } from '@/shared/lib/auth';
 import { InviteUserDialog } from '@/features/settings/components/invite-user-dialog';
 import { getAvailableRoles } from '@/features/settings/actions/roles';
 import type { UserInfo } from '@/features/settings/actions/user-actions';
+import { isPlanFeatureEnabled } from '@/features/billing/lib/plan-limits';
 
 /**
  * 用户管理设置页面
@@ -55,6 +56,22 @@ export default async function UsersSettingsPage(props: {
     }
   }
 
+  // 读取租户 plan 类型以判断是否为基础版
+  let isBasePlan = false;
+  if (tenantId) {
+    try {
+      const tenant = await db.query.tenants.findFirst({
+        where: eq(tenants.id, tenantId),
+        columns: { planType: true },
+      });
+      if (tenant?.planType) {
+        isBasePlan = !isPlanFeatureEnabled(tenant.planType as 'base' | 'pro' | 'enterprise', 'fineGrainedRbac');
+      }
+    } catch (error) {
+      console.error('获取租户信息失败:', error);
+    }
+  }
+
   // 获取可用角色
   let roles: { label: string; value: string }[] = [];
   try {
@@ -71,7 +88,7 @@ export default async function UsersSettingsPage(props: {
         </div>
       </DashboardPageHeader>
 
-      <UsersSettingsClient userData={userData} availableRoles={roles} totalPages={totalPages} />
+      <UsersSettingsClient userData={userData} availableRoles={roles} totalPages={totalPages} isBasePlan={isBasePlan} />
     </div>
   );
 }

@@ -441,7 +441,7 @@ describe('Platform Actions - L4 升级测试', () => {
           userId: 'admin-001',
           type: 'SYSTEM',
           title: expect.stringContaining('测试通知企业'),
-          link: '/admin/tenants',
+          link: '/platform/tenants',
         })
       );
     });

@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { seedFinanceARData } from './fixtures/finance-data-seed';
 
 /**
  * P1: 财务收款 (AR) E2E 测试
@@ -12,6 +13,20 @@ import { test, expect } from '@playwright/test';
  */
 
 test.describe('财务应收 (Finance AR)', () => {
+    test.describe.configure({ mode: 'serial' });
+
+    test('如果无数据，预先生成测试所需应收数据', async ({ page }) => {
+        await page.goto('/finance/ar', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        const pendingRow = page.locator('tr', { has: page.getByText(/待回款|PENDING/) }).first();
+        if (!(await pendingRow.isVisible({ timeout: 5000 }).catch(() => false))) {
+            console.log('ℹ️ 未检测到待回款账单，开始造数据...');
+            const success = await seedFinanceARData(page);
+            expect(success).toBeTruthy();
+        } else {
+            console.log('✅ 系统已有待回款数据，跳过前置造数据环节');
+        }
+    });
+
     test.beforeEach(async ({ page: _page }) => {
         // 预留钩子，暂时不需要执行任何操作
     });

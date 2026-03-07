@@ -13,6 +13,8 @@ type MatrixData = Awaited<ReturnType<typeof getPermissionMatrix>>;
 interface RolesPageTabsProps {
   rolesData: Role[];
   matrixData: MatrixData | null;
+  /** 是否为基础版租户（控制权限矩阵只读模式） */
+  isBasePlan?: boolean;
 }
 
 /**
@@ -23,7 +25,7 @@ interface RolesPageTabsProps {
  * - RoleList 中的「查看权限」按钮需要切换到"权限矩阵" Tab
  * - 通过 onViewPermissions 回调实现跨组件 Tab 切换
  */
-export function RolesPageTabs({ rolesData, matrixData }: RolesPageTabsProps) {
+export function RolesPageTabs({ rolesData, matrixData, isBasePlan = false }: RolesPageTabsProps) {
   const [activeTab, setActiveTab] = useState<'list' | 'matrix'>('list');
 
   /** 切换到权限矩阵并滚动到顶部 */
@@ -59,7 +61,7 @@ export function RolesPageTabs({ rolesData, matrixData }: RolesPageTabsProps) {
           </ul>
         </div>
         {matrixData ? (
-          <PermissionMatrix data={matrixData} />
+          <PermissionMatrix data={matrixData} isBasePlan={isBasePlan} />
         ) : (
           <div className="flex items-center justify-center py-12">
             <span className="text-muted-foreground">加载中...</span>

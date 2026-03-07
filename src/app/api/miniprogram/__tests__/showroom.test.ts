@@ -45,10 +45,10 @@ vi.mock('@/features/showroom/actions/view-stats', () => ({
 // ─── Mock: ShowroomError ─────────────────────────────────────
 vi.mock('@/features/showroom/errors', () => {
   class ShowroomError extends Error {
-    code: string;
+    errorDetail: { code: string; message: string };
     constructor(errDef: { code: string; message: string }) {
       super(errDef.message);
-      this.code = errDef.code;
+      this.errorDetail = errDef;
       this.name = 'ShowroomError';
     }
   }
@@ -57,8 +57,8 @@ vi.mock('@/features/showroom/errors', () => {
     ShowroomErrors: {
       SHARE_NOT_FOUND: { code: 'SHOWROOM_1201', message: '分享链接不存在或已失效' },
       SHARE_LOCKED: { code: 'SHOWROOM_1207', message: '该链接仅限指定客户访问' },
-      UNAUTHORIZED: { code: 'SHOWROOM_1000', message: '未授权' },
-      FORBIDDEN: { code: 'SHOWROOM_1001', message: '无权限' },
+      UNAUTHORIZED: { code: 'SHOWROOM_1001', message: '未授权' },
+      FORBIDDEN: { code: 'SHOWROOM_1002', message: '无权限' },
     },
   };
 });

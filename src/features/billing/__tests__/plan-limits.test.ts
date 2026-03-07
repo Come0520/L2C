@@ -13,8 +13,8 @@ import {
 } from '../lib/plan-limits';
 
 describe('PLAN_LIMITS 配置', () => {
-  it('免费版用户数上限应为 5', () => {
-    expect(PLAN_LIMITS.base.maxUsers).toBe(5);
+  it('免费版用户数上限应为 3', () => {
+    expect(PLAN_LIMITS.base.maxUsers).toBe(3);
   });
 
   it('免费版客户数上限应为 200', () => {
@@ -42,7 +42,7 @@ describe('PLAN_LIMITS 配置', () => {
 
 describe('getPlanLimit', () => {
   it('应正确返回免费版用户上限', () => {
-    expect(getPlanLimit('base', 'users')).toBe(5);
+    expect(getPlanLimit('base', 'users')).toBe(3);
   });
 
   it('应正确返回专业版客户上限', () => {
@@ -78,15 +78,15 @@ describe('isPlanFeatureEnabled', () => {
 
 describe('checkLimit', () => {
   it('用量未达上限时 allowed 应为 true', () => {
-    const result = checkLimit('base', 'users', 3);
+    const result = checkLimit('base', 'users', 2);
     expect(result.allowed).toBe(true);
-    expect(result.current).toBe(3);
-    expect(result.limit).toBe(5);
+    expect(result.current).toBe(2);
+    expect(result.limit).toBe(3);
     expect(result.planType).toBe('base');
   });
 
   it('用量恰好等于上限时 allowed 应为 false（已满不能再加）', () => {
-    const result = checkLimit('base', 'users', 5);
+    const result = checkLimit('base', 'users', 3);
     expect(result.allowed).toBe(false);
   });
 

@@ -1,7 +1,7 @@
 'use server';
 
 import { checkPlanLimit, getUsageSummary } from '../lib/usage-calculator';
-import { type PlanResource, type PlanLimitCheckResult, formatLimit } from '../lib/plan-limits';
+import { type PlanType, type PlanResource, type PlanLimitCheckResult, formatLimit } from '../lib/plan-limits';
 import { getTenantSubscription } from '../actions/subscription-actions';
 import { auth } from '@/shared/lib/auth';
 
@@ -34,10 +34,17 @@ export async function checkTenantLimitAction(
   }
 
   const sub = await getTenantSubscription(tenantId);
-  const planType = (sub?.planType as any) || 'base';
+  const planType = (sub?.planType as PlanType) || 'base';
   const isGrandfathered = sub?.isGrandfathered || false;
 
-  return await checkPlanLimit(tenantId, planType, resource, isGrandfathered);
+  return await checkPlanLimit(tenantId, {
+    planType,
+    isGrandfathered,
+    maxUsers: sub?.maxUsers || null,
+    purchasedModules: sub?.purchasedModules || null,
+    storageQuota: sub?.storageQuota || null,
+    trialEndsAt: sub?.trialEndsAt || null,
+  }, resource);
 }
 
 /**
@@ -51,10 +58,17 @@ export async function getTenantUsageSummaryAction(): Promise<TenantUsageSummaryO
   }
 
   const sub = await getTenantSubscription(tenantId);
-  const planType = (sub?.planType as any) || 'base';
+  const planType = (sub?.planType as PlanType) || 'base';
   const isGrandfathered = sub?.isGrandfathered || false;
 
-  const summaryData = await getUsageSummary(tenantId, planType, isGrandfathered);
+  const summaryData = await getUsageSummary(tenantId, {
+    planType,
+    isGrandfathered,
+    maxUsers: sub?.maxUsers || null,
+    purchasedModules: sub?.purchasedModules || null,
+    storageQuota: sub?.storageQuota || null,
+    trialEndsAt: sub?.trialEndsAt || null,
+  });
 
   const resourceKeys = Object.keys(summaryData) as PlanResource[];
 

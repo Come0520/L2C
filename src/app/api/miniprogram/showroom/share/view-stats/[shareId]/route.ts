@@ -31,8 +31,8 @@ export const GET = withMiniprogramAuth(
     } catch (error) {
       if (error instanceof ShowroomError) {
         const statusMap: Record<string, number> = {
-          SHOWROOM_1000: 401, // UNAUTHORIZED
-          SHOWROOM_1001: 403, // FORBIDDEN
+          SHOWROOM_1001: 401, // UNAUTHORIZED
+          SHOWROOM_1002: 403, // FORBIDDEN
         };
         const status = statusMap[error.errorDetail.code] || 400;
         return Response.json({ error: error.message, code: error.errorDetail.code }, { status });

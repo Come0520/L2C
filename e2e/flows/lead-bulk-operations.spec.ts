@@ -7,6 +7,11 @@ import { createLead, generateTestName, navigateToModule, confirmDialog } from '.
  */
 test.describe('Lead Bulk Operations', () => {
 
+    // createMultipleLeads(2) 需要约 25s，加 navigateToModule 合计超过默认 120s 需要充裕时间
+    test.beforeEach(async ({ page }) => {
+        test.setTimeout(180000);
+    });
+
     /**
      * 批量创建线索并返回 ID 数组
      */

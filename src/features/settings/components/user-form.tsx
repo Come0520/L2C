@@ -8,8 +8,11 @@ import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
 import { Switch } from '@/shared/ui/switch';
 import { RoleSelector } from './role-selector';
-import { updateUser } from '@/features/settings/actions/user-actions';
+import { updateUser, updateUserWithToggles } from '@/features/settings/actions/user-actions';
 import type { UserInfo } from '@/features/settings/actions/user-actions';
+import { BaseMemberTogglesSection } from './base-member-toggles-section';
+import { rolesToToggles } from '@/features/settings/lib/base-member-toggles';
+import type { BaseMemberToggles } from '@/features/settings/lib/base-member-toggles';
 import Loader2 from 'lucide-react/dist/esm/icons/loader';
 import { toast } from 'sonner';
 
@@ -19,6 +22,8 @@ interface UserFormProps {
   initialData?: UserInfo | null;
   onSuccess: () => void;
   availableRoles?: { label: string; value: string }[];
+  /** 是否为基础版租户（使用虚拟开关代替角色选择器） */
+  isBasePlan?: boolean;
 }
 
 /**
@@ -32,8 +37,17 @@ export function UserForm({
   initialData,
   onSuccess,
   availableRoles = [],
+  isBasePlan = false,
 }: UserFormProps) {
   const [loading, setLoading] = useState(false);
+  // Base 版虚拟开关状态
+  const [toggles, setToggles] = useState<BaseMemberToggles>({
+    isPartner: false,
+    allowFinance: false,
+    allowDispatch: false,
+    allowSupply: false,
+    allowStoreSharing: false,
+  });
   const form = useForm({
     defaultValues: {
       name: '',
@@ -44,26 +58,42 @@ export function UserForm({
 
   useEffect(() => {
     if (open && initialData) {
+      const currentRoles = Array.from(
+        new Set([...(initialData.roles || []), ...(initialData.role ? [initialData.role] : [])])
+      ).filter((r) => r && r !== 'STAFF');
+
       form.reset({
         name: initialData.name || '',
-        roles: Array.from(
-          new Set([...(initialData.roles || []), ...(initialData.role ? [initialData.role] : [])])
-        ).filter((r) => r && r !== 'STAFF'),
+        roles: currentRoles,
         isActive: initialData.isActive ?? true,
       });
+
+      // Base 版：从当前角色反推开关状态
+      if (isBasePlan) {
+        const permissions = ((initialData as unknown as { permissions?: string[] }).permissions) ?? [];
+        setToggles(rolesToToggles(currentRoles, permissions));
+      }
     }
-  }, [open, initialData, form]);
+  }, [open, initialData, form, isBasePlan]);
 
   const onSubmit = async (data: { name: string; roles: string[]; isActive: boolean }) => {
     if (!initialData?.id) return;
 
     setLoading(true);
     try {
-      const result = await updateUser(initialData.id, {
-        name: data.name,
-        roles: data.roles,
-        isActive: data.isActive,
-      });
+      let result;
+
+      if (isBasePlan) {
+        // Base 版：通过虚拟开关提交
+        result = await updateUserWithToggles(initialData.id, data.name, toggles);
+      } else {
+        // Pro/Enterprise 版：通过角色选择器提交
+        result = await updateUser(initialData.id, {
+          name: data.name,
+          roles: data.roles,
+          isActive: data.isActive,
+        });
+      }
 
       if (result.success) {
         toast.success('用户更新成功');
@@ -115,14 +145,22 @@ export function UserForm({
               </div>
             )}
 
-            <div className="space-y-2">
-              <Label>角色</Label>
-              <RoleSelector
-                options={availableRoles}
-                selected={form.watch('roles')}
-                onSelect={(vals) => form.setValue('roles', vals)}
+            {/* 角色/权限配置 */}
+            {isBasePlan ? (
+              <BaseMemberTogglesSection
+                toggles={toggles}
+                onChange={setToggles}
               />
-            </div>
+            ) : (
+              <div className="space-y-2">
+                <Label>角色</Label>
+                <RoleSelector
+                  options={availableRoles}
+                  selected={form.watch('roles')}
+                  onSelect={(vals) => form.setValue('roles', vals)}
+                />
+              </div>
+            )}
 
             <div className="bg-muted/30 flex items-center justify-between rounded-lg border p-3">
               <div className="space-y-0.5">

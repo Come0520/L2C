@@ -7,6 +7,7 @@ import {
   toggleUserActive,
   deleteUser,
   generateUserMagicLink,
+  deactivateUserWithHandover,
 } from '@/features/settings/actions/user-actions';
 import type { UserInfo } from '@/features/settings/actions/user-actions';
 import { toast } from 'sonner';
@@ -22,11 +23,14 @@ import {
 } from '@/shared/ui/dialog';
 import { Button } from '@/shared/ui/button';
 import { Link2, AlertTriangle, CheckCheck, Copy } from 'lucide-react';
+import { DeactivateHandoverDialog } from './deactivate-handover-dialog';
 
 interface UsersSettingsClientProps {
   userData: UserInfo[];
   availableRoles?: { label: string; value: string }[];
   totalPages?: number;
+  /** 是否为基础版租户 */
+  isBasePlan?: boolean;
 }
 
 /**
@@ -37,10 +41,14 @@ export function UsersSettingsClient({
   userData,
   availableRoles = [],
   totalPages = 1,
+  isBasePlan = false,
 }: UsersSettingsClientProps) {
   const [editingUser, setEditingUser] = useState<UserInfo | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const router = useRouter();
+
+  // Base 版停用交接弹窗状态
+  const [handoverTarget, setHandoverTarget] = useState<UserInfo | null>(null);
 
   // Magic Link 状态
   const [magicLinkDialog, setMagicLinkDialog] = useState<{
@@ -91,6 +99,14 @@ export function UsersSettingsClient({
   };
 
   const handleToggleActive = async (userId: string) => {
+    const targetUser = userData.find(u => u.id === userId);
+
+    // Base 版停用时，打开交接弹窗
+    if (isBasePlan && targetUser?.isActive) {
+      setHandoverTarget(targetUser);
+      return;
+    }
+
     const result = await toggleUserActive(userId);
     if (result.success) {
       toast.success(result.message || '操作成功');
@@ -128,7 +144,28 @@ export function UsersSettingsClient({
         initialData={editingUser}
         onSuccess={handleSuccess}
         availableRoles={availableRoles}
+        isBasePlan={isBasePlan}
       />
+
+      {/* Base 版停用交接弹窗 */}
+      {handoverTarget && (
+        <DeactivateHandoverDialog
+          open={!!handoverTarget}
+          onOpenChange={(open) => !open && setHandoverTarget(null)}
+          targetUser={handoverTarget}
+          activeMembers={userData.filter(u => u.isActive && u.id !== handoverTarget.id)}
+          onConfirm={async (handoverToUserId) => {
+            const result = await deactivateUserWithHandover(handoverTarget.id, handoverToUserId);
+            if (result.success) {
+              toast.success('停用成功，资产已交接');
+              setHandoverTarget(null);
+              router.refresh();
+            } else {
+              toast.error(result.error || '停用失败');
+            }
+          }}
+        />
+      )}
 
       {/* Magic Link 展示 Dialog */}
       <Dialog

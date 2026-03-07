@@ -1,5 +1,5 @@
 ---
-description: 逐个完成 todolist.md 中的待办任务，测试通过后迁移至（已完成）.md
+description: 逐个完成 docs/todolist.md 中的待办任务，测试通过后迁移至 docs/（已完成）.md
 ---
 
 # TodoList Killer 工作流
@@ -11,7 +11,7 @@ description: 逐个完成 todolist.md 中的待办任务，测试通过后迁移
 1. **逐个击破**：一次只专注一个任务，完成后才进入下一个
 2. **测试驱动**：每个任务完成后必须通过测试验证
 3. **即时归档**：测试通过后立即将任务迁移到（已完成）.md
-4. **状态同步**：保持 `todolist.md` 和 `（已完成）.md` 的一致性
+4. **状态同步**：保持 `docs/todolist.md` 和 `docs/（已完成）.md` 的一致性
 
 ---
 

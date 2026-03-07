@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { seedFinanceARData } from './fixtures/finance-data-seed';
 
 /**
  * P2: 财务 AR 高级流程测试
@@ -6,6 +7,22 @@ import { test, expect } from '@playwright/test';
  */
 
 test.describe('Finance AR Advanced Flows', () => {
+    test.describe.configure({ mode: 'serial' });
+
+    test('如果无待回款或已完成数据，预先生成并结清测试数据', async ({ page }) => {
+        await page.goto('/finance/ar', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        const hasPending = await page.locator('tr', { has: page.getByText(/待回款|PENDING/) }).first().isVisible().catch(() => false);
+        const hasCompleted = await page.locator('tr', { has: page.getByText(/已完成|COMPLETED/) }).first().isVisible().catch(() => false);
+
+        if (!hasPending || !hasCompleted) {
+            console.log('ℹ️ 数据不足(待回款/已完成)，开始补录数据...');
+            const success = await seedFinanceARData(page);
+            expect(success).toBeTruthy();
+        } else {
+            console.log('✅ 系统包含足够用于高级测试的应收数据，跳过补录');
+        }
+    });
+
     test.beforeEach(async ({ page }) => {
         await page.goto('/finance/ar', { waitUntil: 'domcontentloaded', timeout: 60000 });
         await page.waitForLoadState('domcontentloaded');

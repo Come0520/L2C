@@ -246,7 +246,7 @@ export async function submitTenantApplication(
                                     <p><strong>申请时间：</strong>${formatDate(new Date())}</p>
                                     <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
                                     <p>请登录管理后台进行审批：</p>
-                                    <a href="${process.env.NEXT_PUBLIC_APP_URL}/admin/tenants" 
+                                    <a href="${process.env.NEXT_PUBLIC_APP_URL}/platform/tenants" 
                                        style="display: inline-block; background: #2563eb; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
                                        前往审批
                                     </a>
@@ -268,7 +268,7 @@ export async function submitTenantApplication(
                 type: 'SYSTEM',
                 title: `新的企业入驻申请：${data.companyName}`,
                 content: `联系人：${data.applicantName}，联系电话：${data.phone}，请前往审批页面处理`,
-                link: '/admin/tenants',
+                link: '/platform/tenants',
               })
             )
           );

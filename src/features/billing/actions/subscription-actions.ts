@@ -244,15 +244,16 @@ export async function activateSubscriptionByPayment(
 
 // ==================== 查询当前订阅状态 ====================
 
-/**
- * 获取租户当前的订阅信息
- */
 export async function getTenantSubscription(tenantId: string) {
   const tenant = await db
     .select({
       planType: tenants.planType,
       planExpiresAt: tenants.planExpiresAt,
       isGrandfathered: tenants.isGrandfathered,
+      maxUsers: tenants.maxUsers,
+      purchasedModules: tenants.purchasedModules,
+      storageQuota: tenants.storageQuota,
+      trialEndsAt: tenants.trialEndsAt,
     })
     .from(tenants)
     .where(eq(tenants.id, tenantId))
@@ -268,6 +269,10 @@ export async function getTenantSubscription(tenantId: string) {
     planType: t.planType ?? 'base',
     planExpiresAt: t.planExpiresAt,
     isGrandfathered: t.isGrandfathered ?? false,
+    maxUsers: t.maxUsers,
+    purchasedModules: t.purchasedModules,
+    storageQuota: t.storageQuota,
+    trialEndsAt: t.trialEndsAt,
     isExpired,
     isActive: !isExpired || t.isGrandfathered,
   };

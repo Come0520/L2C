@@ -8,6 +8,8 @@ import {
   jsonb,
   pgEnum,
   unique,
+  integer,
+  bigint,
 } from 'drizzle-orm/pg-core';
 import { userRoleEnum } from './enums';
 
@@ -103,8 +105,20 @@ export const tenants = pgTable('tenants', {
 
   // ==================== 计费与套餐 ====================
   /**
+   * 动态套餐配置 (Add-ons 扩展)
+   */
+  /** 自定义席位上限，可覆盖套餐默认值 */
+  maxUsers: integer('max_users'),
+  /** 已购增值模块定义数组，如 ['BRANDING', 'ADVANCED_APPROVAL'] */
+  purchasedModules: jsonb('purchased_modules').$type<string[]>().default([]),
+  /** 自定义存储空间配额（单位：Byte），可覆盖套餐默认值 */
+  storageQuota: bigint('storage_quota', { mode: 'number' }),
+  /** 实效试用期/临时提权截止时间，过期后恢复原基础权限 */
+  trialEndsAt: timestamp('trial_ends_at', { withTimezone: true }),
+
+  /**
    * 套餐类型
-   * - 'base': 基础版 (Base)（≤5人，≤200客户，≤50报价/月）
+   * - 'base': 基础版 (Base)
    * - 'pro': 专业版 ¥99/月
    * - 'enterprise': 企业版（按需报价）
    */

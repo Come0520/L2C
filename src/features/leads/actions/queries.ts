@@ -49,6 +49,14 @@ export async function getLeads(input: z.infer<typeof leadFilterSchema>) {
       const whereConditions: (SQL | undefined)[] = [];
       whereConditions.push(eq(leads.tenantId, tenantId));
 
+      // === 基础版数据隔离：SALES 角色只能查看自己负责的线索 ===
+      // ADMIN / BOSS / 拥有 view:all_data 权限的用户不受此限制
+      const { buildDataScopeFilter } = await import('@/shared/lib/data-scope-filter');
+      const scopeFilter = await buildDataScopeFilter(leads.assignedSalesId);
+      if (scopeFilter) {
+        whereConditions.push(scopeFilter);
+      }
+
       if (f.status && f.status.length > 0) {
         whereConditions.push(
           inArray(

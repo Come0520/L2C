@@ -6,10 +6,10 @@ import { db } from '@/shared/api/db';
 import { eq, and, gte, count } from 'drizzle-orm';
 import * as schema from '@/shared/api/schema';
 import {
-  type PlanType,
   type PlanResource,
   type PlanLimitCheckResult,
   checkLimit,
+  type TenantOverride,
 } from './plan-limits';
 
 /** 租户用量快照 */
@@ -109,14 +109,13 @@ export async function getResourceUsage(tenantId: string, resource: PlanResource)
  * 完整的套餐限额检查（含数据库查询）
  *
  * @param tenantId - 租户 ID
- * @param planType - 套餐类型
+ * @param subscription - 包含重写覆盖项的租户订阅包
  * @param resource - 要检查的资源类型
- * @param isGrandfathered - 是否为祖父条款用户
  * @returns 限额检查结果
  *
  * @example
  * ```ts
- * const result = await checkPlanLimit(tenantId, 'base', 'users', false);
+ * const result = await checkPlanLimit(tenantId, sub, 'users');
  * if (!result.allowed) {
  *   // 展示升级弹窗
  * }
@@ -124,22 +123,21 @@ export async function getResourceUsage(tenantId: string, resource: PlanResource)
  */
 export async function checkPlanLimit(
   tenantId: string,
-  planType: PlanType,
-  resource: PlanResource,
-  isGrandfathered: boolean
+  subscription: TenantOverride & { isGrandfathered: boolean },
+  resource: PlanResource
 ): Promise<PlanLimitCheckResult> {
   // 祖父条款用户 → 不受任何限制
-  if (isGrandfathered) {
+  if (subscription.isGrandfathered) {
     return {
       allowed: true,
       current: 0,
       limit: Infinity,
-      planType,
+      planType: subscription.planType,
     };
   }
 
   const currentUsage = await getResourceUsage(tenantId, resource);
-  return checkLimit(planType, resource, currentUsage);
+  return checkLimit(subscription, resource, currentUsage);
 }
 
 /**
@@ -148,8 +146,7 @@ export async function checkPlanLimit(
  */
 export async function getUsageSummary(
   tenantId: string,
-  planType: PlanType,
-  isGrandfathered: boolean
+  subscription: TenantOverride & { isGrandfathered: boolean }
 ): Promise<Record<PlanResource, PlanLimitCheckResult>> {
   const usage = await getCurrentUsage(tenantId);
 
@@ -174,15 +171,15 @@ export async function getUsageSummary(
   const result = {} as Record<PlanResource, PlanLimitCheckResult>;
 
   for (const resource of resources) {
-    if (isGrandfathered) {
+    if (subscription.isGrandfathered) {
       result[resource] = {
         allowed: true,
         current: usageMap[resource],
         limit: Infinity,
-        planType,
+        planType: subscription.planType,
       };
     } else {
-      result[resource] = checkLimit(planType, resource, usageMap[resource]);
+      result[resource] = checkLimit(subscription, resource, usageMap[resource]);
     }
   }
 

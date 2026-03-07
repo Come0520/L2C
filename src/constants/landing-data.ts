@@ -393,6 +393,37 @@ export interface VersionRecord {
 
 export const versionHistory: VersionRecord[] = [
   {
+    id: 'v1.3.6',
+    version: 'v1.3.6',
+    date: '2026-03-07',
+    title: '测量媒体录入、离线上传队列与 AI 渲染 Schema 创建',
+    description:
+      '完成 P0-P3 测量模块 TDD 全链路：媒体录入、离线上传队列、存储配额 API、前端 UI 接入；新增配额展示页；创建 AI 渲染记录表与款式模板表 Schema（Task 1）；修复全站构建错误及 E2E 烟雾测试。',
+    contributors: ['长城（开发者）'],
+    updates: [
+      {
+        type: 'feature',
+        content: '测量媒体录入/离线上传队列/存储配额 API — P0-P3 TDD 全部完成并接入前端 UI',
+      },
+      {
+        type: 'feature',
+        content: '工人端存储配额展示页上线（P3 阶段）',
+      },
+      {
+        type: 'feature',
+        content: 'AI 渲染模块 Task 1：ai_render_records 与 style_templates 数据库表 Schema 创建',
+      },
+      {
+        type: 'fix',
+        content: 'E2E 烟雾测试全面修复，__PLATFORM__ 租户短路逻辑补全',
+      },
+      {
+        type: 'fix',
+        content: '修复构建错误：measureMedia 兜底、Modal→Dialog 替换、planDefinitions 查询重构',
+      },
+    ],
+  },
+  {
     id: 'v1.3.5',
     version: 'v1.3.5',
     date: '2026-03-05',

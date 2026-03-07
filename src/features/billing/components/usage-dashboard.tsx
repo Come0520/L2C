@@ -151,6 +151,7 @@ function getResourceLabel(r: PlanResource): string {
     ordersPerMonth: '本月订单生成量',
     showroomProducts: '云展厅上架名额',
     storageBytes: '存储空间 (MB)',
+    aiRenderingCredits: 'AI 效果图积分',
   };
   return map[r] || r;
 }

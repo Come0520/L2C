@@ -49,7 +49,7 @@ export async function getAllTenantsCreditsStats() {
 /**
  * 获取套餐积分配置（展示用）
  */
-export function getPlanCreditsConfig() {
+export async function getPlanCreditsConfig() {
   return {
     base: PLAN_LIMITS.base.maxAiRenderingCredits,
     pro: PLAN_LIMITS.pro.maxAiRenderingCredits,

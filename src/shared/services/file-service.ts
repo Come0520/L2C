@@ -2,8 +2,11 @@ import OSS from 'ali-oss';
 import { env } from '@/shared/config/env';
 
 // 区分内外网Endpoint
-const internalEndpoint = env.OSS_INTERNAL_ENDPOINT || `oss-${env.OSS_REGION}-internal.aliyuncs.com`;
-const publicEndpoint = `oss-${env.OSS_REGION}.aliyuncs.com`;
+const normalizedRegion = env.OSS_REGION.startsWith('oss-')
+  ? env.OSS_REGION
+  : `oss-${env.OSS_REGION}`;
+const internalEndpoint = env.OSS_INTERNAL_ENDPOINT || `${normalizedRegion}-internal.aliyuncs.com`;
+const publicEndpoint = `${normalizedRegion}.aliyuncs.com`;
 
 // 服务端使用的 Client 实例（懒加载）
 let _serverClient: OSS | null = null;
@@ -11,7 +14,9 @@ let _serverClient: OSS | null = null;
 function getServerClient(): OSS {
   if (!_serverClient) {
     if (!env.OSS_ACCESS_KEY_ID || !env.OSS_ACCESS_KEY_SECRET) {
-      console.warn('[OSS] Missing OSS_ACCESS_KEY_ID or OSS_ACCESS_KEY_SECRET. OSS client will not be initialized in build time.');
+      console.warn(
+        '[OSS] Missing OSS_ACCESS_KEY_ID or OSS_ACCESS_KEY_SECRET. OSS client will not be initialized in build time.'
+      );
     }
     _serverClient = new OSS({
       region: env.OSS_REGION,

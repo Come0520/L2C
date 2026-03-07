@@ -32,7 +32,17 @@ function maskPhone(phone: string) {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    let body = {};
+    try {
+      // 兼容一些奇怪的空请求或非标准 JSON 格式
+      const text = await request.text();
+      if (text) {
+        body = JSON.parse(text);
+      }
+    } catch (e) {
+      logger.warn('[Login] 解析请求 Body 失败', { route: 'auth/login', error: String(e) });
+      return apiBadRequest('无效的请求数据格式');
+    }
 
     // Zod 输入验证
     const parsed = LoginSchema.safeParse(body);
@@ -171,7 +181,15 @@ export async function POST(request: NextRequest) {
       tenantStatus: tenant.status,
     });
   } catch (error: unknown) {
-    logger.error('[Login] 登录服务异常', { route: 'auth/login', error });
+    if (error instanceof Error) {
+      logger.error('[Login] 登录服务异常', {
+        route: 'auth/login',
+        error: error.message,
+        stack: error.stack,
+      });
+    } else {
+      logger.error('[Login] 登录服务异常 (未知)', { route: 'auth/login', error: String(error) });
+    }
     return apiServerError('登录服务异常');
   }
 }

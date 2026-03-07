@@ -20,10 +20,44 @@ git add -A && git commit -m "deploy: <描述>" && git push origin main && git pu
 ### 2. 本地构建生产环境产物
 
 ```bash
+# 强制清除旧产物，确保本次构建是全量的
+Remove-Item -Recurse -Force .next -ErrorAction SilentlyContinue
 pnpm run build
 ```
 
 > 这一步会在 `.next/` 目录下生成 standalone 模式的产物。
+> **构建必须无 Error**（Warning 可接受）——如有 Error，禁止继续后续步骤。
+
+### 2.5. ⚠️ 本地生产冒烟测试（新增强制 Gate）
+
+> **背景**：曾发生过 E2E 通过、但上线后出现 `unstable_cache` 和 `nuqs` 运行时错误的事故。根因是 E2E 本地默认复用旧产物，测的是过期代码。此步骤在本地用生产构建产物启动服务，验证关键页面真正可访问。
+
+```bash
+# 1. 用生产构建产物启动本地服务（后台运行）
+$env:PORT="3099"; node .next/standalone/server.js &
+Start-Sleep -Seconds 5
+
+# 2. 冒烟测试：验证关键页面无 500/崩溃（期望 200 或 307 重定向）
+$pages = @("/", "/leads", "/api/health")
+$failed = $false
+foreach ($p in $pages) {
+  $code = (Invoke-WebRequest -Uri "http://localhost:3099$p" -MaximumRedirection 0 -ErrorAction SilentlyContinue).StatusCode
+  if (-not $code) { $code = "ERROR" }
+  $icon = if ($code -in 200,307,302) { "✅" } else { "❌" }
+  Write-Host "$icon $p -> HTTP $code"
+  if ($code -notin 200,307,302) { $failed = $true }
+}
+
+# 3. 关闭测试服务器
+Stop-Process -Name "node" -ErrorAction SilentlyContinue
+
+# 4. 检查结果
+if ($failed) { Write-Error "❌ 冒烟测试失败，禁止部署！请先修复上述页面错误。"; exit 1 }
+Write-Host "✅ 冒烟测试通过，继续部署流程。"
+```
+
+- 🟢 全部页面返回 **200 / 302 / 307** → 继续 Step 3。
+- 🔴 任何页面返回 **500 / Error** → **禁止继续部署**，先修复错误，再从 Step 2 重新开始。
 
 ### 3. 检查数据库 Schema 变更（必须执行）
 
@@ -35,6 +69,29 @@ git diff --name-only HEAD~5 -- src/shared/api/schema/
 - **如果有输出**（说明 schema 有变更）：必须确认 `drizzle/` 目录下已有对应的 `.sql` 迁移文件（即已执行过 `pnpm db:generate` 并提交）
 - **如果没有生成**：先执行 `pnpm db:generate`，检查生成的 `.sql` 文件，再提交后继续
 - ❌ **铁律**：严禁跳过此步或通过数据库工具手动加字段/建表，否则会导致 db-migrate 与真实 schema 不同步，重演 2026-03 生产事故
+
+#### ⚠️ 迁移文件完整性校验（必须执行）
+
+// turbo
+
+```bash
+node -e "
+  const fs = require('fs');
+  const j = JSON.parse(fs.readFileSync('drizzle/meta/_journal.json', 'utf8'));
+  let missing = [];
+  j.entries.forEach(e => {
+    const f = 'drizzle/' + e.tag + '.sql';
+    if (!fs.existsSync(f)) missing.push(f);
+  });
+  if (missing.length > 0) {
+    console.error('❌ 缺少迁移文件：\n' + missing.join('\n'));
+    process.exit(1);
+  }
+  console.log('✅ 全部迁移文件完整，共', j.entries.length, '个');
+"
+```
+
+> 此步骤会校验 `_journal.json` 中记录的每个迁移条目是否都有对应的 `.sql` 文件。如果有任何丢失，**禁止继续部署**，先补创建空占位文件并提交后再继续。
 
 ### 4. 打包构建产物
 

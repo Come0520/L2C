@@ -53,7 +53,16 @@ async function code2Session(code: string) {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    let body = {};
+    try {
+      const text = await request.text();
+      if (text) {
+        body = JSON.parse(text);
+      }
+    } catch (e) {
+      logger.warn('[WxLogin] 解析请求 Body 失败', { route: 'wx-login', error: String(e) });
+      return apiBadRequest('无效的请求数据格式');
+    }
 
     // Zod 输入验证
     const parsed = WxLoginSchema.safeParse(body);

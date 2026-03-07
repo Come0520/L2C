@@ -190,6 +190,27 @@ pnpm run test:run
 - `app` 服务在 `db-migrate` 的 `service_completed_successfully` 后才启动，顺序有保障。
 - 对于**破坏性变更**（删列、改类型），必须向用户确认后才能继续，并在迁移文件中特别标注。
 
+**⚠️ 迁移文件完整性校验（必须执行，不得跳过）**：
+
+```bash
+node -e "
+  const fs = require('fs');
+  const j = JSON.parse(fs.readFileSync('drizzle/meta/_journal.json', 'utf8'));
+  let missing = [];
+  j.entries.forEach(e => {
+    const f = 'drizzle/' + e.tag + '.sql';
+    if (!fs.existsSync(f)) missing.push(f);
+  });
+  if (missing.length > 0) {
+    console.error('❌ 缺少迁移文件：\n' + missing.join('\n'));
+    process.exit(1);
+  }
+  console.log('✅ 全部迁移文件完整，共', j.entries.length, '个');
+"
+```
+
+> 如果有文件缺失，**禁止继续部署**。根因通常是 `pnpm db:generate` 的 `.sql` 文件被遗漏未提交到 Git（见 2026-03 `0050_nappy_joshua_kane.sql` 生产事故）。补救方法：创建空占位文件并提交后重新执行本步骤。
+
 ### Step 2: 版本号递增
 
 根据用户指示确定范围（Major / Minor / Patch），未指定默认 **Patch**。
@@ -227,52 +248,39 @@ git push origin main
 git push codeup main
 ```
 
-### Step 5: 本地构建与打包
+### Step 5: 本地构建
 
 ECS 只有 4GB 内存，必须在本地构建。并且必须保证本地构建 0 报错。
 
 ```bash
-# 1. 构建生产产物（如果有任何 TypeScript/Turbopack 报错，必须停下来修复，严禁带错发布）
 pnpm run build
-
-# 2. 打包 standalone 产物
-tar -czf next-build.tar.gz .next/standalone .next/static public package.json
 ```
 
-### Step 6: 安全 ECS 部署 (含备份、镜像重建、清理)
+> 如果有任何 TypeScript 报错，必须停下来修复，严禁带错发布。
 
-```bash
-# 1. 上传到 ECS
-scp next-build.tar.gz ecs:/root/L2C/
+### Step 6: 打包、上传与 ECS 部署
 
-# 2. SSH 远程：备份旧产物 → 解压新产物 → 重建镜像 → 重启服务
-ssh ecs "cd /root/L2C && \
-  git fetch origin main && \
-  git checkout FETCH_HEAD -- .dockerignore docker-compose.prod.yml Dockerfile.prebuilt nginx/ package.json pnpm-lock.yaml drizzle/ drizzle.config.ts src/shared/api/schema.ts src/shared/api/schema/ tsconfig.json && \
-  [ -f next-build.tar.gz ] && cp next-build.tar.gz next-build-backup-\$(date +%Y%m%d-%H%M%S).tar.gz || true && \
-  rm -rf .next/standalone .next/static && \
-  tar -xzf next-build.tar.gz && \
-  sed -i '/^\.next$/d' .dockerignore && \
-  docker-compose -f docker-compose.prod.yml build --no-cache && \
-  echo '.next' >> .dockerignore && \
-  docker rm -f l2c-app l2c-db-migrate l2c-nginx 2>/dev/null; \
-  docker-compose -f docker-compose.prod.yml up -d"
+**📋 执行 `/deploy` 工作流的 Step 4 起**（即从打包到 ECS 重建的全部机械步骤），命令以 `deploy.md` 为准，不在此处重复维护。
 
-# 3. 清理本地 tar 包
-rm -f next-build.tar.gz
-```
+> **设计原则**：`/deploy` 工作流是部署机械步骤的唯一事实来源（Single Source of Truth）。本 Skill 负责编排整个发布仪式（质量门禁 → 版本号 → 贡献墙 → 部署 → 验收），具体部署命令由 `deploy.md` 维护，避免两处不同步。
 
-## 部署完成
+## 部署完成验收
 
 1. 等待约 2 分钟（健康检查 `start_period=120s`）。
-2. **强制重载 nginx**（防止 upstream 解析失败静默回退默认配置）：
+2. **强制重载 nginx**：
    ```bash
    ssh ecs "docker exec l2c-nginx nginx -s reload"
    ```
-3. 验证：`ssh ecs "docker ps --format 'table {{.Names}}\t{{.Status}}' && curl -s -o /dev/null -w 'HTTP %{http_code}' https://l2c.asia/"`
-4. 预期结果：`l2c-app Up (healthy)` + `HTTP 200`。
+3. 验证容器状态与 HTTP：
+   ```bash
+   ssh ecs "docker ps --format 'table {{.Names}}\t{{.Status}}' && curl -s -o /dev/null -w 'HTTP %{http_code}' https://l2c.asia/"
+   ```
+4. 健康检查 API（`authReady` 必须为 `true`，否则禁止宣告完成）：
+   ```bash
+   curl -s https://l2c.asia/api/health
+   # 预期：{"status":"healthy","dbStatus":"connected","authReady":true}
+   ```
 5. 向用户汇报：版本号、更新模块、部署状态。
-6. 如果部署过程中出现了短暂停机，温馨提示用户未来可探索 Blue-Green 零停机部署方案。
 
 ---
 

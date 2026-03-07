@@ -39,22 +39,27 @@ export async function getLeads(input: z.infer<typeof leadFilterSchema>) {
   }
   const filters = leadFilterSchema.parse(input);
 
+  // === 基础版数据隔离：在 unstable_cache 外部预先计算，避免在缓存回调中调用 auth() → headers() ===
+  // 若 SALES 角色需限制只查自己的数据，则传入对应 userId；ADMIN/BOSS 传 null（不限制）
+  const { buildDataScopeFilter } = await import('@/shared/lib/data-scope-filter');
+  const rawScopeFilter = await buildDataScopeFilter(leads.assignedSalesId);
+  // 将角色判断结果简化为 scopedUserId，让缓存函数通过参数重建 SQL 条件
+  const scopedUserId: string | null =
+    rawScopeFilter !== undefined ? (session.user.id ?? null) : null;
+
   // 使用稳定排序的缓存键，避免属性顺序不同导致缓存未命中
   const cacheKey = JSON.stringify(filters, Object.keys(filters).sort());
 
   return unstable_cache(
-    async (f: z.infer<typeof leadFilterSchema>) => {
+    async (f: z.infer<typeof leadFilterSchema>, tId: string, sUserId: string | null) => {
       const start = Date.now();
-      logger.info('[leads] getLeads 执行开始', { tenantId, filters: f });
+      logger.info('[leads] getLeads 执行开始', { tenantId: tId, filters: f });
       const whereConditions: (SQL | undefined)[] = [];
-      whereConditions.push(eq(leads.tenantId, tenantId));
+      whereConditions.push(eq(leads.tenantId, tId));
 
-      // === 基础版数据隔离：SALES 角色只能查看自己负责的线索 ===
-      // ADMIN / BOSS / 拥有 view:all_data 权限的用户不受此限制
-      const { buildDataScopeFilter } = await import('@/shared/lib/data-scope-filter');
-      const scopeFilter = await buildDataScopeFilter(leads.assignedSalesId);
-      if (scopeFilter) {
-        whereConditions.push(scopeFilter);
+      // === 数据范围过滤（基于角色的数据隔离，参数由外部传入以避免在缓存中访问动态数据源） ===
+      if (sUserId !== null) {
+        whereConditions.push(eq(leads.assignedSalesId, sUserId));
       }
 
       if (f.status && f.status.length > 0) {
@@ -140,7 +145,11 @@ export async function getLeads(input: z.infer<typeof leadFilterSchema>) {
 
       const totalCount = totalResult?.value || 0;
       const durationMs = Date.now() - start;
-      logger.info('[leads] getLeads 执行完成', { durationMs, resultCount: rows.length, tenantId });
+      logger.info('[leads] getLeads 执行完成', {
+        durationMs,
+        resultCount: rows.length,
+        tenantId: tId,
+      });
 
       return {
         data: rows,
@@ -155,7 +164,7 @@ export async function getLeads(input: z.infer<typeof leadFilterSchema>) {
       tags: [`leads-list-${tenantId}`, `leads-${tenantId}`, 'leads'],
       revalidate: 30, // 30 seconds for lead list
     }
-  )(filters);
+  )(filters, tenantId, scopedUserId);
 }
 
 /**

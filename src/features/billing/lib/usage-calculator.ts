@@ -100,6 +100,7 @@ export async function getResourceUsage(tenantId: string, resource: PlanResource)
     ordersPerMonth: usage.orderCountMonth,
     showroomProducts: usage.showroomProductCount,
     storageBytes: usage.storageUsedBytes,
+    aiRenderingCredits: 0, // 暂不统计，后续接入 AI 积分查询时补充
   };
 
   return resourceMap[resource];
@@ -166,6 +167,7 @@ export async function getUsageSummary(
     ordersPerMonth: usage.orderCountMonth,
     showroomProducts: usage.showroomProductCount,
     storageBytes: usage.storageUsedBytes,
+    aiRenderingCredits: 0, // 暂不统计，后续接入 AI 积分查询时补充
   };
 
   const result = {} as Record<PlanResource, PlanLimitCheckResult>;

@@ -1,0 +1,471 @@
+/**
+ * AI 效果图向导 — 全局样式
+ */
+
+// ==================== 基础变量 ====================
+
+$primary: #007AFF;
+$primary-light: #E5F0FF;
+$secondary: #8E8E93;
+$text-main: #1A1A1A;
+$text-sub: #666;
+$border: #E5E5EA;
+$bg: #F2F2F7;
+$card-bg: #FFFFFF;
+$danger: #FF3B30;
+$success: #34C759;
+$spacing: 24rpx;
+
+// ==================== 主容器 ====================
+
+.ai-rendering-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: $bg;
+}
+
+// ==================== 步骤进度条 ====================
+
+.step-bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 32rpx $spacing 24rpx;
+  background: $card-bg;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.06);
+
+  .step-lines {
+    position: absolute;
+    top: 50%;
+    left: $spacing;
+    right: $spacing;
+    display: flex;
+    gap: 0;
+    pointer-events: none;
+    z-index: 0;
+
+    .step-line {
+      flex: 1;
+      height: 4rpx;
+      background: $border;
+      transition: background 0.3s;
+
+      &.active {
+        background: $primary;
+      }
+    }
+  }
+
+  .step-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8rpx;
+    z-index: 1;
+
+    .step-dot {
+      width: 48rpx;
+      height: 48rpx;
+      border-radius: 50%;
+      background: $border;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24rpx;
+      color: $secondary;
+      border: 2rpx solid $border;
+      transition: all 0.3s;
+    }
+
+    .step-label {
+      font-size: 20rpx;
+      color: $secondary;
+      white-space: nowrap;
+    }
+
+    &.active {
+      .step-dot {
+        background: $primary;
+        border-color: $primary;
+        color: #fff;
+      }
+
+      .step-label {
+        color: $primary;
+        font-weight: 600;
+      }
+    }
+
+    &.done {
+      .step-dot {
+        background: $success;
+        border-color: $success;
+        color: #fff;
+
+        .check {
+          font-size: 24rpx;
+        }
+      }
+
+      .step-label {
+        color: $success;
+      }
+    }
+  }
+}
+
+// ==================== 步骤内容区 ====================
+
+.step-content {
+  flex: 1;
+  padding: $spacing;
+}
+
+.step-title {
+  display: block;
+  font-size: 36rpx;
+  font-weight: 700;
+  color: $text-main;
+  margin-bottom: 8rpx;
+}
+
+.step-desc {
+  display: block;
+  font-size: 26rpx;
+  color: $text-sub;
+  margin-bottom: 32rpx;
+}
+
+// ==================== 底部操作按钮 ====================
+
+.step-actions {
+  display: flex;
+  gap: $spacing;
+  margin-top: 48rpx;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.btn {
+  flex: 1;
+  height: 88rpx;
+  border-radius: 16rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30rpx;
+  font-weight: 600;
+  transition: opacity 0.2s;
+
+  &.btn-primary {
+    background: $primary;
+    color: #fff;
+
+    &.disabled {
+      opacity: 0.4;
+    }
+  }
+
+  &.btn-secondary {
+    background: $card-bg;
+    color: $text-main;
+    border: 2rpx solid $border;
+  }
+
+  &.btn-outline {
+    background: $primary-light;
+    color: $primary;
+    border: 2rpx solid $primary;
+  }
+}
+
+// ==================== Step 1 选面料 ====================
+
+.choice-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: $spacing;
+  margin-bottom: 32rpx;
+
+  .choice-card {
+    background: $card-bg;
+    border: 2rpx solid $border;
+    border-radius: 20rpx;
+    padding: 32rpx 20rpx;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12rpx;
+    transition: all 0.2s;
+
+    .card-icon {
+      font-size: 56rpx;
+    }
+
+    .card-title {
+      font-size: 28rpx;
+      font-weight: 600;
+      color: $text-main;
+    }
+
+    .card-desc {
+      font-size: 22rpx;
+      color: $text-sub;
+      text-align: center;
+    }
+
+    &.selected {
+      border-color: $primary;
+      background: $primary-light;
+
+      .card-title {
+        color: $primary;
+      }
+    }
+  }
+}
+
+.preview-area {
+  background: $card-bg;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin-bottom: 24rpx;
+
+  .preview-label {
+    font-size: 26rpx;
+    color: $text-sub;
+    margin-bottom: 16rpx;
+    display: block;
+  }
+
+  .preview-img {
+    width: 100%;
+    border-radius: 12rpx;
+    max-height: 400rpx;
+  }
+}
+
+// ==================== Step 2 标注位置 ====================
+
+.photo-upload-area {
+  width: 100%;
+  aspect-ratio: 4/3;
+  background: $card-bg;
+  border: 2rpx dashed $border;
+  border-radius: 20rpx;
+  overflow: hidden;
+  margin-bottom: 24rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  .room-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .upload-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16rpx;
+
+    .upload-icon {
+      font-size: 80rpx;
+    }
+
+    .upload-text {
+      font-size: 30rpx;
+      color: $text-main;
+      font-weight: 600;
+    }
+
+    .upload-hint {
+      font-size: 24rpx;
+      color: $text-sub;
+    }
+  }
+}
+
+.retake-btn {
+  text-align: center;
+  color: $primary;
+  font-size: 28rpx;
+  margin-bottom: 24rpx;
+}
+
+.notes-section {
+  .notes-label {
+    display: block;
+    font-size: 26rpx;
+    color: $text-sub;
+    margin-bottom: 12rpx;
+  }
+
+  .notes-input {
+    width: 100%;
+    min-height: 160rpx;
+    background: $card-bg;
+    border: 2rpx solid $border;
+    border-radius: 16rpx;
+    padding: 20rpx;
+    font-size: 28rpx;
+    color: $text-main;
+    box-sizing: border-box;
+  }
+}
+
+// ==================== Step 3 选款式 ====================
+
+.style-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16rpx;
+  margin-bottom: 24rpx;
+
+  .style-card {
+    background: $card-bg;
+    border: 2rpx solid $border;
+    border-radius: 16rpx;
+    padding: 20rpx 12rpx;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8rpx;
+    transition: all 0.2s;
+
+    .style-icon {
+      font-size: 48rpx;
+    }
+
+    .style-name {
+      font-size: 22rpx;
+      font-weight: 600;
+      color: $text-main;
+      text-align: center;
+    }
+
+    .style-category {
+      font-size: 18rpx;
+      color: $text-sub;
+    }
+
+    &.selected {
+      border-color: $primary;
+      background: $primary-light;
+
+      .style-name {
+        color: $primary;
+      }
+    }
+  }
+}
+
+.selected-hint {
+  text-align: center;
+  color: $primary;
+  font-size: 28rpx;
+  margin-bottom: 24rpx;
+}
+
+// ==================== Step 4 出图 ====================
+
+.summary-card {
+  background: $card-bg;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin-bottom: 32rpx;
+
+  .summary-row {
+    display: flex;
+    gap: 16rpx;
+    margin-bottom: 12rpx;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+
+    .summary-label {
+      font-size: 26rpx;
+      color: $text-sub;
+      width: 100rpx;
+    }
+
+    .summary-value {
+      font-size: 26rpx;
+      color: $text-main;
+      font-weight: 600;
+    }
+  }
+}
+
+.generate-area {
+  .error-msg {
+    background: rgba($danger, 0.1);
+    border-radius: 12rpx;
+    padding: 20rpx;
+    margin-bottom: 24rpx;
+
+    .error-text {
+      font-size: 26rpx;
+      color: $danger;
+    }
+  }
+
+  .generate-btn {
+    width: 100%;
+    height: 96rpx;
+    font-size: 32rpx;
+    border-radius: 20rpx;
+  }
+}
+
+.loading-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 64rpx 0;
+  gap: 24rpx;
+
+  .loading-spinner {
+    width: 80rpx;
+    height: 80rpx;
+    border: 6rpx solid $border;
+    border-top-color: $primary;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+
+  .loading-text {
+    font-size: 26rpx;
+    color: $text-sub;
+  }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.result-area {
+  .result-credits {
+    display: block;
+    font-size: 24rpx;
+    color: $text-sub;
+    text-align: center;
+    margin-bottom: 16rpx;
+  }
+
+  .result-img {
+    width: 100%;
+    border-radius: 16rpx;
+    margin-bottom: 24rpx;
+  }
+
+  .result-actions {
+    display: flex;
+    gap: $spacing;
+  }
+}

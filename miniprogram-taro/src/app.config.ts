@@ -81,6 +81,8 @@ export default defineAppConfig({
                 'orders/index',           // 订单列表 - MIGRATED
                 'orders/detail/index',    // 订单详情 - MIGRATED
                 'invite/index',           // 邀请 - MIGRATED
+                'ai-rendering/index',     // AI 效果图向导 - Task 7
+                'ai-rendering/gallery',   // AI 效果图库 - Task 8
             ],
         },
         {

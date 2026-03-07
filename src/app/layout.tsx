@@ -6,7 +6,6 @@ import StyleProvider from '@/shared/providers/style-provider';
 import { ProgressBarProvider } from '@/shared/providers/progress-bar-provider';
 import { QueryProvider } from '@/shared/providers/query-provider';
 import { TenantProvider } from '@/shared/providers/tenant-provider';
-import { NuqsAdapter } from 'nuqs/adapters/next/app';
 import dynamic from 'next/dynamic';
 import './globals.css';
 import '@/lib/zod-i18n';
@@ -47,9 +46,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             >
               <ProgressBarProvider>
                 <QueryProvider>
-                  <NuqsAdapter>
-                    <TenantProvider>{children}</TenantProvider>
-                  </NuqsAdapter>
+                  <TenantProvider>{children}</TenantProvider>
                 </QueryProvider>
               </ProgressBarProvider>
               <Toaster />

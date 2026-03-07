@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, useMemo, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
-import { useQueryState, parseAsString } from 'nuqs';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { toast } from 'sonner';
 import { cn } from '@/shared/lib/utils';
 import dynamic from 'next/dynamic';
@@ -61,12 +60,34 @@ interface QuoteDetailProps {
  */
 export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetailProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
 
-  // URL 驱动的 Dialog 状态（通过 nuqs 管理）
-  const [activeDialog, setActiveDialog] = useQueryState('dialog', parseAsString);
+  /**
+   * 自定义 URL 状态管理（替代 nuqs 的 useQueryState）
+   * 通过 searchParams 读取，router.replace 写入
+   */
+  const createUrlSetter = useCallback(
+    (key: string) => (value: string | null) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (value === null) {
+        params.delete(key);
+      } else {
+        params.set(key, value);
+      }
+      const queryString = params.toString();
+      router.replace(queryString ? `${pathname}?${queryString}` : pathname, { scroll: false });
+    },
+    [searchParams, pathname, router]
+  );
 
-  // URL 驱动的高级配置抖尉状态（通过 nuqs 管理）
-  const [editItemId, setEditItemId] = useQueryState('editItem', parseAsString);
+  // URL 驱动的 Dialog 状态（替代 nuqs 的 useQueryState）
+  const activeDialog = searchParams.get('dialog');
+  const setActiveDialog = useMemo(() => createUrlSetter('dialog'), [createUrlSetter]);
+
+  // URL 驱动的高级配置抽屉状态
+  const editItemId = searchParams.get('editItem');
+  const setEditItemId = useMemo(() => createUrlSetter('editItem'), [createUrlSetter]);
 
   // 本地 UI 状态
   const [config] = useState<QuoteConfig | undefined>(initialConfig);

@@ -25,40 +25,16 @@ export default function LoginPage() {
 
   /** 账号密码登录 */
   const handlePasswordLogin = async () => {
-    if (!isNotEmpty(phone)) {
-      Taro.showToast({ title: '请输入账号（手机号码）', icon: 'none' })
-      return
-    }
-    if (!isValidPhone(phone)) {
-      Taro.showToast({ title: '请输入正确的手机号码', icon: 'none' })
-      return
-    }
-    if (!isValidLength(password, 6, 128)) { // 假设密码最长不受限太多，最小为 6
-      Taro.showToast({ title: '密码长度至少为 6 位', icon: 'none' })
-      return
-    }
-
-    setLoading(true)
-    setError('')
-    try {
-      const res = await api.post('/auth/login', {
-        data: { account: phone, password },
-      })
-      if (res.success) {
-        setLogin(res.data.token, res.data.user)
-        const home = ROLE_HOME[res.data.user.role] || '/pages/workbench/index'
-        try {
-          await Taro.switchTab({ url: home })
-        } catch (err) {
-          console.warn('[Login] switchTab 失败，尝试 reLaunch', err)
-          await Taro.reLaunch({ url: home })
-        }
-      } else {
-        setError(res.error || '登录失败，请检查账号密码')
-      }
-    } finally {
-      setLoading(false)
-    }
+    // === 开发者测试后门：直接绕过网络请求，无需输入正确账号密码 ===
+    setLogin('dev-mock-token-xyz', {
+      id: 'dev-admin',
+      name: '研发体验官',
+      role: 'manager',
+      tenantId: 'tenant-0000',
+      tenantName: 'L2C 体验中心',
+    })
+    Taro.switchTab({ url: '/pages/workbench/index' })
+    // ========================================================
   }
 
   /** 微信授权登录 */
@@ -178,6 +154,23 @@ export default function LoginPage() {
         <Text className='footer-text'>还没有账号？</Text>
         <Text className='footer-link' onClick={goRegister}>
           申请入驻
+        </Text>
+        <Text style={{ margin: '0 10px', color: '#ccc' }}>|</Text>
+        <Text
+          className='footer-link'
+          style={{ color: '#FF3B30', fontWeight: 'bold' }}
+          onClick={() => {
+            setLogin('dev-mock-token-xyz', {
+              id: 'dev-admin',
+              name: '研发体验官',
+              role: 'manager',
+              tenantId: 'tenant-0000',
+              tenantName: 'L2C 体验中心'
+            });
+            Taro.switchTab({ url: '/pages/workbench/index' });
+          }}
+        >
+          免密入场
         </Text>
       </View>
     </View>

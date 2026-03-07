@@ -6,8 +6,8 @@
  * 字段：名称 / 分类 / 缩略图 / Prompt 片段 / 排序值
  * 缩略图通过 /api/platform/ai-templates/upload 上传
  */
-import { useState, useTransition, useRef, type FormEvent } from 'react';
-import { createTemplate } from '../actions/template-actions';
+import { useState, useTransition, useRef, type FormEvent, useEffect } from 'react';
+import { createTemplate, updateTemplate } from '../actions/template-actions';
 
 /** 分类选项 */
 const CATEGORIES = [
@@ -22,11 +22,21 @@ interface TemplateFormDialogProps {
   open: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  initialData?: {
+    id: string;
+    name: string;
+    category: string;
+    thumbnailUrl: string | null;
+    referenceImageUrl: string | null;
+    promptFragment: string;
+    sortOrder: number;
+    isActive: number;
+  } | null;
 }
 
-export function TemplateFormDialog({ open, onClose, onSuccess }: TemplateFormDialogProps) {
+export function TemplateFormDialog({ open, onClose, onSuccess, initialData }: TemplateFormDialogProps) {
   const [name, setName] = useState('');
-  const [category, setCategory] = useState('track');
+  const [category, setCategory] = useState<'track' | 'roman_pole' | 'roman_blind' | 'roller' | 'venetian'>('track');
   const [promptFragment, setPromptFragment] = useState('');
   const [sortOrder, setSortOrder] = useState(0);
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
@@ -34,6 +44,25 @@ export function TemplateFormDialog({ open, onClose, onSuccess }: TemplateFormDia
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (open) {
+      if (initialData) {
+        setName(initialData.name);
+        setCategory(initialData.category as any);
+        setPromptFragment(initialData.promptFragment);
+        setSortOrder(initialData.sortOrder);
+        setThumbnailUrl(initialData.thumbnailUrl);
+      } else {
+        setName('');
+        setCategory('track');
+        setPromptFragment('');
+        setSortOrder(0);
+        setThumbnailUrl(null);
+      }
+      setError(null);
+    }
+  }, [open, initialData]);
 
   if (!open) return null;
 
@@ -75,24 +104,24 @@ export function TemplateFormDialog({ open, onClose, onSuccess }: TemplateFormDia
 
     startTransition(async () => {
       try {
-        await createTemplate({
+        const payload = {
           name: name.trim(),
           category,
           promptFragment: promptFragment.trim(),
           sortOrder,
           thumbnailUrl,
-        });
-        // 重置表单
-        setName('');
-        setCategory('track');
-        setPromptFragment('');
-        setSortOrder(0);
-        setThumbnailUrl(null);
-        setError(null);
+          isActive: initialData ? initialData.isActive : 1,
+        };
+        if (initialData?.id) {
+          await updateTemplate(initialData.id, payload);
+        } else {
+          await createTemplate(payload);
+        }
+
         onSuccess();
         onClose();
       } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : '创建失败');
+        setError(err instanceof Error ? err.message : '保存失败');
       }
     });
   };
@@ -100,7 +129,7 @@ export function TemplateFormDialog({ open, onClose, onSuccess }: TemplateFormDia
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl">
-        <h3 className="mb-4 text-lg font-semibold text-gray-900">新增款式模板</h3>
+        <h3 className="mb-4 text-lg font-semibold text-gray-900">{initialData ? '编辑款式模板' : '新增款式模板'}</h3>
 
         {error && <div className="mb-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</div>}
 
@@ -124,7 +153,7 @@ export function TemplateFormDialog({ open, onClose, onSuccess }: TemplateFormDia
             <select
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
               value={category}
-              onChange={(e) => setCategory(e.target.value)}
+              onChange={(e) => setCategory(e.target.value as 'track' | 'roman_pole' | 'roman_blind' | 'roller' | 'venetian')}
             >
               {CATEGORIES.map((c) => (
                 <option key={c.value} value={c.value}>

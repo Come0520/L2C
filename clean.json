@@ -1,0 +1,169 @@
+[dotenv@17.2.3] injecting env (3) from .env.test -- tip: 📡 add observability to secrets: https://dotenvx.com/ops
+{
+  "config": {
+    "configFile": "C:\\Users\\bigey\\Documents\\Antigravity\\L2C\\playwright.config.ts",
+    "rootDir": "C:/Users/bigey/Documents/Antigravity/L2C/e2e",
+    "forbidOnly": false,
+    "fullyParallel": true,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {},
+    "preserveOutput": "always",
+    "reporter": [
+      [
+        "json"
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "quiet": false,
+    "projects": [
+      {
+        "outputDir": "C:/Users/bigey/Documents/Antigravity/L2C/test-results",
+        "repeatEach": 1,
+        "retries": 1,
+        "metadata": {},
+        "id": "setup",
+        "name": "setup",
+        "testDir": "C:/Users/bigey/Documents/Antigravity/L2C/e2e",
+        "testIgnore": [
+          "**/channels.spec.ts"
+        ],
+        "testMatch": [
+          "/.*\\.setup\\.ts/"
+        ],
+        "timeout": 120000
+      },
+      {
+        "outputDir": "C:/Users/bigey/Documents/Antigravity/L2C/test-results",
+        "repeatEach": 1,
+        "retries": 1,
+        "metadata": {},
+        "id": "api",
+        "name": "api",
+        "testDir": "C:/Users/bigey/Documents/Antigravity/L2C/e2e",
+        "testIgnore": [
+          "**/channels.spec.ts"
+        ],
+        "testMatch": [
+          "/mobile-api-.*\\.spec\\.ts/"
+        ],
+        "timeout": 120000
+      },
+      {
+        "outputDir": "C:/Users/bigey/Documents/Antigravity/L2C/test-results",
+        "repeatEach": 1,
+        "retries": 1,
+        "metadata": {},
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "C:/Users/bigey/Documents/Antigravity/L2C/e2e",
+        "testIgnore": [
+          "**/channels.spec.ts"
+        ],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 120000
+      },
+      {
+        "outputDir": "C:/Users/bigey/Documents/Antigravity/L2C/test-results",
+        "repeatEach": 1,
+        "retries": 1,
+        "metadata": {},
+        "id": "firefox",
+        "name": "firefox",
+        "testDir": "C:/Users/bigey/Documents/Antigravity/L2C/e2e",
+        "testIgnore": [
+          "**/channels.spec.ts"
+        ],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 120000
+      },
+      {
+        "outputDir": "C:/Users/bigey/Documents/Antigravity/L2C/test-results",
+        "repeatEach": 1,
+        "retries": 1,
+        "metadata": {},
+        "id": "webkit",
+        "name": "webkit",
+        "testDir": "C:/Users/bigey/Documents/Antigravity/L2C/e2e",
+        "testIgnore": [
+          "**/channels.spec.ts"
+        ],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 120000
+      },
+      {
+        "outputDir": "C:/Users/bigey/Documents/Antigravity/L2C/test-results",
+        "repeatEach": 1,
+        "retries": 1,
+        "metadata": {},
+        "id": "Mobile Chrome",
+        "name": "Mobile Chrome",
+        "testDir": "C:/Users/bigey/Documents/Antigravity/L2C/e2e",
+        "testIgnore": [
+          "**/channels.spec.ts"
+        ],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 120000
+      },
+      {
+        "outputDir": "C:/Users/bigey/Documents/Antigravity/L2C/test-results",
+        "repeatEach": 1,
+        "retries": 1,
+        "metadata": {},
+        "id": "Mobile Safari",
+        "name": "Mobile Safari",
+        "testDir": "C:/Users/bigey/Documents/Antigravity/L2C/e2e",
+        "testIgnore": [
+          "**/channels.spec.ts"
+        ],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 120000
+      }
+    ],
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.57.0",
+    "workers": 1,
+    "webServer": {
+      "command": "node scripts/start-e2e-server.mjs",
+      "port": 3004,
+      "reuseExistingServer": true,
+      "timeout": 120000,
+      "stdout": "pipe"
+    }
+  },
+  "suites": [],
+  "errors": [
+    {
+      "message": "Error: Process from config.webServer was not able to start. Exit code: 1",
+      "stack": "Error: Process from config.webServer was not able to start. Exit code: 1"
+    }
+  ],
+  "stats": {
+    "startTime": "2026-03-07T14:57:33.613Z",
+    "duration": 128.923,
+    "expected": 0,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

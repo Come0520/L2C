@@ -94,7 +94,35 @@ export function StepGenerate({ wizardState, onBack, onRestart }: StepGeneratePro
                 },
             });
         } catch {
-            Taro.showToast({ title: '保存失败', icon: 'none' });
+            Taro.showToast({ title: '写入文件失败', icon: 'none' });
+        }
+    }, [resultImage]);
+
+    /** 发送给微信好友 */
+    const handleShare = useCallback(async () => {
+        if (!resultImage) return;
+
+        try {
+            const base64Data = resultImage.replace(/^data:image\/\w+;base64,/, '');
+            const tempFilePath = `${Taro.env.USER_DATA_PATH}/share_rendering_${Date.now()}.jpg`;
+
+            Taro.getFileSystemManager().writeFile({
+                filePath: tempFilePath,
+                data: base64Data,
+                encoding: 'base64',
+                success: () => {
+                    Taro.showShareImageMenu({
+                        path: tempFilePath,
+                        fail: (err) => {
+                            if (err.errMsg && err.errMsg.indexOf('cancel') === -1) {
+                                Taro.showToast({ title: '分享失败', icon: 'none' });
+                            }
+                        }
+                    });
+                },
+            });
+        } catch {
+            Taro.showToast({ title: '准备分享文件失败', icon: 'none' });
         }
     }, [resultImage]);
 
@@ -152,11 +180,16 @@ export function StepGenerate({ wizardState, onBack, onRestart }: StepGeneratePro
                     <Image src={resultImage} mode="widthFix" className="result-img" showMenuByLongpress />
 
                     <View className="result-actions">
-                        <View className="btn btn-outline" onClick={handleSave}>
-                            💾 保存图片
+                        <View className="btn btn-primary" onClick={handleShare}>
+                            📤 发送给客户
                         </View>
-                        <View className="btn btn-outline" onClick={handleRetry}>
-                            🔄 重新生成{retryCount === 0 ? '（首次免费）' : ''}
+                        <View className="result-actions-row" style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
+                            <View className="btn btn-outline" style={{ flex: 1 }} onClick={handleSave}>
+                                💾 保存本地
+                            </View>
+                            <View className="btn btn-outline" style={{ flex: 1 }} onClick={handleRetry}>
+                                🔄 重新生成{retryCount === 0 ? '（免费）' : ''}
+                            </View>
                         </View>
                     </View>
                 </View>

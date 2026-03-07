@@ -45,7 +45,12 @@ export default function ShowroomPage() {
   const [selectedItems, setSelectedItems] = useState<ShowroomItem[]>([])
   const [loading, setLoading] = useState(false)
 
-  const isSales = currentRole === 'sales'
+  // 支持作为选择器被其他页面调用
+  const router = Taro.useRouter()
+  const isSelectMode = router.params.mode === 'select'
+  const eventName = router.params.eventName
+
+  const isSales = currentRole === 'sales' || isSelectMode
 
   /** 获取展厅内容 */
   const fetchItems = async (category: ShowroomTab) => {
@@ -87,6 +92,14 @@ export default function ShowroomPage() {
     Taro.navigateTo({
       url: `/packageShowroom/capsule/index?id=${item.id}&mode=share`,
     })
+  }
+
+  /** 选品模式：选择单项并回调 */
+  const handleSelect = (item: ShowroomItem) => {
+    if (eventName) {
+      Taro.eventCenter.trigger(eventName, item)
+    }
+    Taro.navigateBack()
   }
 
   /** Sales：加入/移出选品包 (多选) */
@@ -172,27 +185,41 @@ export default function ShowroomPage() {
                     <Text className='card-desc text-ellipsis'>{item.description}</Text>
                   )}
 
-                  {/* Sales 操作区 */}
+                  {/* Sales/Select 操作区 */}
                   {isSales && (
                     <View className='sales-actions'>
-                      <View
-                        className={`btn-select ${selectedItems.some(i => i.id === item.id) ? 'btn-select--active' : ''}`}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          toggleSelect(item)
-                        }}
-                      >
-                        <Text>{selectedItems.some(i => i.id === item.id) ? '不选' : '加入展包'}</Text>
-                      </View>
-                      <View
-                        className='btn-share'
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleShare(item)
-                        }}
-                      >
-                        <Text>分享</Text>
-                      </View>
+                      {isSelectMode ? (
+                        <View
+                          className='btn-select btn-select--active w-full text-center'
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleSelect(item)
+                          }}
+                        >
+                          <Text>选择此面料</Text>
+                        </View>
+                      ) : (
+                        <>
+                          <View
+                            className={`btn-select ${selectedItems.some((i) => i.id === item.id) ? 'btn-select--active' : ''}`}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              toggleSelect(item)
+                            }}
+                          >
+                            <Text>{selectedItems.some((i) => i.id === item.id) ? '不选' : '加入展包'}</Text>
+                          </View>
+                          <View
+                            className='btn-share'
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleShare(item)
+                            }}
+                          >
+                            <Text>分享</Text>
+                          </View>
+                        </>
+                      )}
                     </View>
                   )}
                 </View>
@@ -208,8 +235,8 @@ export default function ShowroomPage() {
         )}
       </ScrollView>
 
-      {/* 底部悬浮分享购物车（Sales） */}
-      {isSales && selectedItems.length > 0 && (
+      {/* 底部悬浮分享购物车（Sales 正常模式下） */}
+      {isSales && !isSelectMode && selectedItems.length > 0 && (
         <View className='share-cart-bar'>
           <View className='cart-info'>
             <Text className='cart-count'>已选 {selectedItems.length} 项</Text>
@@ -221,7 +248,8 @@ export default function ShowroomPage() {
         </View>
       )}
 
-      <TabBar selected='/pages/showroom/index' />
+      {/* 选品模式不显示 TabBar */}
+      {!isSelectMode && <TabBar selected='/pages/showroom/index' />}
     </View>
   )
 }

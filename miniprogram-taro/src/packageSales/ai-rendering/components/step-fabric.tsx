@@ -20,12 +20,50 @@ interface StepFabricProps {
 }
 
 export function StepFabric({ value, onChange, onNext, onBack }: StepFabricProps) {
-    /** 从云展厅选择面料（跳转展厅商品选择页，TODO: Phase 2 返回商品信息） */
+    /** 从云展厅选择面料（跳转展厅选品页并接收回调） */
     const handleChooseFromShowroom = useCallback(() => {
-        onChange({ fabricSource: 'showroom', fabricImageBase64: null });
-        // Phase 2: 跳转到展厅选品页，带回调参数返回面料信息
-        // 目前直接允许继续，展厅商品信息通过 fabricDescription 传递
-        Taro.showToast({ title: '已选：云展厅面料', icon: 'success' });
+        const eventName = `ON_FABRIC_SELECT_${Date.now()}`;
+
+        // 监听云展厅的选择回调
+        Taro.eventCenter.once(eventName, (item) => {
+            if (!item) return;
+
+            Taro.showLoading({ title: '正在提取面料...', mask: true });
+
+            // 选中的是云展厅里的网络图片，需要下载并转 Base64 传递给 AI
+            Taro.downloadFile({
+                url: item.coverUrl,
+                success: (res) => {
+                    const tempFilePath = res.tempFilePath;
+                    Taro.getFileSystemManager().readFile({
+                        filePath: tempFilePath,
+                        encoding: 'base64',
+                        success: (fileRes) => {
+                            onChange({
+                                fabricSource: 'showroom',
+                                fabricImageBase64: fileRes.data as string,
+                                fabricDescription: item.title || '云展厅面料',
+                            });
+                            Taro.hideLoading();
+                            Taro.showToast({ title: '已选定面料', icon: 'success' });
+                        },
+                        fail: () => {
+                            Taro.hideLoading();
+                            Taro.showToast({ title: '读取网图失败', icon: 'none' });
+                        }
+                    });
+                },
+                fail: () => {
+                    Taro.hideLoading();
+                    Taro.showToast({ title: '下载面料图失败', icon: 'none' });
+                }
+            });
+        });
+
+        // 跳转到云展厅的特定模式
+        Taro.navigateTo({
+            url: `/pages/showroom/index?mode=select&eventName=${eventName}`
+        });
     }, [onChange]);
 
     /** 上传自有面料图片 */
@@ -94,9 +132,11 @@ export function StepFabric({ value, onChange, onNext, onBack }: StepFabricProps)
             </View>
 
             {/* 已上传面料预览 */}
-            {value.fabricSource === 'upload' && value.fabricImageBase64 && (
+            {value.fabricImageBase64 && (
                 <View className="preview-area">
-                    <Text className="preview-label">已选面料：</Text>
+                    <Text className="preview-label">
+                        已选面料：{value.fabricSource === 'showroom' ? value.fabricDescription : '自有图片'}
+                    </Text>
                     <Image
                         src={`data:image/jpeg;base64,${value.fabricImageBase64}`}
                         mode="aspectFit"

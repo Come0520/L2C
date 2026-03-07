@@ -23,6 +23,7 @@ import { aiRenderings, aiCurtainStyleTemplates } from '@/shared/api/schema';
 import { eq } from 'drizzle-orm';
 import { revalidateTag } from 'next/cache';
 import { auth } from '@/shared/lib/auth';
+import { fileService } from '@/shared/services/file-service';
 import { calculateCreditsCost } from '../lib/credits';
 import { buildPrompt, generateRendering, CURTAIN_STYLE_PROMPT_MAP } from '../lib/gemini-client';
 import { addWatermark, doesImageNeedWatermark } from '../lib/watermark';
@@ -198,13 +199,29 @@ export async function generateAiRendering(
       }
     }
 
-    // === Step 8: 更新记录为成功 ===
+    // === Step 8: 上传至 OSS 并更新记录为成功 ===
     if (renderingId) {
+      let resultUrl = '';
+      try {
+        const buffer = Buffer.from(finalImageBase64, 'base64');
+        const objectName = `ai-renderings/${tenantId}/${renderingId}.jpg`;
+        const uploadRes = await fileService.uploadFile(objectName, buffer);
+        if (uploadRes.success && uploadRes.url) {
+          resultUrl = uploadRes.url;
+        } else {
+          resultUrl = `data:${result.mimeType};base64,${finalImageBase64}`;
+          console.warn('[AI Rendering] OSS 上传失败，回退使用 Base64');
+        }
+      } catch (ossErr) {
+        console.error('[AI Rendering] OSS 上传抛出异常:', ossErr);
+        resultUrl = `data:${result.mimeType};base64,${finalImageBase64}`;
+      }
+
       await db
         .update(aiRenderings)
         .set({
           status: 'completed',
-          resultImageUrl: `data:${result.mimeType};base64,${finalImageBase64}`,
+          resultImageUrl: resultUrl,
           creditsUsed: creditsNeeded,
         })
         .where(eq(aiRenderings.id, renderingId));

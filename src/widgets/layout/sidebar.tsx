@@ -24,6 +24,8 @@ import {
   Network, // 渠道管理图标
   UserCheck, // 客户管理图标
   Bell, // 通知中心图标
+  Sparkles, // AI 模板图标
+  Coins, // 积分额度图标
 } from 'lucide-react';
 
 import { motion } from 'motion/react';
@@ -178,6 +180,18 @@ export function AppSidebar() {
           label: '套餐配置',
           href: '/platform/plans',
           icon: DollarSign,
+          requiredPermission: null,
+        },
+        {
+          label: 'AI 模板',
+          href: '/platform/ai-templates',
+          icon: Sparkles,
+          requiredPermission: null,
+        },
+        {
+          label: '积分额度',
+          href: '/platform/credit-limits',
+          icon: Coins,
           requiredPermission: null,
         },
       ];

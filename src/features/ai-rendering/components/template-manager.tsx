@@ -37,6 +37,7 @@ export function TemplateManager({ initialTemplates }: TemplateManagerProps) {
   const [templates, setTemplates] = useState(initialTemplates);
   const [isPending, startTransition] = useTransition();
   const [showDialog, setShowDialog] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
 
   /** 弹窗保存成功后刷新列表 */
   const handleCreateSuccess = useCallback(() => {
@@ -62,19 +63,38 @@ export function TemplateManager({ initialTemplates }: TemplateManagerProps) {
     });
   };
 
+  /** 编辑模板 */
+  const handleEdit = (tpl: Template) => {
+    setEditingTemplate(tpl);
+    setShowDialog(true);
+  };
+
+  /** 点击新增 */
+  const handleCreateNew = () => {
+    setEditingTemplate(null);
+    setShowDialog(true);
+  };
+
   return (
     <div>
-      {/* 新增弹窗 */}
+      {/* 新增/编辑弹窗 */}
       <TemplateFormDialog
         open={showDialog}
-        onClose={() => setShowDialog(false)}
+        initialData={editingTemplate ? {
+          ...editingTemplate,
+          referenceImageUrl: null // 如果以后支持 ReferenceImage 可以在此处传递
+        } : null}
+        onClose={() => {
+          setShowDialog(false);
+          setEditingTemplate(null);
+        }}
         onSuccess={handleCreateSuccess}
       />
 
       <div className="mb-4 flex justify-end">
         <button
           className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-          onClick={() => setShowDialog(true)}
+          onClick={handleCreateNew}
         >
           + 新增款式模板
         </button>
@@ -114,14 +134,20 @@ export function TemplateManager({ initialTemplates }: TemplateManagerProps) {
                   <td className="px-4 py-3 text-sm text-gray-600">{tpl.sortOrder}</td>
                   <td className="px-4 py-3">
                     <span
-                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                        tpl.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
-                      }`}
+                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${tpl.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+                        }`}
                     >
                       {tpl.isActive ? '已启用' : '已禁用'}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right">
+                    <button
+                      className="mr-3 text-xs text-indigo-600 hover:underline"
+                      onClick={() => handleEdit(tpl)}
+                      disabled={isPending}
+                    >
+                      编辑
+                    </button>
                     <button
                       className="mr-3 text-xs text-blue-600 hover:underline"
                       onClick={() => handleToggle(tpl.id, tpl.isActive)}

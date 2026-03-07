@@ -1,0 +1,171 @@
+/**
+ * 效果图库样式
+ */
+
+$primary: #007AFF;
+$primary-light: #E5F0FF;
+$text-main: #1A1A1A;
+$text-sub: #666;
+$border: #E5E5EA;
+$bg: #F2F2F7;
+$card-bg: #FFFFFF;
+$success: #34C759;
+$spacing: 24rpx;
+
+.gallery-page {
+    min-height: 100vh;
+    background: $bg;
+    display: flex;
+    flex-direction: column;
+}
+
+// ==================== 积分余额卡片 ====================
+
+.credits-card {
+    margin: $spacing;
+    background: linear-gradient(135deg, $primary 0%, #5856D6 100%);
+    border-radius: 20rpx;
+    padding: 32rpx;
+    color: #fff;
+
+    .credits-info {
+        display: flex;
+        align-items: baseline;
+        gap: 8rpx;
+        margin-bottom: 16rpx;
+
+        .credits-label {
+            font-size: 26rpx;
+            opacity: 0.8;
+        }
+
+        .credits-value {
+            font-size: 56rpx;
+            font-weight: 700;
+            margin-left: auto;
+        }
+
+        .credits-total {
+            font-size: 26rpx;
+            opacity: 0.7;
+        }
+    }
+
+    .credits-bar {
+        width: 100%;
+        height: 8rpx;
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 4rpx;
+        margin-bottom: 12rpx;
+        overflow: hidden;
+
+        .credits-bar-used {
+            height: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 4rpx;
+            transition: width 0.3s ease;
+        }
+    }
+
+    .credits-desc {
+        font-size: 24rpx;
+        opacity: 0.7;
+    }
+}
+
+// ==================== 新建按钮 ====================
+
+.generate-entry {
+    margin: 0 $spacing $spacing;
+    background: $card-bg;
+    border: 2rpx solid $primary;
+    border-radius: 16rpx;
+    padding: 24rpx;
+    text-align: center;
+
+    .generate-btn-text {
+        font-size: 30rpx;
+        font-weight: 600;
+        color: $primary;
+    }
+}
+
+// ==================== 加载/空状态 ====================
+
+.loading-state,
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 80rpx $spacing;
+    gap: 16rpx;
+
+    .empty-icon {
+        font-size: 96rpx;
+    }
+
+    .empty-text {
+        font-size: 32rpx;
+        font-weight: 600;
+        color: $text-main;
+    }
+
+    .empty-desc {
+        font-size: 26rpx;
+        color: $text-sub;
+    }
+}
+
+// ==================== 图片网格 ====================
+
+.gallery-scroll {
+    flex: 1;
+}
+
+.gallery-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16rpx;
+    padding: 0 $spacing $spacing;
+}
+
+.gallery-item {
+    background: $card-bg;
+    border-radius: 16rpx;
+    overflow: hidden;
+    box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.08);
+
+    .gallery-img {
+        width: 100%;
+        aspect-ratio: 3/4;
+    }
+
+    .gallery-placeholder {
+        width: 100%;
+        aspect-ratio: 3/4;
+        background: $bg;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: $text-sub;
+        font-size: 26rpx;
+    }
+
+    .gallery-meta {
+        padding: 12rpx 16rpx;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+
+        .meta-style {
+            font-size: 22rpx;
+            color: $text-main;
+            font-weight: 500;
+        }
+
+        .meta-credits {
+            font-size: 20rpx;
+            color: $text-sub;
+        }
+    }
+}

@@ -11,7 +11,8 @@ import { test, expect } from '@playwright/test';
 
 test.describe('加工单全生命周期 (Processing Order Lifecycle)', () => {
     test.beforeEach(async ({ page }) => {
-        await page.goto('/processing-orders', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        // 路由修正：/processing-orders 不存在，真实路由是 /supply-chain/processing-orders
+        await page.goto('/supply-chain/processing-orders', { waitUntil: 'domcontentloaded', timeout: 60000 });
         await page.waitForLoadState('domcontentloaded');
     });
 
@@ -39,7 +40,7 @@ test.describe('加工单全生命周期 (Processing Order Lifecycle)', () => {
             console.log(`✅ 正在验证订单 ${orderNo} 的加工联动`);
 
             // 导航到加工单列表并搜索该订单号
-            await page.goto('/processing-orders', { waitUntil: 'domcontentloaded', timeout: 60000 });
+            await page.goto('/supply-chain/processing-orders', { waitUntil: 'domcontentloaded', timeout: 60000 });
             await page.getByPlaceholder(/搜索|单号/).fill(orderNo?.trim() || '');
             await page.keyboard.press('Enter');
             await page.waitForTimeout(1000);
@@ -60,7 +61,7 @@ test.describe('加工单全生命周期 (Processing Order Lifecycle)', () => {
         }
 
         await firstLink.click();
-        await expect(page).toHaveURL(/\/processing-orders\/.+/);
+        await expect(page).toHaveURL(/\/supply-chain\/processing-orders\/.+/);
 
         // 验证基本信息区域
         await expect(page.locator('text=基础信息')).toBeVisible();

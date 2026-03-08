@@ -174,6 +174,17 @@ test.describe('工费计算数值准确性 (Fee Calculation Accuracy)', () => {
         await firstRow.locator('a').first().click();
         await page.waitForLoadState('domcontentloaded');
 
+        // Task 4 修复：等待 Loading 状态消失，防止因详情页长时间 Loading 而超时
+        const loadingIndicator = page.getByText(/^Loading\.\.\.$/);
+        if (await loadingIndicator.isVisible({ timeout: 3000 })) {
+            console.log('⏳ 检测到详情页 Loading 状态，等待消失...');
+            await loadingIndicator.waitFor({ state: 'hidden', timeout: 30000 });
+            console.log('✅ Loading 消失，继续操作');
+        }
+
+        // 等待页面内容渲染完成
+        await page.waitForTimeout(500);
+
         // 查找所有包含金额的行
         const feeRows = page.locator('[data-testid*="fee"], tr:has(text=/工费|基础费|高空|远程|加项/)');
         const rowCount = await feeRows.count();
@@ -205,4 +216,6 @@ test.describe('工费计算数值准确性 (Fee Calculation Accuracy)', () => {
             console.log('⚠️ 费用明细行不足，跳过合计验证');
         }
     });
+
 });
+

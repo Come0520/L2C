@@ -61,7 +61,7 @@ export const getSettingsByCategory = cache(async (category: string) => {
   try {
     if (session.user.tenantId === '__PLATFORM__') {
       const result: Record<string, unknown> = {};
-      for (const setting of DEFAULT_SYSTEM_SETTINGS.filter(s => s.category === category)) {
+      for (const setting of DEFAULT_SYSTEM_SETTINGS.filter((s) => s.category === category)) {
         result[setting.key] = parseSettingValue(setting.value, setting.valueType);
       }
       return result;
@@ -278,10 +278,20 @@ export async function batchUpdateSettings(settings: Record<string, unknown>) {
 }
 
 /**
+ * 进程内已初始化租户集合（内存级缓存）
+ *
+ * @description 记录当前进程中已完成设置初始化的租户 ID。
+ * - 进程重启后自动清空（不影响正确性，因为 onConflictDoNothing 保障幂等）
+ * - 避免每次 Dashboard 页面请求都开启一次 DB 事务检查是否已初始化
+ */
+const _initializedTenants = new Set<string>();
+
+/**
  * 初始化租户默认设置
  *
  * @description 为租户创建默认的系统设置项。通常在租户创建或初始化时调用。
  * 使用 `onConflictDoNothing` 策略，仅当设置项不存在时才创建，不会覆盖现有配置。
+ * 进程内已初始化的租户会被缓存，第二次调用直接返回，避免重复执行 DB 事务。
  *
  * @param tenantId - 目标租户 ID
  * @returns Promise<{ success: boolean; message?: string; error?: string }> 初始化结果
@@ -290,6 +300,11 @@ export async function initTenantSettings(tenantId: string) {
   try {
     if (tenantId === '__PLATFORM__') {
       return { success: true, message: '平台租户跳过配置初始化' };
+    }
+
+    // [性能优化] 进程内已初始化的租户直接跳过，避免每次请求开启 DB 事务
+    if (_initializedTenants.has(tenantId)) {
+      return { success: true, message: '配置已初始化，跳过' };
     }
 
     await db.transaction(async (tx) => {
@@ -313,6 +328,8 @@ export async function initTenantSettings(tenantId: string) {
       }
     });
 
+    // 初始化完成后标记，避免后续请求重复执行
+    _initializedTenants.add(tenantId);
     return { success: true, message: '配置初始化完成' };
   } catch (error) {
     logger.error('initTenantSettings error:', error);
@@ -334,7 +351,10 @@ const getCachedAllSettings = (tenantId: string) =>
         const grouped: Record<string, Record<string, unknown>> = {};
         for (const setting of DEFAULT_SYSTEM_SETTINGS) {
           if (!grouped[setting.category]) grouped[setting.category] = {};
-          grouped[setting.category][setting.key] = parseSettingValue(setting.value, setting.valueType);
+          grouped[setting.category][setting.key] = parseSettingValue(
+            setting.value,
+            setting.valueType
+          );
         }
         return grouped;
       }

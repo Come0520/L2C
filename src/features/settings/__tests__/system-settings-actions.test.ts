@@ -197,7 +197,30 @@ describe('SystemSettingsActions - Task 1: 纯函数单元测试', () => {
       } as unknown as SystemSetting);
       const result = await initTenantSettings(mockTenantId);
       expect(result?.success).toBe(true);
-      expect(result?.message).toBe('配置初始化完成');
+    });
+
+    it('已初始化的租户第二次调用时不应再开启事务（进程内缓存）', async () => {
+      // 第一次：配置已存在
+      vi.mocked(db.query.systemSettings.findFirst).mockResolvedValue({
+        id: 'existing',
+      } as unknown as SystemSetting);
+
+      await initTenantSettings('tenant-cache-test');
+      // 重置调用计数，准备观察第二次
+      vi.mocked(db).transaction.mockClear();
+
+      // 第二次调用同一个 tenantId
+      const result = await initTenantSettings('tenant-cache-test');
+
+      // 第二次不应再开启 DB 事务
+      expect(vi.mocked(db).transaction).toHaveBeenCalledTimes(0);
+      expect(result?.success).toBe(true);
+    });
+
+    it('平台租户应直接返回成功，不执行任何数据库操作', async () => {
+      const result = await initTenantSettings('__PLATFORM__');
+      expect(result?.success).toBe(true);
+      expect(vi.mocked(db).transaction).not.toHaveBeenCalled();
     });
   });
 

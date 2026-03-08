@@ -1,5 +1,4 @@
 import { auth } from '@/shared/lib/auth';
-export const dynamic = 'force-dynamic';
 import { redirect } from 'next/navigation';
 import { AppSidebar } from '../../widgets/layout/sidebar';
 import { Header } from '../../widgets/layout/header';
@@ -32,30 +31,31 @@ export default async function DashboardLayout({ children }: { children: React.Re
     redirect('/login');
   }
 
-  // ── Onboarding 守卫：检测新租户是否需要填写初始化问卷 ──
-  if (session.user?.tenantId && session.user?.role === 'ADMIN') {
-    const { db } = await import('@/shared/api/db');
-    const { tenants } = await import('@/shared/api/schema');
-    const { eq } = await import('drizzle-orm');
+  // ── 并行执行 onboarding 守卫 + 租户配置初始化（性能优化：消除串行瀑布流）──
+  if (session.user?.tenantId) {
+    const [{ db }, { tenants }, { eq }, { initTenantSettings }] = await Promise.all([
+      import('@/shared/api/db'),
+      import('@/shared/api/schema'),
+      import('drizzle-orm'),
+      import('@/features/settings/actions/system-settings-actions'),
+    ]);
 
-    const tenant = await db.query.tenants.findFirst({
-      where: eq(tenants.id, session.user.tenantId),
-      columns: { onboardingStatus: true, status: true },
-    });
+    const [tenant] = await Promise.all([
+      session.user.role === 'ADMIN'
+        ? db.query.tenants.findFirst({
+            where: eq(tenants.id, session.user.tenantId),
+            columns: { onboardingStatus: true, status: true },
+          })
+        : Promise.resolve(null),
+      // 初始化租户配置（静默尝试，确保旧租户配置补齐）
+      initTenantSettings(session.user.tenantId).catch((err: unknown) => {
+        console.error('Failed to initialize tenant settings:', err);
+      }),
+    ]);
 
     if (tenant?.status === 'active' && tenant?.onboardingStatus === 'pending') {
       redirect('/onboarding');
     }
-  }
-
-  // 初始化租户配置（静默尝试，确保旧租户配置补齐）
-  if (session.user?.tenantId) {
-    const { initTenantSettings } =
-      await import('@/features/settings/actions/system-settings-actions');
-    // 这是一个异步操作，但不阻塞布局渲染
-    initTenantSettings(session.user.tenantId).catch((err) => {
-      console.error('Failed to initialize tenant settings:', err);
-    });
   }
 
   return (

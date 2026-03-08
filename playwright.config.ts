@@ -23,7 +23,10 @@ export default defineConfig({
     /* 本地开发默认使用 1 个 worker 防止 dev 服务器过载，CI 环境同样使用 1 */
     workers: process.env.PLAYWRIGHT_WORKERS ? parseInt(process.env.PLAYWRIGHT_WORKERS) : 1,
     /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-    reporter: 'html',
+    reporter: [
+        ['html'],
+        ['@midscene/web/playwright-reporter']
+    ],
     /* Shared settings for all the projects below. See https://playwright.dev/docs/test-use-options. */
     use: {
         /* Base URL to use in actions like `await page.goto('/')`. */
@@ -50,7 +53,9 @@ export default defineConfig({
             testMatch: /mobile-api-.*\.spec\.ts/,
             use: {
                 baseURL: process.env.BASE_URL || 'http://localhost:3004',
+                storageState: '.auth/user.json', // 修复：注入已登录 session，避免 page fixture 跳回登录页
             },
+            dependencies: ['setup'], // 修复：确保 auth setup 先执行
         },
         {
             name: 'chromium',

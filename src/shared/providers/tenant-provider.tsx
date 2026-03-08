@@ -30,10 +30,24 @@ interface TenantContextValue {
 
 const TenantContext = createContext<TenantContextValue | undefined>(undefined);
 
-export function TenantProvider({ children }: { children: ReactNode }) {
+interface TenantProviderProps {
+  children: ReactNode;
+  /**
+   * 可选：服务端预取的租户数据
+   *
+   * @description 由 Server Component（Dashboard Layout）提前获取并传入，
+   * 避免客户端挂载后再发 Server Action 请求（消除瀑布流，减少 2 次串行请求）。
+   * 未传时退回到客户端请求模式（兼容无法服务端预取的场景）。
+   */
+  initialTenant?: Tenant | null;
+}
+
+export function TenantProvider({ children, initialTenant }: TenantProviderProps) {
   const { data: session, status } = useSession();
-  const [tenant, setTenant] = useState<Tenant | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  // 有服务端预取数据时直接使用，无需等待客户端请求
+  const [tenant, setTenant] = useState<Tenant | null>(initialTenant ?? null);
+  // 有服务端数据则直接设为非 loading 状态
+  const [isLoading, setIsLoading] = useState(!initialTenant);
 
   const fetchTenant = useCallback(async (): Promise<void> => {
     if (!session?.user?.tenantId) return;
@@ -64,6 +78,9 @@ export function TenantProvider({ children }: { children: ReactNode }) {
   }, [session?.user?.tenantId]);
 
   useEffect(() => {
+    // 服务端已预取数据，无需客户端再发请求
+    if (initialTenant !== undefined) return;
+
     if (status === 'loading') return;
 
     if (status === 'unauthenticated') {
@@ -78,7 +95,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       setIsLoading(false);
       setTenant(null);
     }
-  }, [session, status, fetchTenant]);
+  }, [session, status, fetchTenant, initialTenant]);
 
   return (
     <TenantContext.Provider

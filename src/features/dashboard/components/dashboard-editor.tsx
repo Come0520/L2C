@@ -112,69 +112,79 @@ export function DashboardEditor({ userRole, onConfigChange }: DashboardEditorPro
       }));
   }, [config]);
 
-  // 处理布局变化
+  // 处理布局变化（使用函数式 setState 避免闭包中 config 过时问题）
   const handleLayoutChange = useCallback(
     (newLayout: Layout[]) => {
-      if (!config || !isEditing) return;
+      if (!isEditing) return;
 
-      const updatedWidgets = config.widgets.map((widget) => {
-        const layoutItem = newLayout.find((l) => l.i === widget.id);
-        if (layoutItem) {
-          return {
-            ...widget,
-            x: layoutItem.x,
-            y: layoutItem.y,
-            w: layoutItem.w,
-            h: layoutItem.h,
-          };
-        }
-        return widget;
-      });
+      setConfig((prev) => {
+        if (!prev) return prev;
+        const updatedWidgets = prev.widgets.map((widget) => {
+          const layoutItem = newLayout.find((l) => l.i === widget.id);
+          if (layoutItem) {
+            return {
+              ...widget,
+              x: layoutItem.x,
+              y: layoutItem.y,
+              w: layoutItem.w,
+              h: layoutItem.h,
+            };
+          }
+          return widget;
+        });
 
-      setConfig({
-        ...config,
-        widgets: updatedWidgets,
+        return {
+          ...prev,
+          widgets: updatedWidgets,
+        };
       });
     },
-    [config, isEditing]
+    [isEditing]
   );
 
-  // 添加 Widget
+  // 添加 Widget（使用函数式 setState 确保基于最新 state）
   const handleAddWidget = useCallback(
     (type: WidgetType) => {
-      if (!config) return;
-
       const meta = WIDGET_REGISTRY[type];
       if (!meta) return;
-      const newWidget: WidgetConfig = {
-        id: `w-${Date.now()}`,
-        type,
-        title: meta.title || 'Widget',
-        x: 0,
-        y: Infinity, // 放到最底部
-        w: meta.defaultSize.w,
-        h: meta.defaultSize.h,
-        visible: true,
-      };
 
-      setConfig({
-        ...config,
-        widgets: [...config.widgets, newWidget],
+      setConfig((prev) => {
+        if (!prev) return prev;
+        // 如果已经存在同类型 widget，直接返回不重复添加
+        if (prev.widgets.some((w) => w.type === type)) return prev;
+
+        const newWidget: WidgetConfig = {
+          id: `w-${Date.now()}`,
+          type,
+          title: meta.title || 'Widget',
+          x: 0,
+          y: Infinity, // 放到最底部
+          w: meta.defaultSize.w,
+          h: meta.defaultSize.h,
+          visible: true,
+        };
+
+        return {
+          ...prev,
+          widgets: [...prev.widgets, newWidget],
+        };
       });
     },
-    [config]
+    []
   );
 
-  // 移除 Widget
+  // 移除 Widget（使用函数式 setState 确保基于最新 state）
   const handleRemoveWidget = useCallback(
     (widgetId: string) => {
-      if (!config) return;
-      setConfig({
-        ...config,
-        widgets: config.widgets.filter((w) => w.id !== widgetId),
+      setConfig((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          widgets: prev.widgets.filter((w) => w.id !== widgetId),
+        };
       });
     },
-    [config]
+    []
   );
 
   // 保存配置

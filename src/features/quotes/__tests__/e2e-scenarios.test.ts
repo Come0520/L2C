@@ -248,30 +248,45 @@ describe('Quotes E2E Scenarios (L5)', () => {
     });
 
     // 2. 提交审批（QuoteLifecycleService.submit 已 mock）
-    // preflightVersionCheck for submitQuote 需要一次 db.update mock
-    mockDb.update.mockReturnValueOnce({
-      set: vi.fn().mockReturnThis(),
-      where: vi.fn().mockReturnThis(),
-      returning: vi.fn().mockResolvedValue([{ id: 'quote-flow', version: 1 }]),
+    // preflightVersionCheck 现已改为纯 SELECT 查询，需要 mock db.query.quotes.findFirst
+    // 必须返回与传入 version 相同的值，才能通过乐观锁检查
+    mockDb.query.quotes.findFirst.mockResolvedValueOnce({
+      id: 'quote-flow',
+      version: 1,
+      tenantId: MOCK_TENANT_ID,
+      status: 'DRAFT',
+      submittedById: null,
     });
     await submitQuote({ id: 'quote-flow', version: 1 });
     expect(AuditService.recordFromSession).toHaveBeenCalled();
 
     // 3. 审批通过（QuoteLifecycleService.approve 已 mock）
-    // preflightVersionCheck for approveQuote 需要一次 db.update mock
-    mockDb.update.mockReturnValueOnce({
-      set: vi.fn().mockReturnThis(),
-      where: vi.fn().mockReturnThis(),
-      returning: vi.fn().mockResolvedValue([{ id: 'quote-flow', version: 1 }]),
-    });
+    // approveQuote 内有两次 findFirst 调用：
+    // 第1次：自我审批检查（需 createdBy 与当前 session user 不同）
+    // 第2次：preflightVersionCheck（需 version 匹配）
+    mockDb.query.quotes.findFirst
+      // 第1次：自我审批检查，createdBy 必须不同于当前 session userId
+      .mockResolvedValueOnce({
+        createdBy: 'original-creator',
+      })
+      // 第2次：preflightVersionCheck，版本号必须匹配
+      .mockResolvedValueOnce({
+        id: 'quote-flow',
+        version: 1,
+        tenantId: MOCK_TENANT_ID,
+        status: 'PENDING_APPROVAL',
+        submittedById: 'approver-user',
+      });
     await approveQuote({ id: 'quote-flow', version: 1 });
 
     // 4. 转订单（QuoteLifecycleService.convertToOrder 已 mock）
-    // preflightVersionCheck for convertToOrder 需要一次 db.update mock
-    mockDb.update.mockReturnValueOnce({
-      set: vi.fn().mockReturnThis(),
-      where: vi.fn().mockReturnThis(),
-      returning: vi.fn().mockResolvedValue([{ id: 'quote-flow', version: 1 }]),
+    // preflightVersionCheck 现已改为纯 SELECT 查询
+    mockDb.query.quotes.findFirst.mockResolvedValueOnce({
+      id: 'quote-flow',
+      version: 1,
+      tenantId: MOCK_TENANT_ID,
+      status: 'APPROVED',
+      submittedById: null,
     });
     const orderResult = await convertQuoteToOrder({ quoteId: 'quote-flow', version: 1 });
     expect(orderResult).toBeDefined();

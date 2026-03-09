@@ -13,6 +13,12 @@ vi.mock('@/shared/lib/auth', () => ({
   }),
 }));
 
+vi.mock('@/shared/services/file-service', () => ({
+  fileService: {
+    uploadFile: vi.fn(),
+  },
+}));
+
 vi.mock('@/shared/services/audit-service', () => ({
   AuditService: {
     record: vi.fn(),
@@ -73,6 +79,35 @@ describe('安装清单验证测试', () => {
 
       expect(result.data?.success).toBe(true);
       expect(result.data?.message).toBe('清单状态已更新');
+    });
+
+    it('如果包含 Base64 照片，应将其转为 OSS 链接后保存', async () => {
+      const { fileService } = await import('@/shared/services/file-service');
+      (fileService.uploadFile as any).mockResolvedValue({
+        success: true,
+        url: 'https://oss.aliyun.com/checklist/task-123.png',
+      });
+
+      const mockData = {
+        taskId: 'task-123',
+        items: [
+          {
+            id: 'track_smooth',
+            label: '轨道顺滑',
+            isChecked: true,
+            required: true,
+            photoUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg=='
+          },
+        ],
+      };
+
+      const result = await updateInstallChecklistAction(mockData);
+
+      expect(result.data?.success).toBe(true);
+      expect(fileService.uploadFile).toHaveBeenCalledTimes(1);
+
+      const updateCall = (db.update as any).mock.results[0].value.set.mock.calls[0][0];
+      expect(updateCall.checklistStatus.items[0].photoUrl).toBe('https://oss.aliyun.com/checklist/task-123.png');
     });
 
     it('应该正确计算 allCompleted 状态 - 未完成', async () => {

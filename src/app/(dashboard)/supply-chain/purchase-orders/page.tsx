@@ -53,18 +53,19 @@ async function PurchaseOrdersDataWrapper({
 
   const status = STATUS_GROUPS[statusParam || ''] || statusParam;
 
-  // 获取采购单数据
-  const result = await getPurchaseOrders({
-    page,
-    pageSize: 20,
-    status,
-    supplierId,
-    paymentStatus,
-    search,
-  });
+  // 并行获取采购单数据和供应商列表
+  const [result, suppliersResult] = await Promise.all([
+    getPurchaseOrders({
+      page,
+      pageSize: 20,
+      status,
+      supplierId,
+      paymentStatus,
+      search,
+    }),
+    getSuppliers({ page: 1, pageSize: 100, type: 'BOTH' }),
+  ]);
 
-  // 获取供应商列表 (用于创建 PO Dialog)
-  const suppliersResult = await getSuppliers({ page: 1, pageSize: 100, type: 'BOTH' });
   const suppliersData = suppliersResult.data?.data || [];
   const suppliers = suppliersData.map((s) => ({ id: s.id, name: s.name }));
 

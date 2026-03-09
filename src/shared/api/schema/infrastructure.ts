@@ -109,6 +109,8 @@ export const tenants = pgTable('tenants', {
    */
   /** 自定义席位上限，可覆盖套餐默认值 */
   maxUsers: integer('max_users'),
+  /** 已购定量增值包/配额定义，键值对如 { "usersLimitBonus": 5 } */
+  purchasedAddons: jsonb('purchased_addons').default({}),
   /** 已购增值模块定义数组，如 ['BRANDING', 'ADVANCED_APPROVAL'] */
   purchasedModules: jsonb('purchased_modules').$type<string[]>().default([]),
   /** 自定义存储空间配额（单位：Byte），可覆盖套餐默认值 */
@@ -158,6 +160,8 @@ export const users = pgTable(
     dashboardConfig: jsonb('dashboard_config').default({}),
     isActive: boolean('is_active').default(true),
     avatarUrl: text('avatar_url'),
+    /** 安装师傅每日派单负荷上限，用于防爆单/过度派单拦截 */
+    dailyTaskLimit: integer('daily_task_limit').default(3),
     notificationSettings: jsonb('notification_settings').default({}), // 通知偏好设置
     isPlatformAdmin: boolean('is_platform_admin').default(false), // 平台超级管理员标识
     /** 上次活跃的租户 ID（登录时自动进入，类似 Slack "上次打开的 Workspace"） */

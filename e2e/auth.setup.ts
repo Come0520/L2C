@@ -4,9 +4,35 @@ import * as fs from 'fs';
 
 const authFile = path.join(__dirname, '../.auth/user.json');
 
-setup('authenticate', async ({ page }) => {
+setup('authenticate', async ({ page, context }) => {
     // 认证流程需要等待 Next.js 首次编译（开发模式下可能超过 60s）
     setup.setTimeout(300000); // 5 分钟
+
+    // ===== P0 修复：强制清除所有浏览器缓存 =====
+    // 根因：standalone 构建的 Server Action Hash 与浏览器缓存的旧 Hash 不匹配
+    // 每次认证前强制清除，确保所有 Server Action 调用使用当前构建的最新 Hash
+    console.log('🧹 强制清除浏览器缓存（防止 Server Action Hash 不匹配）...');
+    await context.clearCookies();
+    // 需要先导航到页面才能操作 localStorage / Cache API
+    try {
+        await page.goto('http://localhost:3004/', { timeout: 30000, waitUntil: 'domcontentloaded' });
+        await page.evaluate(async () => {
+            try {
+                localStorage.clear();
+                sessionStorage.clear();
+            } catch { /* 跨域时忽略 */ }
+            // 清除 Service Worker 缓存（Cache API）
+            if ('caches' in window) {
+                const cacheNames = await caches.keys();
+                await Promise.all(cacheNames.map(name => caches.delete(name)));
+            }
+        });
+        console.log('✅ 浏览器缓存已清除');
+    } catch {
+        console.log('⚠️ 缓存清除时页面未就绪，继续执行...');
+    }
+    // ===== P0 修复结束 =====
+
     // 如果 user.json 已存在，尝试复用现有 session（避免并行批次时互相覆盖）
     if (fs.existsSync(authFile)) {
         try {

@@ -4,6 +4,7 @@ import React, { useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { keepPreviousData } from '@tanstack/react-query';
 import { useServerActionQuery } from '@/shared/hooks/use-server-action-query';
+import { useDebounce } from '@/shared/hooks/use-debounce';
 import { Button } from '@/shared/ui/button';
 import RotateCcw from 'lucide-react/dist/esm/icons/rotate-ccw';
 import ChevronLeft from 'lucide-react/dist/esm/icons/chevron-left';
@@ -45,19 +46,22 @@ export function OrderList() {
   const statusTab = (searchParams.get('status') || 'ALL') as OrderStatusTab;
 
   const [page, setPage] = useState(1);
-  const [search, setSearch] = useState('');
+  // 性能优化（P0-1）：searchInput 跟踪原始输入（即时更新 UI）
+  // debouncedSearch 后 500ms 才变化，只有它才会触发 React Query 重新查询
+  const [searchInput, setSearchInput] = useState('');
+  const debouncedSearch = useDebounce(searchInput, 500);
   const [filters, setFilters] = useState<OrderFilters>({});
   const pageSize = 20;
 
   // 使用 React Query 进行数据获取和缓存
   const { data, isLoading, isFetching, refetch } = useServerActionQuery(
-    ['orders', page, pageSize, search, statusTab, filters],
+    // debouncedSearch 入 key，确保防抖后才触发请求
+    ['orders', page, pageSize, debouncedSearch, statusTab, filters],
     async () => {
-      // Pass filters to getOrders
       const result = await getOrders({
         page,
         pageSize,
-        search,
+        search: debouncedSearch,
         status: statusTab,
         salesId: filters.salesId,
         channelId: filters.channelId,
@@ -119,8 +123,8 @@ export function OrderList() {
         {/* 搜索和筛选栏 */}
         <DataTableToolbar
           searchProps={{
-            value: search,
-            onChange: setSearch,
+            value: searchInput,
+            onChange: setSearchInput, // 更新 UI 输入状态（无延迟）
             placeholder: '搜索客户、订单号...',
           }}
           onRefresh={handleRefresh}

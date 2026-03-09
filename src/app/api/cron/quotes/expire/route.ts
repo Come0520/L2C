@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import { QuoteService } from '@/services/quote.service';
 import { timingSafeEqual } from 'crypto';
+import { logger } from '@/shared/lib/logger';
 
 /**
  * 定时任务：批量处理过期报价
@@ -19,7 +20,8 @@ export async function POST(_req: NextRequest) {
 
     // 安全修复：强制要求配置 CRON_SECRET
     if (!cronSecret) {
-      console.error('[Quotes Expire] CRON_SECRET 未配置，拒绝请求');
+      // 【修复 8.1】使用统一的 logger 替代 console.error
+      logger.error('[Quotes Expire] CRON_SECRET 未配置，拒绝请求');
       return NextResponse.json(
         { error: 'Server configuration error: CRON_SECRET not set' },
         { status: 500 }
@@ -55,7 +57,8 @@ export async function POST(_req: NextRequest) {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error('Failed to execute quote expiration cron:', error);
+    // 【修复 8.1】使用统一的 logger 替代 console.error
+    logger.error('Failed to execute quote expiration cron:', { error });
     return NextResponse.json(
       {
         success: false,
@@ -65,3 +68,4 @@ export async function POST(_req: NextRequest) {
     );
   }
 }
+

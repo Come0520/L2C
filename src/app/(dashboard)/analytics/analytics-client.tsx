@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { useDebounce } from 'use-debounce';
+// 统一使用项目内自定义 debounce hook，移除第三方 use-debounce 依赖
+import { useDebounce } from '@/shared/hooks/use-debounce';
 import {
   getDashboardStats,
   getSalesFunnel,
@@ -195,8 +196,9 @@ export default function AnalyticsClient({ initialData }: { initialData: Analytic
   /**
    * 防抖后的日期范围（500ms 延迟）
    * 只有防抖值变化时才触发真正的数据加载，避免快速连点产生多次请求
+   * 注意：自定义 useDebounce 返回防抖后的值（非元组），500ms 与模块搜索保持一致
    */
-  const [debouncedDateRange] = useDebounce(dateRange, 500);
+  const debouncedDateRange = useDebounce(dateRange, 500);
 
   /**
    * 客户端内存缓存：以「开始日-结束日」为 Key。
@@ -277,9 +279,9 @@ export default function AnalyticsClient({ initialData }: { initialData: Analytic
       const parsedTrend =
         trendRes?.success && trendRes.data
           ? (trendRes.data as unknown as TrendData[]).map((item: TrendData) => ({
-              ...item,
-              amount: Number(item.amount),
-            }))
+            ...item,
+            amount: Number(item.amount),
+          }))
           : null;
       if (parsedTrend) setTrendData(parsedTrend);
       if (leaderboardRes?.success && leaderboardRes.data)

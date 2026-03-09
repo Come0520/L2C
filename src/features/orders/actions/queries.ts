@@ -32,6 +32,150 @@ const getOrderByIdSchema = z.object({
   id: z.string().uuid(),
 });
 
+// =============================================================
+// 性能优化（P0-2）：模块顶层缓存函数
+// 将所有 unstable_cache 从函数体内提升到此处，确保缓存实例全局唯一，
+// 避免每次调用都创建新实例导致命中率为零的反模式。
+// 运行时参数通过显式函数入参传入，而非闭包捕获。
+// =============================================================
+
+/**
+ * 订单列表顶层缓存函数
+ * 将运行时参数（params/tenantId）显式传入，消除闭包依赖
+ */
+const _getCachedOrdersList = unstable_cache(
+  async (
+    p: z.infer<typeof getOrdersSchema>,
+    tenantId: string,
+    page: number,
+    pageSize: number,
+    offset: number
+  ) => {
+    const conditions: (
+      | ReturnType<typeof eq>
+      | ReturnType<typeof ilike>
+      | ReturnType<typeof and>
+    )[] = [eq(orders.tenantId, tenantId)];
+
+    if (p.search) {
+      conditions.push(ilike(orders.orderNo, `%${p.search}%`));
+    }
+
+    if (p.status) {
+      if (Array.isArray(p.status) && p.status.length > 0) {
+        conditions.push(inArray(orders.status, p.status as (typeof orders.status._.data)[]));
+      } else if (typeof p.status === 'string' && p.status !== 'ALL') {
+        conditions.push(eq(orders.status, p.status as typeof orders.status._.data));
+      }
+    }
+
+    if (p.salesId) {
+      conditions.push(eq(orders.salesId, p.salesId));
+    }
+
+    if (p.channelId) {
+      conditions.push(eq(orders.channelId, p.channelId));
+    }
+
+    if (p.dateRange?.from) {
+      conditions.push(sql`${orders.createdAt} >= ${p.dateRange.from.toISOString()}`);
+      if (p.dateRange.to) {
+        conditions.push(sql`${orders.createdAt} <= ${p.dateRange.to.toISOString()}`);
+      }
+    }
+
+    const whereClause = and(...conditions);
+
+    const [totalResult, data] = await Promise.all([
+      db
+        .select({ count: sql<number>`count(*)` })
+        .from(orders)
+        .where(whereClause),
+      db.query.orders.findMany({
+        where: whereClause,
+        with: {
+          // 性能优化：只取列表展示所需字段，避免无效 items JOIN
+          customer: { columns: { id: true, name: true } },
+          sales: { columns: { id: true, name: true } },
+        },
+        limit: pageSize,
+        offset: offset,
+        orderBy: [desc(orders.createdAt)],
+      }),
+    ]);
+
+    const total = Number(totalResult[0]?.count || 0);
+
+    return {
+      data,
+      total,
+      totalPages: Math.ceil(total / pageSize),
+    };
+  },
+  ['orders-list'],
+  {
+    // 缓存失效策略：基于租户的 tag 过滤 (Next.js 15+ 推荐模式)
+    // 当订单发生增删改时，通过 revalidateTag(`orders-${tenantId}`) 批量失效
+    tags: ['orders'],
+    revalidate: 60,
+  }
+);
+
+/**
+ * 订单详情顶层缓存函数
+ */
+const _getCachedOrderDetail = unstable_cache(
+  async (id: string, tenantId: string) => {
+    return await db.query.orders.findFirst({
+      where: and(eq(orders.id, id), eq(orders.tenantId, tenantId)),
+      with: {
+        customer: true,
+        sales: true,
+        // 基础信息不含 items 和 paymentSchedules，改由专用 Action 查询
+      },
+    });
+  },
+  ['order-detail'],
+  {
+    tags: ['orders'],
+    revalidate: 30, // 详情缓存 30 秒
+  }
+);
+
+/**
+ * 订单明细项顶层缓存函数
+ */
+const _getCachedOrderItems = unstable_cache(
+  async (orderId: string) => {
+    return await db.query.orderItems.findMany({
+      where: eq(orderItems.orderId, orderId),
+      orderBy: (items, { asc }) => [asc(items.id)],
+    });
+  },
+  ['order-items'],
+  {
+    tags: ['order-items'],
+    revalidate: 60, // 缓存 60 秒
+  }
+);
+
+/**
+ * 订单收款计划顶层缓存函数
+ */
+const _getCachedPaymentSchedules = unstable_cache(
+  async (orderId: string) => {
+    return await db.query.paymentSchedules.findMany({
+      where: eq(paymentSchedules.orderId, orderId),
+      orderBy: (s, { asc }) => [asc(s.createdAt)],
+    });
+  },
+  ['order-payment-schedules'],
+  {
+    tags: ['order-payment-schedules'],
+    revalidate: 60, // 缓存 60 秒
+  }
+);
+
 // createSafeAction 内部实现
 const getOrdersInternal = createSafeAction(getOrdersSchema, async (params, { session }) => {
   // 权限检查：需要订单查看权限
@@ -50,91 +194,8 @@ const getOrdersInternal = createSafeAction(getOrdersSchema, async (params, { ses
     };
   }
 
-  // Cache key needs to include all filter parameters
-  const statusKey = Array.isArray(params.status)
-    ? [...params.status].sort().join(',')
-    : params.status || 'all';
-  const salesIdKey = params.salesId || 'all';
-  const channelIdKey = params.channelId || 'all';
-  const dateRangeKey = params.dateRange
-    ? `${params.dateRange.from.getTime()}-${params.dateRange.to?.getTime() || 'none'}`
-    : 'none';
-
-  // 缓存失效策略：基于租户的 tag 过滤 (Next.js 15+ 推荐模式)
-  // 当订单发生增删改时，通过 revalidateTag(`orders-${tenantId}`) 批量失效
-  const getCachedOrders = unstable_cache(
-    async () => {
-      const conditions: (
-        | ReturnType<typeof eq>
-        | ReturnType<typeof ilike>
-        | ReturnType<typeof and>
-      )[] = [eq(orders.tenantId, tenantId)];
-
-      if (params.search) {
-        conditions.push(ilike(orders.orderNo, `%${params.search}%`));
-      }
-
-      if (params.status) {
-        if (Array.isArray(params.status) && params.status.length > 0) {
-          conditions.push(inArray(orders.status, params.status as (typeof orders.status._.data)[]));
-        } else if (typeof params.status === 'string' && params.status !== 'ALL') {
-          conditions.push(eq(orders.status, params.status as typeof orders.status._.data));
-        }
-      }
-
-      if (params.salesId) {
-        conditions.push(eq(orders.salesId, params.salesId));
-      }
-
-      if (params.channelId) {
-        conditions.push(eq(orders.channelId, params.channelId));
-      }
-
-      if (params.dateRange?.from) {
-        conditions.push(sql`${orders.createdAt} >= ${params.dateRange.from.toISOString()}`);
-        if (params.dateRange.to) {
-          conditions.push(sql`${orders.createdAt} <= ${params.dateRange.to.toISOString()}`);
-        }
-      }
-
-      const whereClause = and(...conditions);
-
-      const [totalResult, data] = await Promise.all([
-        db
-          .select({ count: sql<number>`count(*)` })
-          .from(orders)
-          .where(whereClause),
-        db.query.orders.findMany({
-          where: whereClause,
-          with: {
-            customer: true,
-            sales: true,
-            items: true, // Often needed in lists for previews
-          },
-          limit: pageSize,
-          offset: offset,
-          orderBy: [desc(orders.createdAt)],
-        }),
-      ]);
-
-      const total = Number(totalResult[0]?.count || 0);
-
-      return {
-        data,
-        total,
-        totalPages: Math.ceil(total / pageSize),
-      };
-    },
-    [
-      `orders-${tenantId}-${page}-${pageSize}-${params.search || 'all'}-${statusKey}-${salesIdKey}-${channelIdKey}-${dateRangeKey}`,
-    ],
-    {
-      tags: ['orders', `orders-${tenantId}`],
-      revalidate: 60,
-    }
-  );
-
-  const result = await getCachedOrders();
+  // 调用模块顶层缓存函数（P0-2 修复）
+  const result = await _getCachedOrdersList(params, tenantId, page, pageSize, offset);
 
   return {
     data: result.data,
@@ -151,23 +212,12 @@ const getOrderByIdInternal = createSafeAction(getOrderByIdSchema, async (params,
     throw new Error('Order not found');
   }
 
-  const order = await db.query.orders.findFirst({
-    where: and(eq(orders.id, params.id), eq(orders.tenantId, session.user.tenantId)),
-    with: {
-      customer: true,
-      sales: true,
-      // 基础信息不再包含 items 和 paymentSchedules，改由专用 Action 查询
-    },
-  });
+  const tenantId = session.user.tenantId;
 
+  // 调用模块顶层缓存函数（P0-2 修复）
+  const order = await _getCachedOrderDetail(params.id, tenantId);
   if (!order) throw new Error('Order not found');
-
-  const getCachedOrder = unstable_cache(async () => order, [`order-detail-${params.id}`], {
-    tags: ['orders', `order-detail-${params.id}`],
-    revalidate: 30, // 详情缓存 30 秒
-  });
-
-  return getCachedOrder();
+  return order;
 });
 
 /**
@@ -176,7 +226,7 @@ const getOrderByIdInternal = createSafeAction(getOrderByIdSchema, async (params,
  * @description 根据订单 ID 查询关联的所有明细项。
  * 性能优化：
  * 1. 按需加载：通过专用 Action 加载明细，避免主列表查询过重。
- * 2. 缓存：使用 `unstable_cache` 缓存明细数据 (60s)，显著提升详情页二次访问速度。
+ * 2. 缓存：使用顶层 `_getCachedOrderItems` 缓存明细数据（60s）。
  * 3. 结果解耦：缓存 Key 与订单项 ID 绑定。
  *
  * @param orderId 待查询详情的订单 ID
@@ -190,22 +240,8 @@ export const getOrderItems = cache(async (orderId: string) => {
     return { success: true, data: [] };
   }
 
-  // 权限检查省略...
-  const getCachedItems = unstable_cache(
-    async () => {
-      return await db.query.orderItems.findMany({
-        where: eq(orderItems.orderId, orderId),
-        orderBy: (items, { asc }) => [asc(items.id)],
-      });
-    },
-    [`order-items-${orderId}`],
-    {
-      tags: ['order-items', `order-items-${orderId}`],
-      revalidate: 60, // 缓存 60 秒
-    }
-  );
-
-  const items = await getCachedItems();
+  // 调用模块顶层缓存函数（P0-2 修复）
+  const items = await _getCachedOrderItems(orderId);
   return { success: true, data: items };
 });
 
@@ -228,21 +264,8 @@ export const getOrderPaymentSchedules = cache(async (orderId: string) => {
     return { success: true, data: [] };
   }
 
-  const getCachedSchedules = unstable_cache(
-    async () => {
-      return await db.query.paymentSchedules.findMany({
-        where: eq(paymentSchedules.orderId, orderId),
-        orderBy: (s, { asc }) => [asc(s.createdAt)],
-      });
-    },
-    [`order-payment-schedules-${orderId}`],
-    {
-      tags: ['order-payment-schedules', `order-payment-schedules-${orderId}`],
-      revalidate: 60, // 缓存 60 秒
-    }
-  );
-
-  const schedules = await getCachedSchedules();
+  // 调用模块顶层缓存函数（P0-2 修复）
+  const schedules = await _getCachedPaymentSchedules(orderId);
   return { success: true, data: schedules };
 });
 

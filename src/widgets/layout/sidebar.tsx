@@ -20,12 +20,9 @@ import {
   ClipboardCheck,
   User,
   Store,
-  Building2, // 租户管理图标
   Network, // 渠道管理图标
   UserCheck, // 客户管理图标
   Bell, // 通知中心图标
-  Sparkles, // AI 模板图标
-  Coins, // 积分额度图标
 } from 'lucide-react';
 
 import { motion } from 'motion/react';
@@ -166,46 +163,8 @@ export function AppSidebar() {
       }))
       .filter((group) => group.items.length > 0); // 移除空分组
 
-    // 平台管理员额外显示独立的"租户管理"和"套餐配置"子菜单入口
-    if (session?.user?.isPlatformAdmin) {
-      const systemGroup = filtered.find((g) => g.title === '系统');
-      const platformItems = [
-        {
-          label: '租户管理',
-          href: '/platform/tenants',
-          icon: Building2,
-          requiredPermission: null,
-        },
-        {
-          label: '套餐配置',
-          href: '/platform/plans',
-          icon: DollarSign,
-          requiredPermission: null,
-        },
-        {
-          label: 'AI 模板',
-          href: '/platform/ai-templates',
-          icon: Sparkles,
-          requiredPermission: null,
-        },
-        {
-          label: '积分额度',
-          href: '/platform/credit-limits',
-          icon: Coins,
-          requiredPermission: null,
-        },
-      ];
-      if (systemGroup) {
-        systemGroup.items.push(...platformItems);
-      } else {
-        filtered.push({
-          title: '平台管理',
-          items: platformItems,
-        });
-      }
-    }
     return filtered;
-  }, [session?.user?.isPlatformAdmin, session?.user?.roles, session?.user?.role]);
+  }, [session?.user?.roles, session?.user?.role]);
 
   return (
     <Sidebar open={open} setOpen={setOpen}>

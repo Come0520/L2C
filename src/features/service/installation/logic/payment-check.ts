@@ -5,7 +5,7 @@ import { orders } from '@/shared/api/schema/orders';
 import { leads } from '@/shared/api/schema/leads';
 import { channels } from '@/shared/api/schema/channels';
 import { receiptBills, receiptBillItems } from '@/shared/api/schema/finance';
-import { eq, and, sum } from 'drizzle-orm';
+import { eq, and, ne, sum, inArray } from 'drizzle-orm';
 import { getTenantBusinessConfig } from '@/features/settings/actions/tenant-config';
 
 /**
@@ -102,11 +102,48 @@ export async function checkPaymentBeforeInstall(
         channelSettlement = channel.settlementType as 'MONTHLY' | 'PREPAY';
         creditLimit = Number(channel.creditLimit) || 0;
 
-        // 计算渠道当前欠款（所有未结清订单的欠款总和）
+        // 计算渠道当前欠款（该渠道下除本订单外的所有未结清订单的欠款总和）
         if (channelSettlement === 'MONTHLY') {
-          // NOTE: 计算渠道所有订单的欠款总和
-          // 这里简化为只检查当前订单
-          channelDebt = 0;
+          const otherOrders = await db
+            .select({
+              id: orders.id,
+              totalAmount: orders.totalAmount,
+            })
+            .from(orders)
+            .innerJoin(leads, eq(orders.leadId, leads.id))
+            .where(
+              and(
+                eq(leads.channelId, lead.channelId),
+                eq(orders.tenantId, tenantId),
+                ne(orders.id, orderId)
+              )
+            );
+
+          let otherOrdersTotal = 0;
+          const otherOrderIds: string[] = [];
+          for (const o of otherOrders) {
+            otherOrdersTotal += Number(o.totalAmount) || 0;
+            otherOrderIds.push(o.id);
+          }
+
+          let otherOrdersPaid = 0;
+          if (otherOrderIds.length > 0) {
+            const otherReceipts = await db
+              .select({
+                total: sum(receiptBillItems.amount),
+              })
+              .from(receiptBillItems)
+              .innerJoin(receiptBills, eq(receiptBillItems.receiptBillId, receiptBills.id))
+              .where(
+                and(
+                  inArray(receiptBillItems.orderId, otherOrderIds),
+                  eq(receiptBills.status, 'VERIFIED')
+                )
+              );
+            otherOrdersPaid = Number(otherReceipts[0]?.total) || 0;
+          }
+
+          channelDebt = Math.max(0, otherOrdersTotal - otherOrdersPaid);
         }
       }
     }

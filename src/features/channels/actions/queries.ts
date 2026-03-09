@@ -51,15 +51,20 @@ export async function getChannels(params: GetChannelsParams) {
     details: { params },
   });
 
-  // P8 Fix: Cache channel list
-  const getCachedChannels = unstable_cache(
-    async (p: GetChannelsParams, tid: string) => _getChannelsInternal(p, tid),
-    [`channels-list-${tenantId}`],
-    { revalidate: 3600, tags: ['channels-list'] }
-  );
-
-  return getCachedChannels(params, tenantId);
+  // 性能修复（P0-2）：直接调用模块顶层缓存函数
+  // 原实现在函数体内动态创建 unstable_cache，导致每次调用都是新的缓存实例，命中率为零
+  return _getChannelsCached(params, tenantId);
 }
+
+/**
+ * 模块顶层缓存函数（性能优化 P0-2）
+ * 将 unstable_cache 提升到顶层，确保同一缓存实例在多次调用之间复用
+ */
+const _getChannelsCached = unstable_cache(
+  async (p: GetChannelsParams, tid: string) => _getChannelsInternal(p, tid),
+  ['channels-list'],
+  { revalidate: 3600, tags: ['channels-list'] }
+);
 
 /**
  * 内部查询逻辑
@@ -135,10 +140,9 @@ async function _getChannelsInternal(params: GetChannelsParams, tenantId: string)
       offset: offsetValue,
       orderBy: [desc(channels.createdAt)],
       with: {
-        contacts: true,
-        channelCategory: true, // 关联渠道类型
-        parent: true, // 关联父级渠道
-        children: true, // 关联子级渠道
+        // 性能优化（P0-1）：列表仅加载渠道分类，移除 contacts/children/parent 无效 JOIN
+        // contacts、children、parent 可在详情页按需加载
+        channelCategory: true,
       },
     }),
     db.$count(channels, whereClause),

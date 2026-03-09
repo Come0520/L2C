@@ -15,6 +15,7 @@ import { eq, and, inArray } from 'drizzle-orm';
 import { format } from 'date-fns';
 import { randomBytes } from 'crypto';
 import { POSplitService } from './po-split.service';
+import { CustomerStatusService } from './customer-status.service';
 import { submitApproval } from '@/features/approval/actions/submission';
 import Decimal from 'decimal.js';
 import { AuditService } from '@/shared/services/audit-service';
@@ -415,6 +416,13 @@ export class OrderService {
         await POSplitService.splitOrderToPOs(orderId, tenantId, userId);
       }
 
+      // Sync with Customer Status
+      if (newStatus === 'COMPLETED') {
+        await CustomerStatusService.onOrderCompleted(order.customerId!, tenantId);
+      } else if (newStatus === 'CANCELLED') {
+        await CustomerStatusService.onOrderCancelled(order.customerId!, tenantId);
+      }
+
       return updatedOrder;
     });
   }
@@ -791,6 +799,9 @@ export class OrderService {
         tx
       );
 
+      // Sync with Customer Status
+      await CustomerStatusService.onOrderCompleted(order.customerId!, tenantId);
+
       return result;
     });
   }
@@ -898,6 +909,9 @@ export class OrderService {
           updatedAt: new Date(),
         })
         .where(and(eq(orderChanges.id, changeRecordId), eq(orderChanges.tenantId, tenantId)));
+
+      // Sync with Customer Status
+      await CustomerStatusService.onOrderCancelled(order.customerId!, tenantId);
 
       return true;
     };

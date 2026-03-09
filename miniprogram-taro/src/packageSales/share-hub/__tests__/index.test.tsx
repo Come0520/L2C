@@ -81,7 +81,7 @@ describe('ShareHubPage — 分享拓客', () => {
         const utils = render(<ShareHubPage />)
         if (capturedUseLoadCallback) {
             await act(async () => {
-                await (capturedUseLoadCallback as Function)(params)
+                await (capturedUseLoadCallback as (params?: unknown) => void | Promise<void>)(params)
             })
         }
         return utils

@@ -176,7 +176,9 @@ describe('auth-utils 认证工具模块', () => {
     });
 
     it('应支持自定义 type 和 expiresIn 选项', async () => {
-      const token = await generateMiniprogramToken('user-1', 'tenant-1', {
+      // 修复：generateMiniprogramToken 签名为 (userId, tenantId, role?, options?)
+      // role 是第3个参数（string），options 是第4个参数（对象）
+      const token = await generateMiniprogramToken('user-1', 'tenant-1', 'WORKER', {
         type: 'refresh',
         expiresIn: '30d',
       });
@@ -190,7 +192,9 @@ describe('auth-utils 认证工具模块', () => {
       expect(SignJWT).toHaveBeenCalledWith({
         userId: 'user-1',
         tenantId: 'tenant-1',
+        role: undefined,    // 修复：第3个参数 role 默认为 undefined
         type: 'miniprogram',
+        phone: undefined,   // options.phone 默认为 undefined
       });
     });
   });

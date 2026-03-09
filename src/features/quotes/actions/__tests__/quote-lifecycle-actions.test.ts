@@ -160,9 +160,10 @@ describe('Quote Lifecycle Actions (L5)', () => {
   });
 
   it('lockQuote 遇到已锁定的报价单会抛出异常', async () => {
-    mockDb.query.quotes.findFirst.mockResolvedValue({
-      id: MOCK_QUOTE_ID,
-      tenantId: MOCK_TENANT_ID,
+    // 新实现：原子 UPDATE WHERE lockedAt IS NULL 影响 0 行（lockedAt 已有值）
+    mockUpdateChain.returning.mockResolvedValueOnce([]);
+    // 随后 findFirst 回查，确认是"已锁定"场景
+    mockDb.query.quotes.findFirst.mockResolvedValueOnce({
       lockedAt: new Date(),
     });
     const { lockQuote } = await import('../quote-lifecycle-actions');
@@ -275,61 +276,114 @@ describe('Quote Lifecycle Actions (L5)', () => {
     expect(result).toHaveProperty('id', MOCK_QUOTE_ID);
   });
 
-  it('submitQuote 正常版本检查：传入 version 时应先调用 preflightVersionCheck（即触发 db.update）', async () => {
+  it('submitQuote 正常版本检查：传入 version 且版本匹配时，preflightVersionCheck 只做 SELECT（db.update 不被调用）', async () => {
     const { submitQuote } = await import('../quote-lifecycle-actions');
 
-    // 模拟 preflightVersionCheck 成功的 update 返回
-    mockUpdateChain.returning.mockResolvedValueOnce([{ id: MOCK_QUOTE_ID }]);
+    // 修复后 preflightVersionCheck 只做 SELECT：findFirst 返回匹配记录
+    mockDb.query.quotes.findFirst.mockResolvedValueOnce({ id: MOCK_QUOTE_ID });
 
     await submitQuote({ id: MOCK_QUOTE_ID, version: 10 });
 
-    // 验证 db.update 被调用，且 where 包含版本校验
-    expect(mockDb.update).toHaveBeenCalled();
-    const whereArgs = mockUpdateChain.where.mock.calls[0][0];
-    // Drizzle-orm and() 内部结构比较复杂，这里简单验证 mock 调用
-    expect(mockUpdateChain.set).toHaveBeenCalledWith(
-      expect.objectContaining({
-        version: expect.anything(),
-      })
-    );
+    // 修复后：action 层不再触发 db.update（只有 service 层会更新，service 是 mock 的）
+    expect(mockDb.update).not.toHaveBeenCalled();
+    // 验证 preflightVersionCheck 调用了 SELECT
+    expect(mockDb.query.quotes.findFirst).toHaveBeenCalled();
   });
 
-  it('submitQuote 版本冲突：传入 version 但 db.update 未找到记录时应抛出错误', async () => {
+  it('submitQuote 版本冲突：传入 version 但 findFirst 未找到记录时应抛出错误', async () => {
     const { submitQuote } = await import('../quote-lifecycle-actions');
 
-    // 模拟 preflightVersionCheck 失败（返回空）
-    mockUpdateChain.returning.mockResolvedValueOnce([]);
+    // 修复后：模拟版本不匹配（findFirst 未找到匹配版本的记录）
+    mockDb.query.quotes.findFirst.mockResolvedValueOnce(null);
 
     await expect(submitQuote({ id: MOCK_QUOTE_ID, version: 10 })).rejects.toThrow(
       '报价数据已被修改，请刷新后重试'
     );
   });
 
-  it('approveQuote 正常版本检查逻辑同 submitQuote', async () => {
+  it('approveQuote 正常版本检查：db.update 不被调用（preflightVersionCheck 为纯 SELECT）', async () => {
     const { approveQuote } = await import('../quote-lifecycle-actions');
-    mockUpdateChain.returning.mockResolvedValueOnce([{ id: MOCK_QUOTE_ID }]);
+
+    // findFirst 返回版本匹配的记录（第1次：preflightVersionCheck；第2次：自我审批检查）
+    mockDb.query.quotes.findFirst
+      .mockResolvedValueOnce({ createdBy: 'other-user-id' })   // 自我审批检查（先执行）
+      .mockResolvedValueOnce({ id: MOCK_QUOTE_ID });           // preflightVersionCheck
 
     await approveQuote({ id: MOCK_QUOTE_ID, version: 5 });
 
-    expect(mockDb.update).toHaveBeenCalled();
-    expect(mockUpdateChain.set).toHaveBeenCalledWith(
-      expect.objectContaining({
-        version: expect.anything(),
-      })
-    );
+    // 修复后：preflightVersionCheck 只做 SELECT，不触发 db.update
+    expect(mockDb.update).not.toHaveBeenCalled();
   });
 
-  it('rejectQuote 正常版本检查逻辑同 submitQuote', async () => {
+  it('rejectQuote 正常版本检查：db.update 不被调用（preflightVersionCheck 为纯 SELECT）', async () => {
     const { rejectQuote } = await import('../quote-lifecycle-actions');
-    mockUpdateChain.returning.mockResolvedValueOnce([{ id: MOCK_QUOTE_ID }]);
+
+    // findFirst 返回版本匹配的记录
+    mockDb.query.quotes.findFirst.mockResolvedValueOnce({ id: MOCK_QUOTE_ID });
 
     await rejectQuote({ id: MOCK_QUOTE_ID, rejectReason: 'test', version: 3 });
 
-    expect(mockDb.update).toHaveBeenCalled();
-    expect(mockUpdateChain.set).toHaveBeenCalledWith(
-      expect.objectContaining({
-        version: expect.anything(),
-      })
+    // 修复后：preflightVersionCheck 只做 SELECT，不触发 db.update
+    expect(mockDb.update).not.toHaveBeenCalled();
+  });
+
+  // ── [TDD-新增] 2.4: preflightVersionCheck 不应递增版本 ──
+
+  it('[2.4] preflightVersionCheck 版本不匹配时应只做 SELECT 校验，不递增版本', async () => {
+    // 安排：模拟版本不匹配（SELECT 未找到对应版本记录）
+    mockDb.query.quotes.findFirst.mockResolvedValueOnce(null);
+
+    const { submitQuote } = await import('../quote-lifecycle-actions');
+
+    // 断言：版本校验失败时应抛出并发冲突错误
+    await expect(submitQuote({ id: MOCK_QUOTE_ID, version: 99 })).rejects.toThrow(
+      '报价数据已被修改，请刷新后重试'
     );
+
+    // 断言：发生预检失败时，db.update（版本递增）不应被调用
+    // 修复前：preflightVersionCheck 用 UPDATE 递增版本；修复后：只做 SELECT
+    expect(mockDb.update).not.toHaveBeenCalled();
+  });
+
+  it('[2.4] preflightVersionCheck 版本匹配时：db.update 调用次数应为 0（版本管理下沉至 service）', async () => {
+    // 安排：版本匹配（SELECT 找到记录）
+    mockDb.query.quotes.findFirst.mockResolvedValueOnce({
+      id: MOCK_QUOTE_ID,
+      tenantId: MOCK_TENANT_ID,
+      version: 5,
+    });
+
+    const { submitQuote } = await import('../quote-lifecycle-actions');
+
+    // 修复后 preflightVersionCheck 只做 SELECT 校验，版本递增由 service 层负责
+    // 因此 action 层的 db.update 不应出现
+    await submitQuote({ id: MOCK_QUOTE_ID, version: 5 });
+    expect(mockDb.update).toHaveBeenCalledTimes(0);
+  });
+
+  // ── [TDD-新增] 2.3: lockQuote 原子操作 ──
+
+  it('[2.3] lockQuote 应通过原子 UPDATE 执行（不预先 SELECT 检查 lockedAt）', async () => {
+    const { lockQuote } = await import('../quote-lifecycle-actions');
+
+    await lockQuote({ id: MOCK_QUOTE_ID });
+
+    // 修复后：原子 UPDATE WHERE lockedAt IS NULL，不再预先 SELECT
+    expect(mockDb.update).toHaveBeenCalled();
+    // 关键断言：findFirst 不应在锁定路径中被调用
+    expect(mockDb.query.quotes.findFirst).not.toHaveBeenCalled();
+  });
+
+  it('[2.3] lockQuote 原子操作：若报价单已锁定（UPDATE 返回空）则抛出已锁定异常', async () => {
+    // 安排：原子 UPDATE 影响 0 行（lockedAt IS NULL 条件不满足）
+    mockUpdateChain.returning.mockResolvedValueOnce([]);
+    // 安排：随后的 findFirst 回查返回有 lockedAt 的数据（表明已锁）
+    mockDb.query.quotes.findFirst.mockResolvedValueOnce({
+      lockedAt: new Date(),
+    });
+    const { lockQuote } = await import('../quote-lifecycle-actions');
+
+    await expect(lockQuote({ id: MOCK_QUOTE_ID })).rejects.toThrow('该报价单已锁定');
   });
 });
+

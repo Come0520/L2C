@@ -2,7 +2,8 @@
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
-import { useDebounce } from 'use-debounce';
+// 统一使用项目内自定义 debounce hook，移除第三方 use-debounce 依赖
+import { useDebounce } from '@/shared/hooks/use-debounce';
 import {
   CommandDialog,
   CommandEmpty,
@@ -23,6 +24,10 @@ import {
   Wrench,
   Wallet,
   Network,
+  BadgeDollarSign,
+  HardHat,
+  ArrowDownToLine,
+  ArrowUpFromLine,
 } from 'lucide-react';
 
 /**
@@ -32,15 +37,19 @@ import {
 interface SearchResultItem {
   /** 模块类型标识 */
   type:
-    | 'customer'
-    | 'lead'
-    | 'order'
-    | 'quote'
-    | 'product'
-    | 'ticket'
-    | 'channel'
-    | 'finance'
-    | 'history';
+  | 'customer'
+  | 'lead'
+  | 'order'
+  | 'quote'
+  | 'product'
+  | 'ticket'
+  | 'channel'
+  | 'finance'
+  | 'ap_supplier'
+  | 'ap_labor'
+  | 'receipt_bill'
+  | 'payment_bill'
+  | 'history';
   /** 实体唯一 ID */
   id: string;
   /** 显示标签 */
@@ -59,7 +68,7 @@ interface SearchResultItem {
  *
  * 功能职责：
  * 1. 响应快捷键 (Ctrl+K / Cmd+K) 唤起全局搜索中心。
- * 2. 处理多维度的业务数据搜索（客户、订单、产品等）。
+ * 2. 处理多维度的业务数据搜索（客户、订单、产品、财务凭证等）。
  * 3. 管理搜索历史记录（集成 Redis 后端）。
  * 4. 提供带关键词高亮的建议列表。
  * 5. 根据结果类型自动路由至对应的业务详情页。
@@ -67,7 +76,8 @@ interface SearchResultItem {
 export function GlobalSearchCommand() {
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState('');
-  const [debouncedQuery] = useDebounce(query, 300);
+  // 全局搜索使用 300ms 防抖（快速响应感）
+  const debouncedQuery = useDebounce(query, 300);
   const [isLoading, setIsLoading] = React.useState(false);
   const [results, setResults] = React.useState<{
     customers: SearchResultItem[];
@@ -78,6 +88,10 @@ export function GlobalSearchCommand() {
     tickets: SearchResultItem[];
     channels: SearchResultItem[];
     finances: SearchResultItem[];
+    apSuppliers: SearchResultItem[];
+    apLabors: SearchResultItem[];
+    receiptBills: SearchResultItem[];
+    paymentBills: SearchResultItem[];
     history: SearchResultItem[];
   }>({
     customers: [],
@@ -88,6 +102,10 @@ export function GlobalSearchCommand() {
     tickets: [],
     channels: [],
     finances: [],
+    apSuppliers: [],
+    apLabors: [],
+    receiptBills: [],
+    paymentBills: [],
     history: [],
   });
 
@@ -117,7 +135,6 @@ export function GlobalSearchCommand() {
     const fetchResults = async () => {
       setIsLoading(true);
       try {
-        // globalSearch 返回的结果默认可能是未知类型，所以稍微提取一下
         const res = await globalSearch({ query: debouncedQuery, limit: 5 });
         if (isActive && res?.data) {
           setResults({
@@ -129,6 +146,10 @@ export function GlobalSearchCommand() {
             tickets: (res.data.tickets as SearchResultItem[]) || [],
             channels: (res.data.channels as SearchResultItem[]) || [],
             finances: (res.data.finances as SearchResultItem[]) || [],
+            apSuppliers: (res.data.apSuppliers as SearchResultItem[]) || [],
+            apLabors: (res.data.apLabors as SearchResultItem[]) || [],
+            receiptBills: (res.data.receiptBills as SearchResultItem[]) || [],
+            paymentBills: (res.data.paymentBills as SearchResultItem[]) || [],
             history: (res.data.history as SearchResultItem[]) || [],
           });
         }
@@ -189,8 +210,24 @@ export function GlobalSearchCommand() {
         router.push(`/channels/${item.id}`);
         break;
       case 'finance':
-        // 财务可能跳转到应收账单详情，这里给出一个通用映射
+        // 应收对账单详情
         router.push(`/finance/ar/${item.id}`);
+        break;
+      case 'receipt_bill':
+        // 收款单详情
+        router.push(`/finance/ar/receipts/${item.id}`);
+        break;
+      case 'ap_supplier':
+        // 应付供应商对账单详情
+        router.push(`/finance/ap/supplier/${item.id}`);
+        break;
+      case 'ap_labor':
+        // 劳务结算单详情
+        router.push(`/finance/ap/labor/${item.id}`);
+        break;
+      case 'payment_bill':
+        // 付款单详情
+        router.push(`/finance/ap/payments/${item.id}`);
         break;
     }
   };
@@ -208,7 +245,11 @@ export function GlobalSearchCommand() {
     results.products.length > 0 ||
     results.tickets.length > 0 ||
     results.channels.length > 0 ||
-    results.finances.length > 0;
+    results.finances.length > 0 ||
+    results.apSuppliers.length > 0 ||
+    results.apLabors.length > 0 ||
+    results.receiptBills.length > 0 ||
+    results.paymentBills.length > 0;
 
   return (
     <CommandDialog open={open} onOpenChange={setOpen}>
@@ -446,7 +487,7 @@ export function GlobalSearchCommand() {
         )}
 
         {!isLoading && results.finances.length > 0 && (
-          <CommandGroup heading="账单 (应收)">
+          <CommandGroup heading="账单（应收对账）">
             {results.finances.map((item) => (
               <CommandItem
                 key={item.id}
@@ -464,6 +505,118 @@ export function GlobalSearchCommand() {
                   {item.sub && (
                     <span className="text-muted-foreground text-xs">
                       状态: {item.highlight?.sub ? renderHighlight(item.highlight.sub) : item.sub}
+                    </span>
+                  )}
+                </div>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
+
+        {/* ===== 新增：收款单 (AR) ===== */}
+        {!isLoading && results.receiptBills.length > 0 && (
+          <CommandGroup heading="收款单（应收）">
+            {results.receiptBills.map((item) => (
+              <CommandItem
+                key={item.id}
+                value={`receipt_bill-${item.id}-${item.label}-${item.sub}`}
+                onSelect={() => handleSelect(item)}
+                className="flex items-center gap-3"
+              >
+                <div className="flex h-8 w-8 items-center justify-center rounded-md border border-emerald-500/20 bg-emerald-500/10 text-emerald-600 shadow-[0_0_10px_rgba(16,185,129,0.1)] backdrop-blur-md dark:text-emerald-400">
+                  <ArrowDownToLine className="h-4 w-4 drop-shadow-sm" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="font-medium">
+                    {item.highlight?.label ? renderHighlight(item.highlight.label) : item.label}
+                  </span>
+                  {item.sub && (
+                    <span className="text-muted-foreground text-xs">
+                      客户: {item.highlight?.sub ? renderHighlight(item.highlight.sub) : item.sub}
+                    </span>
+                  )}
+                </div>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
+
+        {/* ===== 新增：应付供应商对账单 ===== */}
+        {!isLoading && results.apSuppliers.length > 0 && (
+          <CommandGroup heading="供应商对账单（应付）">
+            {results.apSuppliers.map((item) => (
+              <CommandItem
+                key={item.id}
+                value={`ap_supplier-${item.id}-${item.label}-${item.sub}`}
+                onSelect={() => handleSelect(item)}
+                className="flex items-center gap-3"
+              >
+                <div className="flex h-8 w-8 items-center justify-center rounded-md border border-amber-500/20 bg-amber-500/10 text-amber-600 shadow-[0_0_10px_rgba(245,158,11,0.1)] backdrop-blur-md dark:text-amber-400">
+                  <BadgeDollarSign className="h-4 w-4 drop-shadow-sm" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="font-medium">
+                    {item.highlight?.label ? renderHighlight(item.highlight.label) : item.label}
+                  </span>
+                  {item.sub && (
+                    <span className="text-muted-foreground text-xs">
+                      供应商: {item.highlight?.sub ? renderHighlight(item.highlight.sub) : item.sub}
+                    </span>
+                  )}
+                </div>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
+
+        {/* ===== 新增：劳务结算单 ===== */}
+        {!isLoading && results.apLabors.length > 0 && (
+          <CommandGroup heading="劳务结算单（应付）">
+            {results.apLabors.map((item) => (
+              <CommandItem
+                key={item.id}
+                value={`ap_labor-${item.id}-${item.label}-${item.sub}`}
+                onSelect={() => handleSelect(item)}
+                className="flex items-center gap-3"
+              >
+                <div className="flex h-8 w-8 items-center justify-center rounded-md border border-cyan-500/20 bg-cyan-500/10 text-cyan-600 shadow-[0_0_10px_rgba(6,182,212,0.1)] backdrop-blur-md dark:text-cyan-400">
+                  <HardHat className="h-4 w-4 drop-shadow-sm" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="font-medium">
+                    {item.highlight?.label ? renderHighlight(item.highlight.label) : item.label}
+                  </span>
+                  {item.sub && (
+                    <span className="text-muted-foreground text-xs">
+                      工人: {item.highlight?.sub ? renderHighlight(item.highlight.sub) : item.sub}
+                    </span>
+                  )}
+                </div>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
+
+        {/* ===== 新增：付款单 ===== */}
+        {!isLoading && results.paymentBills.length > 0 && (
+          <CommandGroup heading="付款单（应付）">
+            {results.paymentBills.map((item) => (
+              <CommandItem
+                key={item.id}
+                value={`payment_bill-${item.id}-${item.label}-${item.sub}`}
+                onSelect={() => handleSelect(item)}
+                className="flex items-center gap-3"
+              >
+                <div className="flex h-8 w-8 items-center justify-center rounded-md border border-rose-500/20 bg-rose-500/10 text-rose-600 shadow-[0_0_10px_rgba(244,63,94,0.1)] backdrop-blur-md dark:text-rose-400">
+                  <ArrowUpFromLine className="h-4 w-4 drop-shadow-sm" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="font-medium">
+                    {item.highlight?.label ? renderHighlight(item.highlight.label) : item.label}
+                  </span>
+                  {item.sub && (
+                    <span className="text-muted-foreground text-xs">
+                      付款方: {item.highlight?.sub ? renderHighlight(item.highlight.sub) : item.sub}
                     </span>
                   )}
                 </div>

@@ -64,7 +64,7 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
   const pathname = usePathname();
 
   /**
-   * 自定义 URL 状态管理（替代 nuqs 的 useQueryState）
+   * 自定义 URL 状态管理
    * 通过 searchParams 读取，router.replace 写入
    */
   const createUrlSetter = useCallback(
@@ -81,7 +81,7 @@ export function QuoteDetail({ quote, versions = [], initialConfig }: QuoteDetail
     [searchParams, pathname, router]
   );
 
-  // URL 驱动的 Dialog 状态（替代 nuqs 的 useQueryState）
+  // URL 驱动的 Dialog 状态
   const activeDialog = searchParams.get('dialog');
   const setActiveDialog = useMemo(() => createUrlSetter('dialog'), [createUrlSetter]);
 

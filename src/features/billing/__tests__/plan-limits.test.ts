@@ -13,8 +13,8 @@ import {
 } from '../lib/plan-limits';
 
 describe('PLAN_LIMITS 配置', () => {
-  it('免费版用户数上限应为 3', () => {
-    expect(PLAN_LIMITS.base.maxUsers).toBe(3);
+  it('免费版用户数上限应为 5', () => {
+    expect(PLAN_LIMITS.base.maxUsers).toBe(5);
   });
 
   it('免费版客户数上限应为 200', () => {
@@ -42,15 +42,15 @@ describe('PLAN_LIMITS 配置', () => {
 
 describe('getPlanLimit', () => {
   it('应正确返回免费版用户上限', () => {
-    expect(getPlanLimit('base', 'users')).toBe(3);
+    expect(getPlanLimit('base', 'users')).toBe(5);
   });
 
   it('应正确返回专业版客户上限', () => {
     expect(getPlanLimit('pro', 'customers')).toBe(5_000);
   });
 
-  it('企业版存储上限应为 50GB', () => {
-    expect(getPlanLimit('enterprise', 'storageBytes')).toBe(50 * 1024 * 1024 * 1024);
+  it('企业版存储上限应为无限（Infinity）', () => {
+    expect(getPlanLimit('enterprise', 'storageBytes')).toBe(Infinity);
   });
 });
 
@@ -71,8 +71,8 @@ describe('isPlanFeatureEnabled', () => {
     expect(isPlanFeatureEnabled('enterprise', 'apiAccess')).toBe(true);
   });
 
-  it('专业版不应支持多门店', () => {
-    expect(isPlanFeatureEnabled('pro', 'multiStore')).toBe(false);
+  it('专业版应支持多门店（multiStore）', () => {
+    expect(isPlanFeatureEnabled('pro', 'multiStore')).toBe(true);
   });
 });
 
@@ -81,12 +81,12 @@ describe('checkLimit', () => {
     const result = checkLimit('base', 'users', 2);
     expect(result.allowed).toBe(true);
     expect(result.current).toBe(2);
-    expect(result.limit).toBe(3);
+    expect(result.limit).toBe(5);
     expect(result.planType).toBe('base');
   });
 
   it('用量恰好等于上限时 allowed 应为 false（已满不能再加）', () => {
-    const result = checkLimit('base', 'users', 3);
+    const result = checkLimit('base', 'users', 5);
     expect(result.allowed).toBe(false);
   });
 

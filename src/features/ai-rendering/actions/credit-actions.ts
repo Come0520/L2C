@@ -13,6 +13,12 @@ import { PLAN_LIMITS } from '@/features/billing/lib/plan-limits';
 
 // ==================== 查询 ====================
 
+export type TenantCreditsStats = {
+  tenantId: string | null;
+  totalCreditsUsed: string | null;
+  renderingCount: number;
+};
+
 /**
  * 获取所有租户的积分使用统计（SUPER_ADMIN）
  * 返回各租户当月用量汇总

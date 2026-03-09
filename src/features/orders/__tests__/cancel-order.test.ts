@@ -11,11 +11,18 @@ vi.mock('@/shared/api/db', () => ({
     query: {
       orders: {
         findFirst: vi.fn(),
+        // 补充 findMany Mock，供 CustomerStatusService.onOrderCancelled 调用
+        findMany: vi.fn().mockResolvedValue([]),
       },
     },
     insert: vi.fn(() => ({
       values: vi.fn(() => ({
         returning: vi.fn(),
+      })),
+    })),
+    update: vi.fn(() => ({
+      set: vi.fn(() => ({
+        where: vi.fn(() => Promise.resolve()),
       })),
     })),
     transaction: vi.fn((cb) =>
@@ -48,6 +55,14 @@ vi.mock('@/shared/api/db', () => ({
         })),
       })
     ),
+  },
+}));
+
+// 隔离客户状态服务，避免其对 db 产生额外调用影响单元测试
+vi.mock('@/services/customer-status.service', () => ({
+  CustomerStatusService: {
+    onOrderCancelled: vi.fn().mockResolvedValue(undefined),
+    onOrderCompleted: vi.fn().mockResolvedValue(undefined),
   },
 }));
 

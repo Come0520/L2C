@@ -33,7 +33,8 @@ import { redirect } from 'next/navigation';
  * 财务中心着陆页 — 任务导向型设计 + 权限动态渲染
  */
 export default async function FinancePage() {
-  const modeRes = await getFinanceMode();
+  // 并行发起 getFinanceMode 和 auth 请求，消除串行瀑布流
+  const [modeRes, session] = await Promise.all([getFinanceMode(), auth()]);
 
   // 1. 如果尚未选择模式，只展示双卡片让用户选择
   if (!modeRes.success || !modeRes.mode) {
@@ -50,8 +51,7 @@ export default async function FinancePage() {
     redirect('/finance/simple');
   }
 
-  // 3. 专业模式：渲染完整的专业看板视图
-  const session = await auth();
+  // 3. 专业模式：渲染完整的专业看板视图（session 已在并行请求中获取）
   const userRoles = session?.user?.roles || [session?.user?.role || 'SALES'];
   const perms = getUserFinancePermissions(userRoles);
 

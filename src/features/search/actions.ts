@@ -10,6 +10,10 @@ import {
   afterSalesTickets,
   channels,
   arStatements,
+  apSupplierStatements,
+  apLaborStatements,
+  receiptBills,
+  paymentBills,
   roles,
 } from '@/shared/api/schema';
 import { eq, and, or, ilike, inArray } from 'drizzle-orm';
@@ -71,6 +75,10 @@ type SearchResultItem = {
   | 'ticket'
   | 'channel'
   | 'finance'
+  | 'ap_supplier'
+  | 'ap_labor'
+  | 'receipt_bill'
+  | 'payment_bill'
   | 'history';
   /** 实体 ID 或历史记录 Key */
   id: string;
@@ -96,6 +104,14 @@ type DbProductResult = { id: string; name: string; sku: string | null };
 type DbTicketResult = { id: string; ticketNo: string; status: string | null };
 type DbChannelResult = { id: string; name: string };
 type DbFinanceResult = { id: string; statementNo: string; status: string | null };
+/** 应付-供应商对账单 */
+type DbApSupplierResult = { id: string; statementNo: string; supplierName: string; status: string | null };
+/** 应付-劳务结算单 */
+type DbApLaborResult = { id: string; statementNo: string; workerName: string; status: string | null };
+/** 收款单 */
+type DbReceiptBillResult = { id: string; receiptNo: string; customerName: string; status: string | null };
+/** 付款单 */
+type DbPaymentBillResult = { id: string; paymentNo: string; payeeName: string; status: string | null };
 
 /**
  * 从数据库执行实际搜索，并应用缓存
@@ -133,6 +149,10 @@ async function performDbSearch(
         tickets: [] as DbTicketResult[],
         channels: [] as DbChannelResult[],
         finances: [] as DbFinanceResult[],
+        apSuppliers: [] as DbApSupplierResult[],
+        apLabors: [] as DbApLaborResult[],
+        receiptBills: [] as DbReceiptBillResult[],
+        paymentBills: [] as DbPaymentBillResult[],
       };
 
       const searchPromises: Promise<void>[] = [];
@@ -270,7 +290,7 @@ async function performDbSearch(
         );
       }
 
-      // 搜索财务 (应收)
+      // 搜索财务 - 应收对账单 (AR)
       if (doAll && hasPerm(PERMISSIONS.FINANCE.AR_VIEW)) {
         searchPromises.push(
           db.query.arStatements
@@ -284,6 +304,90 @@ async function performDbSearch(
             })
             .then((res) => {
               results.finances = res;
+            })
+        );
+      }
+
+      // 搜索财务 - 收款单 (receiptBills，AR)
+      if (doAll && hasPerm(PERMISSIONS.FINANCE.AR_VIEW)) {
+        searchPromises.push(
+          db.query.receiptBills
+            .findMany({
+              where: and(
+                eq(receiptBills.tenantId, tenantId),
+                or(
+                  ilike(receiptBills.receiptNo, searchPattern),
+                  ilike(receiptBills.customerName, searchPattern)
+                )
+              ),
+              columns: { id: true, receiptNo: true, customerName: true, status: true },
+              limit,
+            })
+            .then((res) => {
+              results.receiptBills = res;
+            })
+        );
+      }
+
+      // 搜索财务 - 应付供应商对账单 (apSupplierStatements)
+      if (doAll && hasPerm(PERMISSIONS.FINANCE.AP_VIEW)) {
+        searchPromises.push(
+          db.query.apSupplierStatements
+            .findMany({
+              where: and(
+                eq(apSupplierStatements.tenantId, tenantId),
+                or(
+                  ilike(apSupplierStatements.statementNo, searchPattern),
+                  ilike(apSupplierStatements.supplierName, searchPattern)
+                )
+              ),
+              columns: { id: true, statementNo: true, supplierName: true, status: true },
+              limit,
+            })
+            .then((res) => {
+              results.apSuppliers = res;
+            })
+        );
+      }
+
+      // 搜索财务 - 劳务结算单 (apLaborStatements)
+      if (doAll && hasPerm(PERMISSIONS.FINANCE.LABOR_VIEW)) {
+        searchPromises.push(
+          db.query.apLaborStatements
+            .findMany({
+              where: and(
+                eq(apLaborStatements.tenantId, tenantId),
+                or(
+                  ilike(apLaborStatements.statementNo, searchPattern),
+                  ilike(apLaborStatements.workerName, searchPattern)
+                )
+              ),
+              columns: { id: true, statementNo: true, workerName: true, status: true },
+              limit,
+            })
+            .then((res) => {
+              results.apLabors = res;
+            })
+        );
+      }
+
+      // 搜索财务 - 付款单 (paymentBills)
+      if (doAll && hasPerm(PERMISSIONS.FINANCE.AP_VIEW)) {
+        searchPromises.push(
+          db.query.paymentBills
+            .findMany({
+              where: and(
+                eq(paymentBills.tenantId, tenantId),
+                or(
+                  ilike(paymentBills.paymentNo, searchPattern),
+                  ilike(paymentBills.payeeName, searchPattern)
+                )
+              ),
+              columns: { id: true, paymentNo: true, payeeName: true, status: true },
+              limit,
+            })
+            .then((res) => {
+              results.paymentBills = res;
             })
         );
       }
@@ -348,6 +452,10 @@ const globalSearchActionInternal = createSafeAction(
           channels: [],
           tickets: [],
           finances: [],
+          apSuppliers: [],
+          apLabors: [],
+          receiptBills: [],
+          paymentBills: [],
           history: historyResults,
         };
       }
@@ -383,7 +491,11 @@ const globalSearchActionInternal = createSafeAction(
         results.products.length +
         results.tickets.length +
         results.channels.length +
-        results.finances.length;
+        results.finances.length +
+        results.apSuppliers.length +
+        results.apLabors.length +
+        results.receiptBills.length +
+        results.paymentBills.length;
 
       logger.info('[Search] 数据库搜索完成', {
         totalResults: totalResultCount,
@@ -396,6 +508,10 @@ const globalSearchActionInternal = createSafeAction(
           tickets: results.tickets.length,
           channels: results.channels.length,
           finances: results.finances.length,
+          apSuppliers: results.apSuppliers.length,
+          apLabors: results.apLabors.length,
+          receiptBills: results.receiptBills.length,
+          paymentBills: results.paymentBills.length,
         },
       });
 
@@ -478,6 +594,46 @@ const globalSearchActionInternal = createSafeAction(
           highlight: {
             label: highlightText(f.statementNo, query),
             sub: highlightText(f.status, query),
+          },
+        })),
+        apSuppliers: results.apSuppliers.map((a: DbApSupplierResult) => ({
+          type: 'ap_supplier' as const,
+          id: a.id,
+          label: a.statementNo,
+          sub: a.supplierName,
+          highlight: {
+            label: highlightText(a.statementNo, query),
+            sub: highlightText(a.supplierName, query),
+          },
+        })),
+        apLabors: results.apLabors.map((a: DbApLaborResult) => ({
+          type: 'ap_labor' as const,
+          id: a.id,
+          label: a.statementNo,
+          sub: a.workerName,
+          highlight: {
+            label: highlightText(a.statementNo, query),
+            sub: highlightText(a.workerName, query),
+          },
+        })),
+        receiptBills: results.receiptBills.map((r: DbReceiptBillResult) => ({
+          type: 'receipt_bill' as const,
+          id: r.id,
+          label: r.receiptNo,
+          sub: r.customerName,
+          highlight: {
+            label: highlightText(r.receiptNo, query),
+            sub: highlightText(r.customerName, query),
+          },
+        })),
+        paymentBills: results.paymentBills.map((p: DbPaymentBillResult) => ({
+          type: 'payment_bill' as const,
+          id: p.id,
+          label: p.paymentNo,
+          sub: p.payeeName,
+          highlight: {
+            label: highlightText(p.paymentNo, query),
+            sub: highlightText(p.payeeName, query),
           },
         })),
         history: [],

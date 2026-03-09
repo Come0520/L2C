@@ -1,5 +1,3 @@
-'use server';
-
 /**
  * 客户状态流转服务 (Customer Status Service)
  * 负责根据业务事件自动更新客户的生命周期阶段和阶段状态

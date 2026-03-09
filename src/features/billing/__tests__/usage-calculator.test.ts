@@ -33,8 +33,8 @@ describe('checkLimit + 用量组合场景', () => {
       expect(checkLimit('base', 'users', 2).allowed).toBe(true);
     });
 
-    it('用户3/3 → 拒绝（已满）', () => {
-      expect(checkLimit('base', 'users', 3).allowed).toBe(false);
+    it('用户5/5 → 拒绝（已满）', () => {
+      expect(checkLimit('base', 'users', 5).allowed).toBe(false);
     });
 
     it('客户199/200 → 允许', () => {

@@ -10,7 +10,7 @@ import { createSafeAction } from '@/shared/lib/server-action';
 import { db } from '@/shared/api/db';
 import crypto from 'crypto';
 import { quotes } from '@/shared/api/schema/quotes';
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and, sql, isNull } from 'drizzle-orm';
 import { revalidatePath, updateTag } from 'next/cache';
 import { QuoteLifecycleService } from '@/services/quote-lifecycle.service';
 import { QuoteVersionService } from '@/features/quotes/services/quote-version.service';
@@ -22,11 +22,14 @@ import { AppError, ERROR_CODES } from '@/shared/lib/errors';
 import { logger } from '@/shared/lib/logger';
 
 /**
- * 【乐观锁】通用前置版本检查工具函数
- * 在委托 Service 层执行状态变更前，先校验版本号是否匹配，并递增版本
+ * 【乐观锁】通用前置版本检查工具函数（纯 SELECT，不修改数据）
+ *
+ * 仅校验版本号是否匹配，不递增版本。版本号的递增由各操作的最终业务 UPDATE 负责，
+ * 避免"预检 UPDATE + 业务 UPDATE"导致版本号连跳两次的问题（修复审计问题 2.4）。
+ *
  * @param quoteId 报价单 ID
  * @param tenantId 租户 ID
- * @param version 客户端传入的版本号（可选）
+ * @param version 客户端传入的版本号（可选，undefined 时跳过校验）
  */
 async function preflightVersionCheck(
   quoteId: string,
@@ -35,17 +38,18 @@ async function preflightVersionCheck(
 ): Promise<void> {
   if (version === undefined) return;
 
-  const [updated] = await db
-    .update(quotes)
-    .set({ version: sql`${quotes.version} + 1`, updatedAt: new Date() })
-    .where(and(eq(quotes.id, quoteId), eq(quotes.tenantId, tenantId), eq(quotes.version, version)))
-    .returning();
+  // 【修复 2.4】纯 SELECT 校验版本号，不做 UPDATE 递增
+  // 版本递增由最终的业务 UPDATE（在 service 层或后续原子操作中）统一处理
+  const current = await db.query.quotes.findFirst({
+    where: and(eq(quotes.id, quoteId), eq(quotes.tenantId, tenantId), eq(quotes.version, version)),
+    columns: { id: true },
+  });
 
-  if (!updated) {
+  if (!current) {
     logger.warn('乐观锁冲突：前置检查发现版本号不匹配', {
       quoteId,
       tenantId,
-      currentVersion: version,
+      expectedVersion: version,
     });
     throw new AppError('报价数据已被修改，请刷新后重试', ERROR_CODES.CONCURRENCY_CONFLICT, 409);
   }
@@ -186,12 +190,17 @@ export async function lockQuoteAction(params: z.infer<typeof lockQuoteSchema>) {
 
 /**
  * 锁定报价单以防止进一步编辑，通常用于待审批或最终确定前
- * 【乐观锁】传入 version 时启用并发冲突检测，版本不匹配将抛出 CONCURRENCY_CONFLICT
+ *
+ * 【修复 2.3】改为原子 UPDATE 操作：
+ * - WHERE 条件包含 lockedAt IS NULL，直接在数据库层面判断是否已锁定
+ * - 消除原"先 SELECT 查锁定状态，再 UPDATE"的竞态窗口
+ * - 若 UPDATE 返回空，再做一次读操作区分"已锁定"、"不存在"、"版本冲突"三种场景
+ *
  * @param data 包含报价单 ID 和可选版本号的对象
  * @param context 执行上下文
  */
 export const lockQuote = createSafeAction(lockQuoteSchema, async (data, context) => {
-  const traceId = crypto.randomUUID().slice(0, 8);
+  const traceId = crypto.randomUUID();
   const userTenantId = context.session.user.tenantId;
 
   // P2-01: 权限校验
@@ -204,24 +213,8 @@ export const lockQuote = createSafeAction(lockQuoteSchema, async (data, context)
     throw new Error('无权执行此操作');
   }
 
-  const quote = await db.query.quotes.findFirst({
-    where: and(eq(quotes.id, data.id), eq(quotes.tenantId, userTenantId)),
-  });
-
-  if (!quote) {
-    logger.warn(`[${traceId}] [quotes] 报价单不存在或无权操作`, {
-      quoteId: data.id,
-      tenantId: userTenantId,
-      traceId,
-    });
-    throw new Error('报价单不存在或无权操作');
-  }
-  if (quote.lockedAt) {
-    logger.warn(`[${traceId}] [quotes] 试图锁定已经锁定的报价单`, { quoteId: data.id, traceId });
-    throw new Error('该报价单已锁定');
-  }
-
-  // 【乐观锁】更新时携带版本自增，并在 where 条件中校验版本号
+  // 【修复 2.3】原子 UPDATE：WHERE lockedAt IS NULL + tenantId 隔离 + 可选版本号
+  // 若 lockedAt 已有值，UPDATE 影响 0 行 → updated 为 undefined
   const [updated] = await db
     .update(quotes)
     .set({
@@ -233,14 +226,35 @@ export const lockQuote = createSafeAction(lockQuoteSchema, async (data, context)
       and(
         eq(quotes.id, data.id),
         eq(quotes.tenantId, userTenantId),
+        isNull(quotes.lockedAt),
         data.version !== undefined ? eq(quotes.version, data.version) : undefined
       )
     )
     .returning();
 
-  // 【乐观锁】版本不匹配时抛出并发冲突错误
-  if (!updated && data.version !== undefined) {
-    logger.warn('乐观锁冲突：报价单已被修改 (锁定操作)', { quoteId: data.id });
+  if (!updated) {
+    // 做一次读操作，区分三种场景：已锁定 / 不存在 / 版本冲突
+    const exists = await db.query.quotes.findFirst({
+      where: and(eq(quotes.id, data.id), eq(quotes.tenantId, userTenantId)),
+      columns: { lockedAt: true },
+    });
+
+    if (!exists) {
+      logger.warn(`[${traceId}] [quotes] 报价单不存在或无权操作`, {
+        quoteId: data.id,
+        tenantId: userTenantId,
+        traceId,
+      });
+      throw new Error('报价单不存在或无权操作');
+    }
+
+    if (exists.lockedAt) {
+      logger.warn(`[${traceId}] [quotes] 试图锁定已经锁定的报价单`, { quoteId: data.id, traceId });
+      throw new Error('该报价单已锁定');
+    }
+
+    // 乐观锁版本冲突
+    logger.warn(`[${traceId}] 乐观锁冲突：报价单已被修改 (锁定操作)`, { quoteId: data.id });
     throw new AppError('报价数据已被修改，请刷新后重试', ERROR_CODES.CONCURRENCY_CONFLICT, 409);
   }
 

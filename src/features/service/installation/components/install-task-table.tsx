@@ -159,6 +159,8 @@ export function InstallTaskTable({ data, isLoading, pagination }: InstallTaskTab
                 <TableRow
                   key={task.id}
                   className="group border-white/5 transition-colors hover:bg-white/5"
+                  // P1 性能优化：应用 L2C 规范中的 content-visibility 提升长列表首屏加载速度
+                  style={{ contentVisibility: 'auto', containIntrinsicSize: '1px 50px' }}
                 >
                   {/* 安装单号 */}
                   <TableCell className="font-mono text-sm">

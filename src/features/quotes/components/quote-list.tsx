@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import React, { useState, useCallback, useEffect } from 'react';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { Button } from '@/shared/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table';
@@ -18,6 +18,7 @@ import { DataTableToolbar } from '@/shared/ui/data-table-toolbar';
 import { DatePickerWithRange } from '@/shared/ui/date-range-picker';
 import { logger } from '@/shared/lib/logger';
 import { useServerActionQuery } from '@/shared/hooks/use-server-action-query';
+import { useDebounce } from '@/shared/hooks/use-debounce';
 
 // Tab 配置：定义每个 Tab 对应的状态列表
 const QUOTE_TABS = [
@@ -91,6 +92,25 @@ export function QuoteList() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [creating, setCreating] = useState(false);
 
+  // URL 搜索状态管理（Next.js 原生方案）
+  // 三层架构：localSearch(即时UI) → debouncedSearch(防抖) → URL ?q=(触发服务端数据刷新)
+  const pathname = usePathname();
+  const urlSearch = searchParams.get('q') || '';
+  const [localSearch, setLocalSearch] = useState(urlSearch);
+  const debouncedSearch = useDebounce(localSearch, 500);
+
+  // 防抖稳定后更新 URL（replace 不产生历史记录堆积）
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (debouncedSearch) {
+      params.set('q', debouncedSearch);
+    } else {
+      params.delete('q');
+    }
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch]);
+
   // 根据 tab 计算对应的状态过滤条件
   const getStatusesForTab = useCallback((tabValue: string): string[] => {
     const tab = QUOTE_TABS.find((t) => t.value === tabValue);
@@ -98,15 +118,21 @@ export function QuoteList() {
   }, []);
 
   // 使用 useServerActionQuery 替代手动的 useState+useEffect+loadQuotes
-  // activeTab 变化时 queryKey 变化，react-query 自动重新获取，无需手动管理 loading 状态
+  // activeTab 或 debouncedSearch 变化时 queryKey 变化，react-query 自动重新获取
   const statuses = getStatusesForTab(activeTab);
   const {
     data: quotesData,
     isLoading: loading,
     refetch,
   } = useServerActionQuery(
-    ['quotes-list', activeTab],
-    () => getQuotes({ statuses: statuses.length > 0 ? statuses : undefined }),
+    // Bug 修复：将 debouncedSearch 纳入 queryKey，确保搜索变化触发重新请求
+    ['quotes-list', activeTab, debouncedSearch],
+    () =>
+      getQuotes({
+        statuses: statuses.length > 0 ? statuses : undefined,
+        // Bug 修复：将防抖后的 search 传给后端（原来完全不传 search）
+        search: debouncedSearch || undefined,
+      }),
     {
       staleTime: 30_000, // 30 秒内数据视为新鲜，避免无意义重新请求
     }
@@ -174,9 +200,10 @@ export function QuoteList() {
       <div className="glass-liquid-ultra flex min-h-0 flex-1 flex-col gap-4 rounded-2xl border border-white/20 p-4">
         <DataTableToolbar
           searchProps={{
-            value: '',
-            onChange: () => {},
-            placeholder: '搜索报价单...',
+            // 绑定本地即时搜索词，onChange 更新本地状态并触发防抖
+            value: localSearch,
+            onChange: setLocalSearch,
+            placeholder: '搜索报价单号/客户名称/电话...',
           }}
           onRefresh={handleRefresh}
           loading={loading}

@@ -9,9 +9,11 @@ import { installTasks, installItems, users, customers, orders } from '@/shared/a
 import { eq, and, desc, asc, or, ilike, count } from 'drizzle-orm';
 import { auth, checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
-import { checkSchedulingConflict } from './logic/conflict-detection';
 import { checkLogisticsReady } from './logic/logistics-check';
+import { checkPaymentBeforeInstall } from './logic/payment-check';
+import { checkSchedulingConflict } from './logic/conflict-detection';
 import { notifyTaskAssigned } from '@/services/wechat-subscribe-message.service';
+import { fileService } from '@/shared/services/file-service';
 import { logger } from '@/shared/lib/logger';
 import { AuditService } from '@/shared/services/audit-service';
 
@@ -142,6 +144,13 @@ export const getInstallTasks = cache(
         );
       }
 
+      const countQuery = db.select({ count: count() }).from(installTasks);
+      // 如果存在搜索关键字，且涉及对安装师(installer)名字进行模糊搜索，才需要 join users 表
+      if (search) {
+        countQuery.leftJoin(users, eq(installTasks.installerId, users.id));
+      }
+      countQuery.where(and(...conditions));
+
       // Get data and total count concurrently for better performance
       const [tasksData, countResult] = await Promise.all([
         db
@@ -159,11 +168,7 @@ export const getInstallTasks = cache(
           .orderBy(desc(installTasks.createdAt))
           .limit(pageSize)
           .offset(offset),
-        db
-          .select({ count: count() })
-          .from(installTasks)
-          .leftJoin(users, eq(installTasks.installerId, users.id))
-          .where(and(...conditions)),
+        countQuery,
       ]);
 
       const total = Number(countResult[0]?.count || 0);
@@ -195,8 +200,17 @@ export const getInstallTasks = cache(
 
 /**
  * 获取任务详情
+ * @param id 安装任务 UUID（必须是合法的 36 位 UUID 格式）
  */
 export async function getInstallTaskById(id: string) {
+  // P0 修复：UUID 格式校验，防止"占位符字符串"传入触发 PostgreSQL 22P02 错误
+  // 根因：E2E 或 UI 可能在数据未就绪时传入 '...' 等非法值，导致 DB 查询直接 500
+  const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!id || !UUID_REGEX.test(id)) {
+    logger.warn(`[getInstallTaskById] 非法 ID 被拦截: "${id}"，已阻止 DB 查询`);
+    return { success: false, error: `无效的安装任务 ID 格式: ${id}` };
+  }
+
   const session = await auth();
   if (!session?.user?.tenantId) return { success: false, error: '未授权' };
 
@@ -416,6 +430,15 @@ const dispatchInstallTaskInternal = createSafeAction(dispatchTaskSchema, async (
     });
 
     if (existingTask) {
+      // P0 修复：派单前进行收款检查拦截
+      const paymentCheck = await checkPaymentBeforeInstall(
+        existingTask.orderId,
+        session.user.tenantId
+      );
+      if (!paymentCheck.passed && !paymentCheck.requiresApproval) {
+        return { success: false, error: paymentCheck.reason };
+      }
+
       const logistics = await checkLogisticsReady(existingTask.orderId, session.user.tenantId);
       if (!logistics.ready && !data.force) {
         return { success: false, error: `LOGISTICS_NOT_READY: ${logistics.message}` };
@@ -483,14 +506,6 @@ const dispatchInstallTaskInternal = createSafeAction(dispatchTaskSchema, async (
       }
     }
 
-    // 记录派单审计日志
-    await AuditService.recordFromSession(session, 'installTasks', data.id, 'UPDATE', {
-      new: {
-        action: 'DISPATCH',
-        installerId: data.installerId,
-        scheduledDate: data.scheduledDate?.toISOString(),
-      },
-    });
 
     return { success: true, message: '指派成功' };
   } catch (_error: unknown) {
@@ -640,6 +655,25 @@ const checkOutInstallTaskInternal = createSafeAction(checkOutTaskSchema, async (
       return { success: false, error: '请先完成所有标准化作业检查项' };
     }
 
+    let finalSignatureUrl = data.customerSignatureUrl;
+    // P1 修复：完工签名存储方式修改，如果是 Base64，需上传至 OSS 落库
+    if (finalSignatureUrl && finalSignatureUrl.startsWith('data:image')) {
+      try {
+        const base64Data = finalSignatureUrl.replace(/^data:image\/\w+;base64,/, '');
+        const buffer = Buffer.from(base64Data, 'base64');
+        const filename = `signatures/task-${task.id}-${Date.now()}.png`;
+        const uploadResult = await fileService.uploadFile(filename, buffer);
+
+        if (!uploadResult.success) {
+          return { success: false, error: '签名图片上传失败' };
+        }
+        finalSignatureUrl = uploadResult.url;
+      } catch (err) {
+        logger.error('Base64 签名转化失败:', err);
+        return { success: false, error: '签名图片处理失败' };
+      }
+    }
+
     await db
       .update(installTasks)
       .set({
@@ -647,8 +681,8 @@ const checkOutInstallTaskInternal = createSafeAction(checkOutTaskSchema, async (
         checkOutAt: new Date(),
         actualEndAt: new Date(), // 默认签退即结束施工
         checkOutLocation: data.location,
-        customerSignatureUrl: data.customerSignatureUrl,
-        signedAt: data.customerSignatureUrl ? new Date() : undefined,
+        customerSignatureUrl: finalSignatureUrl,
+        signedAt: finalSignatureUrl ? new Date() : undefined,
       })
       .where(and(eq(installTasks.id, data.id), eq(installTasks.tenantId, session.user.tenantId)));
 
@@ -883,11 +917,35 @@ const updateInstallChecklistInternal = createSafeAction(
     try {
       const allCompleted = data.items.every((item) => (item.required ? item.isChecked : true));
 
+      // P1 修复：循环处理检查项，如果是 Base64，需上传至 OSS 落库
+      const processedItems = await Promise.all(
+        data.items.map(async (item) => {
+          let updatedPhotoUrl = item.photoUrl;
+          if (updatedPhotoUrl && updatedPhotoUrl.startsWith('data:image')) {
+            try {
+              const base64Data = updatedPhotoUrl.replace(/^data:image\/\w+;base64,/, '');
+              const buffer = Buffer.from(base64Data, 'base64');
+              const filename = `checklists/task-${data.taskId}-item-${item.id}-${Date.now()}.png`;
+              const uploadResult = await fileService.uploadFile(filename, buffer);
+
+              if (uploadResult.success) {
+                updatedPhotoUrl = uploadResult.url;
+              } else {
+                logger.error(`[Checklist] 图片上传失败 (item: ${item.id})`);
+              }
+            } catch (err) {
+              logger.error(`[Checklist] Base64 转化失败 (item: ${item.id}):`, err);
+            }
+          }
+          return { ...item, photoUrl: updatedPhotoUrl };
+        })
+      );
+
       await db
         .update(installTasks)
         .set({
           checklistStatus: {
-            items: data.items,
+            items: processedItems,
             allCompleted,
             updatedAt: new Date().toISOString(),
           },
@@ -921,7 +979,7 @@ export async function updateInstallChecklistAction(data: z.infer<typeof updateCh
 /**
  * 获取可用师傅列表
  */
-export async function getInstallWorkersAction() {
+export async function getInstallWorkersAction(scheduledDate?: string) {
   const session = await auth();
   if (!session?.user?.tenantId) return { success: false, error: '未授权' };
 
@@ -930,6 +988,13 @@ export async function getInstallWorkersAction() {
       async () => {
         return await db.query.users.findMany({
           where: and(eq(users.tenantId, session.user.tenantId), eq(users.role, 'WORKER')),
+          columns: {
+            id: true,
+            name: true,
+            phone: true,
+            avatarUrl: true,
+            dailyTaskLimit: true,
+          },
           orderBy: [asc(users.name)],
         });
       },
@@ -941,6 +1006,48 @@ export async function getInstallWorkersAction() {
     );
 
     const workers = await getWorkers();
+
+    if (scheduledDate) {
+      const activeTasks = await db
+        .select({
+          installerId: installTasks.installerId,
+          taskCount: count(),
+        })
+        .from(installTasks)
+        .where(
+          and(
+            eq(installTasks.tenantId, session.user.tenantId),
+            eq(installTasks.scheduledDate, new Date(scheduledDate)),
+            or(
+              eq(installTasks.status, 'DISPATCHING'),
+              eq(installTasks.status, 'PENDING_VISIT'),
+              eq(installTasks.status, 'PENDING_CONFIRM'),
+              eq(installTasks.status, 'COMPLETED')
+            )
+          )
+        )
+        .groupBy(installTasks.installerId);
+
+      const workloadMap = activeTasks.reduce((acc, row) => {
+        if (row.installerId) {
+          acc[row.installerId] = Number(row.taskCount);
+        }
+        return acc;
+      }, {} as Record<string, number>);
+
+      const workersWithWorkload = workers.map(w => {
+        const currentTaskCount = workloadMap[w.id] || 0;
+        const limit = w.dailyTaskLimit || 3;
+        return {
+          ...w,
+          currentTaskCount,
+          isFullyLoaded: currentTaskCount >= limit,
+        };
+      });
+
+      return { success: true, data: workersWithWorkload };
+    }
+
     return { success: true, data: workers };
   } catch (_error: unknown) {
     logger.error('获取师傅列表失败:', _error);

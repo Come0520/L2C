@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import { useDebounce } from '@/shared/hooks/use-debounce';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
@@ -68,7 +69,6 @@ export function TicketList({
 
   // URL Params state
   const _currentStatus = searchParams.get('status') || 'all';
-  const currentSearch = searchParams.get('search') || '';
 
   // Local state
   // We synchronize local tickets with server tickets, but allow local updates for optimistic UI
@@ -83,42 +83,27 @@ export function TicketList({
   const [result, setResult] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
 
-  const [searchQuery, setSearchQuery] = useState(currentSearch);
+  // ==========三层搜索架构（Next.js 原生方案）==========
+  // 1. localSearch：本地 useState，即时响应键盘输入。
+  // 2. debouncedSearch：500ms 防抖后的稳定搜索词。
+  // 3. router.replace：防抖完成后更新 URL ?search= 参数，触发 Server Component 重新渲染。
+  const urlSearch = searchParams.get('search') || '';
+  const [localSearch, setLocalSearch] = useState(urlSearch);
+  const debouncedSearch = useDebounce(localSearch, 500);
 
-  // Sync search query from URL
+  // 防抖完成后更新 URL（replace 不产生历史记录堆积）
   useEffect(() => {
-    setSearchQuery(currentSearch);
-  }, [currentSearch]);
-
-  // Create query string helper
-  const createQueryString = useCallback(
-    (params: Record<string, string | null | undefined>) => {
-      const newSearchParams = new URLSearchParams(searchParams.toString());
-      Object.entries(params).forEach(([key, value]) => {
-        if (value === null || value === undefined || value === 'all' || value === '') {
-          newSearchParams.delete(key);
-        } else {
-          newSearchParams.set(key, value);
-        }
-      });
-      // Reset to page 1 when filter changes (except when page itself changes)
-      if (!params.page) {
-        newSearchParams.set('page', '1');
-      }
-      return newSearchParams.toString();
-    },
-    [searchParams]
-  );
-
-  // Handle Search Debounce
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (searchQuery !== currentSearch) {
-        router.push(`${pathname}?${createQueryString({ search: searchQuery, page: '1' })}`);
-      }
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [searchQuery, currentSearch, pathname, router, createQueryString]);
+    const params = new URLSearchParams(searchParams.toString());
+    if (debouncedSearch) {
+      params.set('search', debouncedSearch);
+    } else {
+      params.delete('search');
+    }
+    // 重置到第一页
+    params.set('page', '1');
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch]);
 
   const handleUpdate = async () => {
     if (!selectedTicket) return;
@@ -155,8 +140,8 @@ export function TicketList({
       <div className="glass-liquid-ultra flex flex-col gap-4 rounded-2xl border border-white/10 p-6">
         <DataTableToolbar
           searchProps={{
-            value: searchQuery,
-            onChange: setSearchQuery,
+            value: localSearch,
+            onChange: setLocalSearch,
             placeholder: '搜索工单号/客户/问题...',
           }}
           className="border-none bg-transparent p-0 shadow-none"
@@ -240,17 +225,17 @@ export function TicketList({
           </Table>
         </div>
 
-        {/* Pagination */}
+        {/* 分页 */}
         {totalPages > 1 && (
           <div className="flex items-center justify-end gap-2 py-4">
             <Button
               variant="outline"
               size="sm"
-              onClick={() =>
-                router.push(
-                  `${pathname}?${createQueryString({ page: (currentPage - 1).toString() })}`
-                )
-              }
+              onClick={() => {
+                const params = new URLSearchParams(searchParams.toString());
+                params.set('page', (currentPage - 1).toString());
+                router.push(`${pathname}?${params.toString()}`);
+              }}
               disabled={currentPage <= 1}
             >
               上一页
@@ -261,11 +246,11 @@ export function TicketList({
             <Button
               variant="outline"
               size="sm"
-              onClick={() =>
-                router.push(
-                  `${pathname}?${createQueryString({ page: (currentPage + 1).toString() })}`
-                )
-              }
+              onClick={() => {
+                const params = new URLSearchParams(searchParams.toString());
+                params.set('page', (currentPage + 1).toString());
+                router.push(`${pathname}?${params.toString()}`);
+              }}
               disabled={currentPage >= totalPages}
             >
               下一页

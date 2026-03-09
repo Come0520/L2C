@@ -21,6 +21,11 @@ vi.mock('@/shared/api/db', () => ({
       channels: { findMany: vi.fn().mockResolvedValue([]) },
       arStatements: { findMany: vi.fn().mockResolvedValue([]) },
       roles: { findMany: vi.fn().mockResolvedValue([{ permissions: ['*'] }]) },
+      // TDD Fix: 补全 Search System Enhancement 新增的财务模块表 Mock
+      apSupplierStatements: { findMany: vi.fn().mockResolvedValue([]) },
+      apLaborStatements: { findMany: vi.fn().mockResolvedValue([]) },
+      receiptBills: { findMany: vi.fn().mockResolvedValue([]) },
+      paymentBills: { findMany: vi.fn().mockResolvedValue([]) },
     },
   },
 }));
@@ -31,6 +36,13 @@ vi.mock('@/shared/lib/redis', () => ({
 
 vi.mock('next/cache', () => ({
   unstable_cache: vi.fn((cb) => cb),
+}));
+
+// Mock AuditService，避免 globalSearch 内部审计调用因 db.insert 缺失而报错
+vi.mock('@/shared/services/audit-service', () => ({
+  AuditService: {
+    log: vi.fn().mockResolvedValue(undefined),
+  },
 }));
 
 const TENANT_A = '11111111-1111-1111-1111-111111111111';

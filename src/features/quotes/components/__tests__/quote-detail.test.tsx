@@ -1,26 +1,35 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { QuoteDetail } from '../quote-detail';
 import React from 'react';
 
-const mockUseQueryState = vi.fn();
+// ─── 核心设计 ───────────────────────────────────────────────────────────────────────
+// QuoteDetail 使用原生 next/navigation 的 useSearchParams 管理 URL 状态:
+// - 对话框状态读取：searchParams.get('dialog')
+// - 对话框打开写入：router.replace(url?dialog=xxx)
+// 因此测试中：
+//   - 通过 mockSearchParams 控制当前 dialog 参数值（只读）
+//   - 通过 mockReplace() 断言按鈕点击时是否触发了正确的 URL 跳转（写）
+// ─────────────────────────────────────────────────────────────────────────────
 
-// Mock nuqs
-vi.mock('nuqs', () => ({
-  useQueryState: (key: string) => mockUseQueryState(key),
-  parseAsString: {},
-}));
+const mockReplace = vi.fn();
+// 用对象包装，确保 vi.mock 闭包通过属性访问动态读取最新值，
+// 避免直接重赋值变量后闭包内仍持有旧引用
+const searchParamsState = { current: new URLSearchParams() };
 
-// Mock Next.js router
+// Mock Next.js router 和 searchParams
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push: vi.fn(),
-    replace: vi.fn(),
+    replace: mockReplace,
     refresh: vi.fn(),
   }),
+  // 每次调用时从 searchParamsState.current 取最新值
+  useSearchParams: () => searchParamsState.current,
+  usePathname: () => '/quotes/q-1',
 }));
 
-// !! Critical Auth Mock to prevent next/server errors in vitest !!
+// !! 防止 next-auth / next/server 导入错误
 vi.mock('next-auth', () => ({
   default: vi.fn(() => ({
     auth: vi.fn(() => Promise.resolve({ user: { id: 'u-1' } })),
@@ -36,21 +45,33 @@ vi.mock('@/shared/auth/auth', () => ({
   signOut: vi.fn(),
 }));
 
-// Mock QuoteVersionCompare specifically as it usually requires heavy lazy loading
+// Mock 重量级子组件
 vi.mock('../quote-version-compare', () => ({
   QuoteVersionCompare: () => <div data-testid="version-compare-mock">Compare</div>,
 }));
-
-// Mock QuoteConfigDialog
 vi.mock('../quote-config-dialog', () => ({
   QuoteConfigDialog: () => <div data-testid="quote-config-dialog">Config</div>,
 }));
-
 vi.mock('../quote-expiration-banner', () => ({
   QuoteExpirationBanner: () => <div data-testid="expiration-banner-mock">Expiration Banner</div>,
 }));
+vi.mock('@/shared/components/send-to-customer-dialog', () => ({
+  SendToCustomerDialog: () => <div data-testid="send-to-customer">Send</div>,
+}));
+vi.mock('../quote-to-order-button', () => ({
+  QuoteToOrderButton: () => <div data-testid="quote-to-order-btn">QuoteToOrder</div>,
+}));
+vi.mock('../quote-export-menu', () => ({
+  QuoteExportMenu: () => <div data-testid="quote-export-menu">Export</div>,
+}));
+vi.mock('../quote-items-table/index', () => ({
+  QuoteItemsTable: () => <div data-testid="items-table-mock">Items Table</div>,
+}));
+vi.mock('../quote-bottom-summary-bar', () => ({
+  QuoteBottomSummaryBar: () => <div data-testid="summary-bar-mock">Summary Bar</div>,
+}));
 
-// Mock Server Actions to bypass next-auth / next/server imports causing Vitest issues
+// Mock Server Actions
 vi.mock('@/features/quotes/actions/mutations', () => ({
   updateQuote: vi.fn(),
   submitQuote: vi.fn(),
@@ -59,69 +80,49 @@ vi.mock('@/features/quotes/actions/mutations', () => ({
   createRoom: vi.fn(),
   copyQuote: vi.fn(),
 }));
-
 vi.mock('@/features/quotes/actions/queries', () => ({
   getQuote: vi.fn(),
   getQuoteVersions: vi.fn(),
 }));
-
 vi.mock('@/shared/lib/server-action', () => ({
   authenticatedAction: vi.fn(),
   serverAction: vi.fn(),
 }));
-
 vi.mock('@/features/quotes/logic/risk-control', () => ({
   checkDiscountRisk: vi.fn(() => ({ isRisk: false, reason: [], hardStop: false })),
 }));
 
-vi.mock('../quote-to-order-button', () => ({
-  QuoteToOrderButton: () => <div data-testid="quote-to-order-btn">QuoteToOrder</div>,
+// Mock QuoteDetailDialogs 整体（因内部使用 next/dynamic 懒加载，vi.mock 无法拦截单个子对话框）
+// 直接根据 activeDialog prop 渲染对应 testid，模拟真实的条件渲染行为
+vi.mock('../quote-detail-sections/QuoteDetailDialogs', () => ({
+  QuoteDetailDialogs: ({
+    activeDialog,
+    onClose,
+  }: {
+    activeDialog: string | null;
+    onClose: () => void;
+  }) => (
+    <div data-testid="dialogs-container">
+      {activeDialog === 'reject' && (
+        <div data-testid="reject-dialog-mock">
+          <button onClick={onClose}>Close Reject</button>
+        </div>
+      )}
+      {activeDialog === 'saveTemplate' && (
+        <div data-testid="template-dialog-mock">
+          <button onClick={onClose}>Close Template</button>
+        </div>
+      )}
+      {activeDialog === 'measureImport' && (
+        <div data-testid="measure-import-dialog-mock">
+          <button onClick={onClose}>Close Measure Import</button>
+        </div>
+      )}
+    </div>
+  ),
 }));
 
-vi.mock('../quote-export-menu', () => ({
-  QuoteExportMenu: () => <div data-testid="quote-export-menu">Export</div>,
-}));
-
-vi.mock('@/shared/components/send-to-customer-dialog', () => ({
-  SendToCustomerDialog: () => <div data-testid="send-to-customer">Send</div>,
-}));
-
-// Mock dialog sub-components to verify them easily
-vi.mock('../reject-quote-dialog', () => ({
-  RejectQuoteDialog: ({ open, onOpenChange }: any) =>
-    open ? (
-      <div data-testid="reject-dialog-mock">
-        <button onClick={() => onOpenChange(false)}>Close Reject</button>
-      </div>
-    ) : null,
-}));
-
-vi.mock('../save-as-template-dialog', () => ({
-  SaveAsTemplateDialog: ({ open, onOpenChange }: any) =>
-    open ? (
-      <div data-testid="template-dialog-mock">
-        <button onClick={() => onOpenChange(false)}>Close Template</button>
-      </div>
-    ) : null,
-}));
-
-vi.mock('../measure-data-import-dialog', () => ({
-  MeasureDataImportDialog: ({ open, onOpenChange }: any) =>
-    open ? (
-      <div data-testid="measure-import-dialog-mock">
-        <button onClick={() => onOpenChange(false)}>Close Measure Import</button>
-      </div>
-    ) : null,
-}));
-
-// Mock internal dependencies causing cascade render issues
-vi.mock('../quote-items-table/index', () => ({
-  QuoteItemsTable: () => <div data-testid="items-table-mock">Items Table</div>,
-}));
-
-vi.mock('../quote-bottom-summary-bar', () => ({
-  QuoteBottomSummaryBar: () => <div data-testid="summary-bar-mock">Summary Bar</div>,
-}));
+// ─── 测试基础数据 ──────────────────────────────────────────────────────────────
 
 const MINIMAL_QUOTE_MOCK = {
   id: 'q-1',
@@ -136,86 +137,79 @@ const MINIMAL_QUOTE_MOCK = {
   customer: { id: 'c-1', name: 'Test Customer' },
 };
 
-describe('QuoteDetail - URL Driven Dialogs', () => {
-  let setDialogMock: any;
+// ─── 测试套件 ──────────────────────────────────────────────────────────────────
 
+describe('QuoteDetail - URL Driven Dialogs', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    setDialogMock = vi.fn();
-    // Default mock implementation: no dialog open
-    mockUseQueryState.mockReturnValue([null, setDialogMock]);
+    // 默认：无 dialog 参数，通过对象属性更新确保闭包引用不断开
+    searchParamsState.current = new URLSearchParams();
+    mockReplace.mockReset();
   });
 
-  describe('Dialog Trigger Actions', () => {
-    it('sets the "reject" dialog param when Reject button is clicked', () => {
-      // Setup draft status so buttons show up (Reject usually requires PENDING_APPROVAL)
+  describe('Dialog Trigger Actions（按钮点击写入 URL）', () => {
+    it('点击"驳回"按钮时，应调用 router.replace 并含 dialog=reject 参数', () => {
       render(<QuoteDetail quote={{ ...MINIMAL_QUOTE_MOCK, status: 'PENDING_APPROVAL' } as any} />);
 
       const rejectBtn = screen.getByRole('button', { name: /驳回/i });
       fireEvent.click(rejectBtn);
 
-      expect(setDialogMock).toHaveBeenCalledWith('reject');
+      // router.replace 应被调用，URL 中应含有 dialog=reject
+      expect(mockReplace).toHaveBeenCalledWith(
+        expect.stringContaining('dialog=reject'),
+        expect.any(Object)
+      );
     });
 
-    it('sets the "saveTemplate" dialog param when Save as Template button is clicked', () => {
+    it('点击"保存为模板"按钮时，应调用 router.replace 并含 dialog=saveTemplate 参数', () => {
       render(<QuoteDetail quote={MINIMAL_QUOTE_MOCK as any} />);
 
       const templateBtn = screen.getByRole('button', { name: /保存为模板/i });
       fireEvent.click(templateBtn);
 
-      expect(setDialogMock).toHaveBeenCalledWith('saveTemplate');
+      expect(mockReplace).toHaveBeenCalledWith(
+        expect.stringContaining('dialog=saveTemplate'),
+        expect.any(Object)
+      );
     });
 
-    it('sets the "measureImport" dialog param when Import button is clicked', () => {
+    it('点击"导入测量"按钮时，应调用 router.replace 并含 dialog=measureImport 参数', () => {
       render(<QuoteDetail quote={MINIMAL_QUOTE_MOCK as any} />);
 
       const importBtn = screen.getByRole('button', { name: /导入测量/i });
       fireEvent.click(importBtn);
 
-      expect(setDialogMock).toHaveBeenCalledWith('measureImport');
+      expect(mockReplace).toHaveBeenCalledWith(
+        expect.stringContaining('dialog=measureImport'),
+        expect.any(Object)
+      );
     });
   });
 
-  describe('Dialog Rendering and Closing based on URL state', () => {
-    it('renders Reject Dialog when URL param is "reject"', async () => {
-      mockUseQueryState.mockImplementation((key: string) => {
-        if (key === 'dialog') return ['reject', setDialogMock];
-        return [null, vi.fn()];
-      });
+  describe('Dialog Rendering（URL 参数决定对话框是否渲染）', () => {
+    it('当 URL 含 dialog=reject 时，应渲染 RejectQuoteDialog', () => {
+      // 模拟 URL 中已有 dialog=reject（由 searchParamsState 控制）
+      searchParamsState.current = new URLSearchParams('dialog=reject');
 
       render(<QuoteDetail quote={{ ...MINIMAL_QUOTE_MOCK, status: 'PENDING_APPROVAL' } as any} />);
 
-      await waitFor(() => {
-        expect(screen.getByTestId('reject-dialog-mock')).toBeInTheDocument();
-      });
-
-      // Test closing clears the param
-      fireEvent.click(screen.getByText('Close Reject'));
-      expect(setDialogMock).toHaveBeenCalledWith(null);
+      expect(screen.getByTestId('reject-dialog-mock')).toBeInTheDocument();
     });
 
-    it('does NOT render Reject Dialog when URL param is null', () => {
-      mockUseQueryState.mockReturnValue([null, setDialogMock]);
+    it('当 URL 无 dialog 参数时，不应渲染 RejectQuoteDialog', () => {
+      searchParamsState.current = new URLSearchParams();
 
       render(<QuoteDetail quote={{ ...MINIMAL_QUOTE_MOCK, status: 'PENDING_APPROVAL' } as any} />);
 
       expect(screen.queryByTestId('reject-dialog-mock')).not.toBeInTheDocument();
     });
 
-    it('renders Save as Template Dialog when URL param is "saveTemplate"', async () => {
-      mockUseQueryState.mockImplementation((key: string) => {
-        if (key === 'dialog') return ['saveTemplate', setDialogMock];
-        return [null, vi.fn()];
-      });
+    it('当 URL 含 dialog=saveTemplate 时，应渲染 SaveAsTemplateDialog', () => {
+      searchParamsState.current = new URLSearchParams('dialog=saveTemplate');
 
       render(<QuoteDetail quote={MINIMAL_QUOTE_MOCK as any} />);
 
-      await waitFor(() => {
-        expect(screen.getByTestId('template-dialog-mock')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByText('Close Template'));
-      expect(setDialogMock).toHaveBeenCalledWith(null);
+      expect(screen.getByTestId('template-dialog-mock')).toBeInTheDocument();
     });
   });
 });

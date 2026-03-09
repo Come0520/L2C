@@ -3,6 +3,7 @@ import { OrderService } from '@/services/order.service';
 import { db } from '@/shared/api/db';
 import { submitApproval } from '@/features/approval/actions/submission';
 import { AuditService } from '@/shared/services/audit-service';
+import { CustomerStatusService } from '@/services/customer-status.service';
 import { orders, orderChanges } from '@/shared/api/schema';
 import { eq, and } from 'drizzle-orm';
 
@@ -49,6 +50,13 @@ vi.mock('@/features/approval/actions/submission', () => ({
 vi.mock('@/shared/services/audit-service', () => ({
   AuditService: {
     record: vi.fn(),
+  },
+}));
+
+vi.mock('@/services/customer-status.service', () => ({
+  CustomerStatusService: {
+    onOrderCompleted: vi.fn(),
+    onOrderCancelled: vi.fn(),
   },
 }));
 
@@ -212,9 +220,70 @@ describe('OrderService', () => {
         mockOrderId,
         'MEASURED',
         mockTenantId,
+        1,
         mockUserId
       );
       expect(result.status).toBe('MEASURED');
+    });
+
+    it('should trigger onOrderCompleted when status becomes COMPLETED via customerAccept', async () => {
+      const mockOrder = {
+        id: mockOrderId,
+        tenantId: mockTenantId,
+        customerId: 'cust-123',
+        status: 'PENDING_CONFIRMATION',
+        version: 1,
+      };
+
+      (db.transaction as any).mockImplementation(async (cb: any) => {
+        const tx = {
+          query: { orders: { findFirst: vi.fn().mockResolvedValue(mockOrder) } },
+          update: vi.fn(() => ({
+            set: vi.fn().mockReturnThis(),
+            where: vi.fn().mockReturnThis(),
+            returning: vi.fn().mockResolvedValue([{ ...mockOrder, status: 'COMPLETED' }]),
+          })),
+        };
+        return cb(tx);
+      });
+
+      await OrderService.customerAccept(
+        mockOrderId,
+        mockTenantId,
+        1
+      );
+
+      expect(CustomerStatusService.onOrderCompleted).toHaveBeenCalledWith('cust-123', mockTenantId);
+    });
+
+    it('should trigger onOrderCancelled when status becomes CANCELLED', async () => {
+      const mockOrder = {
+        id: mockOrderId,
+        tenantId: mockTenantId,
+        customerId: 'cust-123',
+        status: 'PENDING_INSTALL',
+        version: 1,
+      };
+
+      const mockTx = {
+        query: { orders: { findFirst: vi.fn().mockResolvedValue(mockOrder) } },
+        update: vi.fn(() => ({
+          set: vi.fn().mockReturnThis(),
+          where: vi.fn().mockReturnThis(),
+          returning: vi.fn().mockResolvedValue([{ ...mockOrder, status: 'CANCELLED' }]),
+        })),
+      };
+
+      (db.transaction as any).mockImplementation(async (cb: any) => cb(mockTx));
+
+      await OrderService.executeCancelOrder(
+        mockOrderId,
+        'change-record-1',
+        mockTenantId,
+        mockUserId
+      );
+
+      expect(CustomerStatusService.onOrderCancelled).toHaveBeenCalledWith('cust-123', mockTenantId);
     });
 
     it('should validate transition logic', async () => {
@@ -233,7 +302,7 @@ describe('OrderService', () => {
       });
 
       await expect(
-        OrderService.updateOrderStatus(mockOrderId, 'COMPLETED', mockTenantId, mockUserId)
+        OrderService.updateOrderStatus(mockOrderId, 'COMPLETED', mockTenantId, 1, mockUserId)
       ).rejects.toThrow(); // Transition from DRAFT to COMPLETED is invalid
     });
   });
@@ -250,7 +319,7 @@ describe('OrderService', () => {
 
     it('should successfully cancel order and update change record', async () => {
       // Mock db.transaction to yield our custom tx
-      const mockOrder = { id: orderId, tenantId, status: 'CANCELLED_REQUESTED', version: 1 };
+      const mockOrder = { id: orderId, tenantId, status: 'CANCELLED_REQUESTED', version: 1, customerId: 'cust-123' };
 
       const mockTx = {
         query: {
@@ -295,6 +364,9 @@ describe('OrderService', () => {
         }),
         mockTx
       );
+
+      // Expected Customer Status update
+      expect(CustomerStatusService.onOrderCancelled).toHaveBeenCalledWith(mockOrder.customerId, tenantId);
     });
 
     it('should throw if order does not exist or tenant check fails', async () => {

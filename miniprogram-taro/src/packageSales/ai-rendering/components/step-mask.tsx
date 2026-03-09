@@ -36,6 +36,32 @@ export function StepMask({ value, onChange, onNext, onBack }: StepMaskProps) {
     const [drawing, setDrawing] = useState(false);
     const [hasAnnotation, setHasAnnotation] = useState(false);
 
+    /** 初始化 Canvas 2D 上下文 */
+    const initCanvas = useCallback(() => {
+        setTimeout(() => {
+            const query = Taro.createSelectorQuery();
+            query.select(`#${CANVAS_ID}`)
+                .fields({ node: true, size: true })
+                .exec((res) => {
+                    if (!res?.[0]) return;
+                    const canvas = res[0].node;
+                    const ctx = canvas.getContext('2d');
+                    // 设置 Canvas 物理像素匹配
+                    const dpr = Taro.getSystemInfoSync().pixelRatio;
+                    canvas.width = res[0].width * dpr;
+                    canvas.height = res[0].height * dpr;
+                    ctx.scale(dpr, dpr);
+                    // 画笔样式：红色高亮
+                    ctx.strokeStyle = 'rgba(255, 50, 50, 0.7)';
+                    ctx.lineWidth = 4;
+                    ctx.lineCap = 'round';
+                    ctx.lineJoin = 'round';
+                    ctxRef.current = ctx;
+                    canvasRef.current = canvas;
+                });
+        }, 300);
+    }, []);
+
     /** 拍摄/选择现场室内照片 */
     const handleChooseRoom = useCallback(() => {
         Taro.chooseMedia({
@@ -72,33 +98,7 @@ export function StepMask({ value, onChange, onNext, onBack }: StepMaskProps) {
                 });
             },
         });
-    }, [onChange]);
-
-    /** 初始化 Canvas 2D 上下文 */
-    const initCanvas = useCallback(() => {
-        setTimeout(() => {
-            const query = Taro.createSelectorQuery();
-            query.select(`#${CANVAS_ID}`)
-                .fields({ node: true, size: true })
-                .exec((res) => {
-                    if (!res?.[0]) return;
-                    const canvas = res[0].node;
-                    const ctx = canvas.getContext('2d');
-                    // 设置 Canvas 物理像素匹配
-                    const dpr = Taro.getSystemInfoSync().pixelRatio;
-                    canvas.width = res[0].width * dpr;
-                    canvas.height = res[0].height * dpr;
-                    ctx.scale(dpr, dpr);
-                    // 画笔样式：红色高亮
-                    ctx.strokeStyle = 'rgba(255, 50, 50, 0.7)';
-                    ctx.lineWidth = 4;
-                    ctx.lineCap = 'round';
-                    ctx.lineJoin = 'round';
-                    ctxRef.current = ctx;
-                    canvasRef.current = canvas;
-                });
-        }, 300);
-    }, []);
+    }, [onChange, initCanvas]);
 
     /** 触摸开始：定位起点 */
     const onTouchStart = useCallback((e: ITouchEvent) => {

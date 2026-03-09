@@ -72,14 +72,14 @@ export type PlanLimitsMap = Record<PlanType, PlanLimitConfig>;
 export const PLAN_LIMITS: PlanLimitsMap = {
   base: {
     label: '基础版 (Base)',
-    maxUsers: 3, // 基础版最多 3 名活跃成员（Boss + 最多 2 名员工）
+    // 决策记录（2026-03-02 已确认）：≤5 人、≤200 客户、≤50 报价/月、≤200 展厅产品
+    maxUsers: 5,
     maxCustomers: 200,
     maxQuotesPerMonth: 50,
     maxOrdersPerMonth: 30,
     maxShowroomProducts: 200,
-    maxStorageBytes: 500 * 1024 * 1024, // 500MB
-    /** Base: 5 点/月，1-3 人共用；每增加一个付费用户 +5 点 */
-    maxAiRenderingCredits: 5,
+    maxStorageBytes: 500 * 1024 * 1024, // 500 MB
+    maxAiRenderingCredits: 50, // AI 出图使用第三方接口，给予基础额度
     features: {
       dataExport: false,
       multiLevelApproval: false,
@@ -87,27 +87,27 @@ export const PLAN_LIMITS: PlanLimitsMap = {
       advancedAnalytics: false,
       apiAccess: false,
       multiStore: false,
-      fineGrainedRbac: false, // 精细化权限矩阵：Base 版只读，不可自定义调整
+      fineGrainedRbac: false,
     },
   },
   pro: {
     label: '专业版 (Pro)',
+    // 决策记录（2026-03-02 已确认）：≤15 人、≤5000 客户、不限报价/订单
     maxUsers: 15,
     maxCustomers: 5_000,
     maxQuotesPerMonth: Infinity,
     maxOrdersPerMonth: Infinity,
-    maxShowroomProducts: 500,
-    maxStorageBytes: 5 * 1024 * 1024 * 1024, // 5GB
-    /** Pro: 30 点/月，租户所有用户共用同一额度池 */
-    maxAiRenderingCredits: 30,
+    maxShowroomProducts: Infinity,
+    maxStorageBytes: Infinity,
+    maxAiRenderingCredits: 500, // 专业版享受更高 AI 额度
     features: {
       dataExport: true,
       multiLevelApproval: true,
       brandCustomization: true,
       advancedAnalytics: true,
       apiAccess: false,
-      multiStore: false,
-      fineGrainedRbac: true, // 专业版可自由配置每个角色的权限
+      multiStore: true,
+      fineGrainedRbac: true,
     },
   },
   enterprise: {
@@ -117,9 +117,8 @@ export const PLAN_LIMITS: PlanLimitsMap = {
     maxQuotesPerMonth: Infinity,
     maxOrdersPerMonth: Infinity,
     maxShowroomProducts: Infinity,
-    maxStorageBytes: 50 * 1024 * 1024 * 1024, // 50GB
-    /** Enterprise: 不限积分，满足所有大量出图需求 */
-    maxAiRenderingCredits: Infinity,
+    maxStorageBytes: Infinity,
+    maxAiRenderingCredits: Infinity, // 旗舰版无限制
     features: {
       dataExport: true,
       multiLevelApproval: true,
@@ -127,7 +126,7 @@ export const PLAN_LIMITS: PlanLimitsMap = {
       advancedAnalytics: true,
       apiAccess: true,
       multiStore: true,
-      fineGrainedRbac: true, // 企业版完整权限自定义能力
+      fineGrainedRbac: true,
     },
   },
 } as const;
@@ -170,9 +169,53 @@ export interface PlanLimitCheckResult {
 export interface TenantOverride {
   planType: PlanType;
   maxUsers?: number | null;
+  purchasedAddons?: Record<string, any> | null;
   purchasedModules?: string[] | null;
   storageQuota?: number | null;
   trialEndsAt?: Date | null;
+}
+
+/**
+ * 获取租户全量最终合并套餐与限额配置
+ * 融合基础 Package 设置与增值包 (purchasedAddons) 和开关 (purchasedModules) 覆写能力
+ */
+export function getTenantPlanLimits(tenant: TenantOverride | PlanType): PlanLimitConfig {
+  const planType = typeof tenant === 'string' ? tenant : tenant.planType;
+  // 深拷贝或者结构基础配置，防污染常量
+  const baseConfig = PLAN_LIMITS[planType];
+  const config: PlanLimitConfig = {
+    ...baseConfig,
+    features: { ...baseConfig.features }
+  };
+
+  if (typeof tenant !== 'string') {
+    // 处理独立字段覆写
+    if (tenant.maxUsers != null) config.maxUsers = tenant.maxUsers;
+    if (tenant.storageQuota != null) config.maxStorageBytes = tenant.storageQuota;
+
+    // 处理功能模块订阅
+    if (tenant.purchasedModules?.length) {
+      if (tenant.purchasedModules.includes('BRANDING')) config.features.brandCustomization = true;
+      if (tenant.purchasedModules.includes('ADVANCED_APPROVAL')) config.features.multiLevelApproval = true;
+    }
+
+    // 处理定量增值包额度合并
+    if (tenant.purchasedAddons) {
+      if (typeof tenant.purchasedAddons.usersLimitBonus === 'number') {
+        config.maxUsers += tenant.purchasedAddons.usersLimitBonus;
+      }
+      if (typeof tenant.purchasedAddons.aiCreditsBonus === 'number') {
+        config.maxAiRenderingCredits += tenant.purchasedAddons.aiCreditsBonus;
+      }
+    }
+
+    // 试用期继承最高级
+    if (tenant.trialEndsAt && new Date(tenant.trialEndsAt) > new Date()) {
+      return JSON.parse(JSON.stringify(PLAN_LIMITS['enterprise'])) as PlanLimitConfig;
+    }
+  }
+
+  return config;
 }
 
 /**

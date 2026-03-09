@@ -1,0 +1,1 @@
+ALTER TABLE "quotes" ADD COLUMN "is_over_quota" boolean DEFAULT false;

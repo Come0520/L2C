@@ -13,6 +13,7 @@ import {
   timestamp,
   jsonb,
   index,
+  unique,
 } from 'drizzle-orm/pg-core';
 import { tenants, tenantPlanTypeEnum } from './infrastructure';
 import { subscriptionStatusEnum, paymentProviderEnum, billingPaymentStatusEnum } from './enums';
@@ -157,3 +158,85 @@ export const usageMetrics = pgTable(
     tenantDateIdx: index('idx_usage_metrics_tenant_date').on(table.tenantId, table.snapshotDate),
   })
 );
+
+// ==================== 定价计划快照表 ====================
+
+/**
+ * 定价计划定义库 (祖父条款支持)
+ * 保存各个历史时期的套餐定价与额度快照
+ */
+export const planDefinitions = pgTable('plan_definitions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  code: varchar('code', { length: 100 }).unique().notNull(), // e.g., 'pro_2026_q1'
+  name: varchar('name', { length: 100 }).notNull(), // e.g., '专业版 (2026春季)'
+  price: integer('price').notNull(), // 单位：分。-1 表示按需定制返回空或面议
+  limitsJson: jsonb('limits_json').notNull(), // 该版本对应的各项限额开关快照
+  isActive: boolean('is_active').default(false).notNull(), // 是否在售
+  description: text('description'),
+  // 审计字段
+  createdBy: uuid('created_by'),
+  updatedBy: uuid('updated_by'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .defaultNow()
+    .$onUpdateFn(() => new Date()),
+});
+
+// ==================== 租户月度用量表 ====================
+
+/**
+ * 租户资源月度用量表
+ * 用于对报价单、订单等按月清零的软上限资源进行高并发计数
+ */
+export const tenantMonthlyUsages = pgTable(
+  'tenant_monthly_usages',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tenantId: uuid('tenant_id')
+      .references(() => tenants.id)
+      .notNull(),
+    month: varchar('month', { length: 7 }).notNull(), // e.g., '2026-03'
+    resourceType: varchar('resource_type', { length: 50 }).notNull(), // e.g., 'quotes', 'customers'
+    usedValue: integer('used_value').default(0).notNull(),
+    // 审计字段
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .$onUpdateFn(() => new Date()),
+  },
+  (table) => ({
+    // 联合唯一索引：每个租户每个月每种资源只能有一条计数记录
+    tenantMonthResUnq: unique('uq_tenant_monthly_usages').on(
+      table.tenantId,
+      table.month,
+      table.resourceType
+    ),
+  })
+);
+
+// ==================== AI 积分流转账单表 ====================
+
+/**
+ * 积分流转账单表 (AI Credits Transactions)
+ * 记录积分的所有发放、充值、消费与退还流水
+ */
+export const aiCreditTransactions = pgTable(
+  'ai_credit_transactions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tenantId: uuid('tenant_id')
+      .references(() => tenants.id)
+      .notNull(),
+    type: varchar('type', { length: 50 }).notNull(), // 'PLEDGE', 'ADDON', 'CONSUME', 'REFUND'
+    amount: integer('amount').notNull(), // 变动数量（正数增加，负数扣减）
+    balance: integer('balance').notNull(), // 变动后的账户总余额快照
+    reason: text('reason').notNull(), // 变动明细说明，如“生成全景图”、“月底配额清零重置”
+    // 审计字段
+    createdBy: uuid('created_by'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  },
+  (table) => ({
+    tenantIdx: index('idx_ai_transactions_tenant').on(table.tenantId),
+  })
+);
+

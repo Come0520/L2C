@@ -1,0 +1,1 @@
+ALTER TABLE "users" ADD COLUMN "daily_task_limit" integer DEFAULT 3;

@@ -15,12 +15,14 @@ vi.mock('@/shared/lib/logger', () => ({
 // 使用 vi.hoisted 提升所有 mock 变量，避免工厂闭包报错
 const {
   mockUpdate,
+  mockFindFirst,
   mockCheckPermission,
   mockAuth,
   mockQuoteLifecycleSubmit,
   mockAuditRecordFromSession,
 } = vi.hoisted(() => ({
   mockUpdate: vi.fn(),
+  mockFindFirst: vi.fn(),
   mockCheckPermission: vi.fn(),
   mockAuth: vi.fn(),
   mockQuoteLifecycleSubmit: vi.fn(),
@@ -30,6 +32,12 @@ const {
 vi.mock('@/shared/api/db', () => ({
   db: {
     update: mockUpdate,
+    // preflightVersionCheck 已改为纯 SELECT，需要 mock db.query.quotes.findFirst
+    query: {
+      quotes: {
+        findFirst: mockFindFirst,
+      },
+    },
   },
 }));
 
@@ -65,16 +73,14 @@ describe('报价单并发保护测试', () => {
   });
 
   it('版本号不匹配时应阻断更新 (乐观锁验证)', async () => {
-    // 模拟 DB update 返回空数组 (即通过 version 过滤后未找到记录)
-    mockUpdate.mockReturnValue({
-      set: vi.fn().mockReturnThis(),
-      where: vi.fn().mockReturnThis(),
-      returning: vi.fn().mockResolvedValue([]),
-    } as never);
+    // preflightVersionCheck 用 eq(quotes.version, version) 查询：
+    // 若 DB 中找不到对应 version 的记录（返回 undefined），说明版本已被修改 → 抛出锁冲突
+    // 因此 mock findFirst 返回 undefined 即模拟"当前 DB 版本已不是 1"
+    mockFindFirst.mockResolvedValueOnce(undefined);
 
     const result = await submitQuoteAction({
       id: '110e8400-e29b-41d4-a716-446655440000',
-      version: 1, // 携带旧版本号
+      version: 1, // 携带旧版本号，而 DB 中已无 version=1 的记录
     });
 
     // 断言返回并发冲突错误
@@ -84,13 +90,9 @@ describe('报价单并发保护测试', () => {
   });
 
   it('未提供版本号时应跳过检查 (兼容性)', async () => {
-    // 模拟未传 version，正常执行（preflightVersionCheck 直接返回，不调用 db.update）
-    mockUpdate.mockReturnValue({
-      set: vi.fn().mockReturnThis(),
-      where: vi.fn().mockReturnThis(),
-      returning: vi.fn().mockResolvedValue([{ id: '110e8400-e29b-41d4-a716-446655440000' }]),
-    } as never);
-
+    // 没有传入 version，preflightVersionCheck 直接返回，不调用 findFirst
+    // submitQuote 内部的 submitById 查询需要 findFirst 返回合法记录
+    // 但这里我们做最简单的测试：QuoteLifecycleService.submit 已 mock，直接验证无 error
     const result = await submitQuoteAction({
       id: '110e8400-e29b-41d4-a716-446655440000',
       // 没有 version 字段

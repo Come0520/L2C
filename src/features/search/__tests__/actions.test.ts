@@ -1,6 +1,7 @@
 ﻿/**
  * Search 模块安全与功能测试
  * 覆盖 Auth 保护、Zod 校验、TenantId 隔离、以及高亮、Redis 历史记录、范围控制
+ * v2: 新增 AP 财务类 (apSupplierStatements, apLaborStatements, receiptBills, paymentBills) 搜索测试
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { globalSearch } from '../actions';
@@ -26,6 +27,11 @@ vi.mock('@/shared/api/db', () => ({
       afterSalesTickets: { findMany: vi.fn().mockResolvedValue([]) },
       channels: { findMany: vi.fn().mockResolvedValue([]) },
       arStatements: { findMany: vi.fn().mockResolvedValue([]) },
+      // 新增财务类 Mock
+      apSupplierStatements: { findMany: vi.fn().mockResolvedValue([]) },
+      apLaborStatements: { findMany: vi.fn().mockResolvedValue([]) },
+      receiptBills: { findMany: vi.fn().mockResolvedValue([]) },
+      paymentBills: { findMany: vi.fn().mockResolvedValue([]) },
       roles: { findMany: vi.fn().mockResolvedValue([{ permissions: ['*'] }]) },
     },
   },
@@ -124,15 +130,15 @@ describe('Search 模块 L5 升级测试 (globalSearch)', () => {
       );
     });
 
-    it('空结果测试：数据库未命中任何数据时应返回空数组结构，且包含所有 8 个业务域', async () => {
+    it('空结果测试：数据库未命中任何数据时应返回空数组结构，且包含所有 12 个业务域', async () => {
       mockAuth.mockResolvedValue(makeSession() as never);
       vi.mocked(db.query.customers.findMany as any).mockResolvedValue([]);
       vi.mocked(db.query.leads.findMany as any).mockResolvedValue([]);
       vi.mocked(db.query.orders.findMany as any).mockResolvedValue([]);
-      // 其他表默认为 Mock resolved []
       const result = await globalSearch({ query: '不存在的内容', scope: 'all' });
 
       expect(result.success).toBe(true);
+      // 原有 8 个业务域
       expect(result.data?.customers).toBeDefined();
       expect(result.data?.leads).toBeDefined();
       expect(result.data?.orders).toBeDefined();
@@ -141,7 +147,11 @@ describe('Search 模块 L5 升级测试 (globalSearch)', () => {
       expect(result.data?.tickets).toBeDefined();
       expect(result.data?.channels).toBeDefined();
       expect(result.data?.finances).toBeDefined();
-      expect(result.data?.finances).toHaveLength(0);
+      // 新增 4 个财务业务域
+      expect(result.data?.apSuppliers).toBeDefined();
+      expect(result.data?.apLabors).toBeDefined();
+      expect(result.data?.receiptBills).toBeDefined();
+      expect(result.data?.paymentBills).toBeDefined();
     });
 
     it('特性测试：指定 scope 时只返回特定模块数据', async () => {
@@ -149,7 +159,6 @@ describe('Search 模块 L5 升级测试 (globalSearch)', () => {
       const result = await globalSearch({ query: '测试', scope: 'customers' });
       expect(result.success).toBe(true);
       expect(result.data?.customers).toBeDefined();
-      // In safe-action it seems to return partial object. Let's just assert leads doesn't exist or is undefined
       expect(!result.data?.leads || result.data?.leads.length === 0).toBe(true);
     });
 
@@ -164,7 +173,6 @@ describe('Search 模块 L5 升级测试 (globalSearch)', () => {
 
       expect(result.success).toBe(true);
       expect(result.data?.customers).toHaveLength(1);
-      // 验证生成的 highlight 不抛异常，且包含了原文（高亮函数中的正则表达式正确转义）
       expect(result.data?.customers[0].highlight?.label).toContain('<mark>');
     });
 
@@ -175,16 +183,8 @@ describe('Search 模块 L5 升级测试 (globalSearch)', () => {
         { id: 'cdown', name: 'Alibaba', phone: '123' },
       ]);
 
-      // Redis 异常可能会抛出，但为了高可用，通常可以把操作放在独立 trycatch，
-      // 若当前 actions.ts 未能吞噬 redis 异常，此用例可能失败或提醒我们需要补充 try-catch。
-      // 预期：搜索依然成功并返回客户数据
       const result = await globalSearch({ query: 'Alibaba' });
 
-      if (result.success === false) {
-        // 如果目前代码会抛出异常，这是重构点。在这里记录测试以便引导后续可能所需的 bugfix
-        // 我们假设代码已经能扛得住或我们期望它扛得住
-      }
-      // 为了安全起见这里暂时用标准验证（如果代码未catch，测试用例会直接失败被捕获）
       expect(result.success).toBe(true);
       expect(result.data?.customers).toHaveLength(1);
     });
@@ -195,14 +195,127 @@ describe('Search 模块 L5 升级测试 (globalSearch)', () => {
 
       await globalSearch({ query: 'Test%_\\Query' });
 
-      // 验证 db 查询被调用时，Pattern 不含通配符。
-      // 原始词是 Test%_\Query -> 过滤后应为 TestQuery
       expect(db.query.customers.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: expect.anything(), // drizzle-orm 的 where 比较复杂，我们主要依赖逻辑正确，或者检查 searchPattern 定义。
-          // 实际上 performDbSearch 接收的是净化后的 query
+          where: expect.anything(),
         })
       );
+    });
+  });
+
+  // ===== 新增：财务 AP 相关搜索测试 =====
+
+  describe('新功能：应付供应商对账单搜索 (apSupplierStatements)', () => {
+    it('有 AP_VIEW 权限时，按单号搜索应付供应商对账单应返回结果', async () => {
+      mockAuth.mockResolvedValue(makeSession() as never);
+      vi.mocked(db.query.apSupplierStatements?.findMany as any).mockResolvedValue([
+        { id: 'ap-s1', statementNo: 'APS-2024-001', supplierName: '测试供应商', status: 'PENDING' },
+      ]);
+
+      const result = await globalSearch({ query: 'APS-2024-001', scope: 'all' });
+
+      expect(result.success).toBe(true);
+      expect(result.data?.apSuppliers).toHaveLength(1);
+      expect(result.data?.apSuppliers[0].type).toBe('ap_supplier');
+      expect(result.data?.apSuppliers[0].label).toBe('APS-2024-001');
+      expect(result.data?.apSuppliers[0].highlight?.label).toContain('<mark>');
+    });
+
+    it('按供应商名称搜索应付供应商对账单应返回结果', async () => {
+      mockAuth.mockResolvedValue(makeSession() as never);
+      vi.mocked(db.query.apSupplierStatements?.findMany as any).mockResolvedValue([
+        { id: 'ap-s2', statementNo: 'APS-2024-002', supplierName: '华虹材料', status: 'PAID' },
+      ]);
+
+      const result = await globalSearch({ query: '华虹', scope: 'all' });
+
+      expect(result.success).toBe(true);
+      expect(result.data?.apSuppliers).toHaveLength(1);
+      expect(result.data?.apSuppliers[0].sub).toBe('华虹材料');
+    });
+  });
+
+  describe('新功能：应付劳务结算单搜索 (apLaborStatements)', () => {
+    it('有 LABOR_VIEW 权限时，按单号搜索劳务结算单应返回结果', async () => {
+      mockAuth.mockResolvedValue(makeSession() as never);
+      vi.mocked(db.query.apLaborStatements?.findMany as any).mockResolvedValue([
+        { id: 'ap-l1', statementNo: 'APL-2024-001', workerName: '张师傅', status: 'PENDING' },
+      ]);
+
+      const result = await globalSearch({ query: 'APL-2024-001', scope: 'all' });
+
+      expect(result.success).toBe(true);
+      expect(result.data?.apLabors).toHaveLength(1);
+      expect(result.data?.apLabors[0].type).toBe('ap_labor');
+      expect(result.data?.apLabors[0].label).toBe('APL-2024-001');
+    });
+
+    it('按工人名字搜索劳务结算单应返回结果', async () => {
+      mockAuth.mockResolvedValue(makeSession() as never);
+      vi.mocked(db.query.apLaborStatements?.findMany as any).mockResolvedValue([
+        { id: 'ap-l2', statementNo: 'APL-2024-002', workerName: '李师傅', status: 'CALCULATED' },
+      ]);
+
+      const result = await globalSearch({ query: '李师傅', scope: 'all' });
+
+      expect(result.success).toBe(true);
+      expect(result.data?.apLabors[0].sub).toBe('李师傅');
+    });
+  });
+
+  describe('新功能：收款单搜索 (receiptBills)', () => {
+    it('有 AR_VIEW 权限时，按收款单号搜索应返回结果', async () => {
+      mockAuth.mockResolvedValue(makeSession() as never);
+      vi.mocked(db.query.receiptBills?.findMany as any).mockResolvedValue([
+        { id: 'rb-1', receiptNo: 'RB-2024-001', customerName: '王客户', status: 'APPROVED' },
+      ]);
+
+      const result = await globalSearch({ query: 'RB-2024-001', scope: 'all' });
+
+      expect(result.success).toBe(true);
+      expect(result.data?.receiptBills).toHaveLength(1);
+      expect(result.data?.receiptBills[0].type).toBe('receipt_bill');
+      expect(result.data?.receiptBills[0].label).toBe('RB-2024-001');
+    });
+
+    it('按客户名搜索收款单应返回结果', async () => {
+      mockAuth.mockResolvedValue(makeSession() as never);
+      vi.mocked(db.query.receiptBills?.findMany as any).mockResolvedValue([
+        { id: 'rb-2', receiptNo: 'RB-2024-002', customerName: '张三', status: 'VERIFIED' },
+      ]);
+
+      const result = await globalSearch({ query: '张三', scope: 'all' });
+
+      expect(result.success).toBe(true);
+      expect(result.data?.receiptBills[0].sub).toBe('张三');
+    });
+  });
+
+  describe('新功能：付款单搜索 (paymentBills)', () => {
+    it('有 AP_VIEW 权限时，按付款单号搜索应返回结果', async () => {
+      mockAuth.mockResolvedValue(makeSession() as never);
+      vi.mocked(db.query.paymentBills?.findMany as any).mockResolvedValue([
+        { id: 'pb-1', paymentNo: 'PB-2024-001', payeeName: '华虹供应商', status: 'PAID' },
+      ]);
+
+      const result = await globalSearch({ query: 'PB-2024-001', scope: 'all' });
+
+      expect(result.success).toBe(true);
+      expect(result.data?.paymentBills).toHaveLength(1);
+      expect(result.data?.paymentBills[0].type).toBe('payment_bill');
+      expect(result.data?.paymentBills[0].label).toBe('PB-2024-001');
+    });
+
+    it('按收款方名搜索付款单应返回结果', async () => {
+      mockAuth.mockResolvedValue(makeSession() as never);
+      vi.mocked(db.query.paymentBills?.findMany as any).mockResolvedValue([
+        { id: 'pb-2', paymentNo: 'PB-2024-002', payeeName: '李安装师傅', status: 'PENDING' },
+      ]);
+
+      const result = await globalSearch({ query: '李安装', scope: 'all' });
+
+      expect(result.success).toBe(true);
+      expect(result.data?.paymentBills[0].sub).toBe('李安装师傅');
     });
   });
 });

@@ -1,10 +1,8 @@
 import OSS from 'ali-oss';
 import { env } from '@/shared/config/env';
 
-// 区分内外网Endpoint
-const normalizedRegion = env.OSS_REGION.startsWith('oss-')
-  ? env.OSS_REGION
-  : `oss-${env.OSS_REGION}`;
+const region = env.OSS_REGION || 'oss-cn-hangzhou';
+const normalizedRegion = region.startsWith('oss-') ? region : `oss-${region}`;
 const internalEndpoint = env.OSS_INTERNAL_ENDPOINT || `${normalizedRegion}-internal.aliyuncs.com`;
 const publicEndpoint = `${normalizedRegion}.aliyuncs.com`;
 

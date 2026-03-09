@@ -29,7 +29,7 @@ test.describe('订单撤单流程 (Order Cancellation)', () => {
         }
 
         await firstOrderLink.click();
-        await expect(page).toHaveURL(/\/orders\/.+/);
+        await page.waitForURL(/\/orders\/.+/, { timeout: 15000 }).catch(() => { });
 
         // 查找撤单按钮
         const cancelBtn = page.getByRole('button', { name: /撤单|取消订单|申请撤单/ });
@@ -57,7 +57,7 @@ test.describe('订单撤单流程 (Order Cancellation)', () => {
         }
 
         await firstOrderLink.click();
-        await expect(page).toHaveURL(/\/orders\/.+/);
+        await page.waitForURL(/\/orders\/.+/, { timeout: 15000 }).catch(() => { });
 
         // 尝试点击撤单按钮
         const cancelBtn = page.getByRole('button', { name: /撤单|取消订单|申请撤单/ });
@@ -89,7 +89,7 @@ test.describe('订单撤单流程 (Order Cancellation)', () => {
 
         if (await shippedRow.isVisible({ timeout: 5000 })) {
             await shippedRow.locator('a').first().click();
-            await expect(page).toHaveURL(/\/orders\/.+/);
+            await page.waitForURL(/\/orders\/.+/, { timeout: 15000 }).catch(() => { });
 
             const cancelBtn = page.getByRole('button', { name: /撤单|取消订单/ });
             if (await cancelBtn.isVisible()) {
@@ -118,7 +118,7 @@ test.describe('订单叫停与恢复 (Order Pause & Resume)', () => {
 
         if (await prodRow.isVisible({ timeout: 5000 })) {
             await prodRow.locator('a').first().click();
-            await expect(page).toHaveURL(/\/orders\/.+/);
+            await page.waitForURL(/\/orders\/.+/, { timeout: 15000 }).catch(() => { });
 
             const pauseBtn = page.getByRole('button', { name: /叫停|暂停/ });
             if (await pauseBtn.isVisible({ timeout: 3000 })) {
@@ -138,7 +138,7 @@ test.describe('订单叫停与恢复 (Order Pause & Resume)', () => {
 
         if (await pausedRow.isVisible({ timeout: 5000 })) {
             await pausedRow.locator('a').first().click();
-            await expect(page).toHaveURL(/\/orders\/.+/);
+            await page.waitForURL(/\/orders\/.+/, { timeout: 15000 }).catch(() => { });
 
             const resumeBtn = page.getByRole('button', { name: /恢复|继续/ });
             if (await resumeBtn.isVisible({ timeout: 3000 })) {

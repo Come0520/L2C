@@ -71,7 +71,7 @@ describe('CapsulePage — visitorUserId 传参 + 锁定提示', () => {
         const utils = render(<CapsulePage />)
         if (capturedUseLoadCallback) {
             await act(async () => {
-                await (capturedUseLoadCallback as Function)(params)
+                await (capturedUseLoadCallback as (params: unknown) => void | Promise<void>)(params)
             })
         }
         return utils

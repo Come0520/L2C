@@ -10,6 +10,62 @@ import { unstable_cache } from 'next/cache';
 import { cache } from 'react';
 import { logger } from '@/shared/lib/logger';
 
+// =============================================================
+// 性能优化（P0-2）：模块顶层缓存函数
+// 将 unstable_cache 从函数体内提升到此处，确保缓存实例全局唯一。
+// 运行时参数通过显式函数入参传入，而非闭包捕获。
+// =============================================================
+
+/**
+ * 测量任务详情顶层缓存函数
+ */
+const _getCachedMeasureTask = unstable_cache(
+  async (id: string, tenantId: string) => {
+    return await db.query.measureTasks.findFirst({
+      where: and(
+        eq(measureTasks.id, id),
+        eq(measureTasks.tenantId, tenantId) // 🔒 强制租户过滤
+      ),
+      with: {
+        assignedWorker: true,
+        lead: true,
+        customer: true,
+        sheets: {
+          orderBy: [desc(measureSheets.createdAt)],
+          limit: 1,
+          with: {
+            items: true,
+          },
+        },
+      },
+    });
+  },
+  ['measure-task'],
+  {
+    tags: ['measure-task'],
+    revalidate: 3600, // 1 小时
+  }
+);
+
+/**
+ * 可用测量师列表顶层缓存函数
+ */
+const _getCachedWorkers = unstable_cache(
+  async (tenantId: string) => {
+    return await db.query.users.findMany({
+      where: and(
+        eq(users.role, 'WORKER'),
+        eq(users.tenantId, tenantId) // 🔒 强制租户过滤
+      ),
+    });
+  },
+  ['workers'],
+  {
+    tags: ['workers'],
+    revalidate: 3600, // 1 小时
+  }
+);
+
 /**
  * 测量任务查询筛选参数
  */
@@ -191,35 +247,8 @@ export async function getMeasureTaskById(id: string) {
   }
   const tenantId = session.user.tenantId;
 
-  const getTask = unstable_cache(
-    async () => {
-      return await db.query.measureTasks.findFirst({
-        where: and(
-          eq(measureTasks.id, id),
-          eq(measureTasks.tenantId, tenantId) // 🔒 强制租户过滤
-        ),
-        with: {
-          assignedWorker: true,
-          lead: true,
-          customer: true,
-          sheets: {
-            orderBy: [desc(measureSheets.createdAt)],
-            limit: 1,
-            with: {
-              items: true,
-            },
-          },
-        },
-      });
-    },
-    [`measure-task-${id}`],
-    {
-      tags: [`measure-task-${id}`, 'measure-task'],
-      revalidate: 3600, // 1 hour default
-    }
-  );
-
-  const task = await getTask();
+  // 调用模块顶层缓存函数（P0-2 修复）
+  const task = await _getCachedMeasureTask(id, tenantId);
 
   if (!task) {
     return { success: false, error: '任务不存在或无权访问' };
@@ -244,24 +273,8 @@ export async function getAvailableWorkers() {
   }
   const tenantId = session.user.tenantId;
 
-  const getWorkers = unstable_cache(
-    async () => {
-      // 只返回当前租户的测量师傅（角色为 WORKER）
-      return await db.query.users.findMany({
-        where: and(
-          eq(users.role, 'WORKER'),
-          eq(users.tenantId, tenantId) // 🔒 强制租户过滤
-        ),
-      });
-    },
-    [`workers-${tenantId}`],
-    {
-      tags: [`workers-${tenantId}`, 'workers'],
-      revalidate: 3600, // 1 hour
-    }
-  );
-
-  const workers = await getWorkers();
+  // 调用模块顶层缓存函数（P0-2 修复）
+  const workers = await _getCachedWorkers(tenantId);
   return { success: true, data: workers };
 }
 

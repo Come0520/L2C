@@ -58,6 +58,9 @@ export const quotes = pgTable(
     approvedAt: timestamp('approved_at', { withTimezone: true }),
     rejectReason: text('reject_reason'),
 
+    // Quota Soft Limit (Batch 2)
+    isOverQuota: boolean('is_over_quota').default(false),
+
     lockedAt: timestamp('locked_at', { withTimezone: true }),
     lockedBy: uuid('locked_by').references(() => users.id),
 

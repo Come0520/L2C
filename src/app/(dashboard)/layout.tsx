@@ -81,7 +81,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
       redirect('/onboarding');
     }
 
-    initialTenant = tenantProfile ?? null;
+    initialTenant = tenantProfile
+      ? {
+        ...tenantProfile,
+        // Drizzle 将 jsonb 列返回为 unknown，此处安全断言为目标类型
+        settings: (tenantProfile.settings as Record<string, unknown>) ?? undefined,
+      }
+      : null;
   }
 
   return (

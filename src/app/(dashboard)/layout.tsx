@@ -39,7 +39,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     code: string;
     logoUrl: string | null;
     region: string | null;
-    settings: unknown;
+    settings?: Record<string, unknown>;
   } | null = null;
 
   // ── 并行执行 onboarding 守卫 + 初始化配置 + 预取租户展示信息 ──
@@ -55,9 +55,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
     const [tenant, , tenantProfile] = await Promise.all([
       session.user.role === 'ADMIN'
         ? db.query.tenants.findFirst({
-            where: eq(tenants.id, session.user.tenantId),
-            columns: { onboardingStatus: true, status: true },
-          })
+          where: eq(tenants.id, session.user.tenantId),
+          columns: { onboardingStatus: true, status: true },
+        })
         : Promise.resolve(null),
       // 初始化租户配置（静默尝试，确保旧租户配置补齐）
       initTenantSettings(session.user.tenantId).catch((err: unknown) => {

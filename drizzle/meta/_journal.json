@@ -407,6 +407,13 @@
       "when": 1773165000000,
       "tag": "0057_youthful_wrecking_crew",
       "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "7",
+      "when": 1773166000000,
+      "tag": "0058_fix_missing_tenant_columns",
+      "breakpoints": true
     }
   ]
 }

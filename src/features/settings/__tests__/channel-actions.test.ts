@@ -5,9 +5,8 @@ import * as authLib from '@/shared/lib/auth';
 import { AuditService } from '@/shared/services/audit-service';
 import { revalidatePath } from 'next/cache';
 
-// Mock dependencies
-vi.mock('@/shared/api/db', () => ({
-  db: {
+const mocks = vi.hoisted(() => {
+  const mockTx = {
     query: {
       marketChannels: {
         findFirst: vi.fn(),
@@ -17,6 +16,14 @@ vi.mock('@/shared/api/db', () => ({
     insert: vi.fn(() => ({ values: vi.fn(() => ({ returning: vi.fn() })) })),
     update: vi.fn(() => ({ set: vi.fn(() => ({ where: vi.fn(() => ({ returning: vi.fn() })) })) })),
     delete: vi.fn(() => ({ where: vi.fn() })),
+  };
+  return { mockTx };
+});
+
+vi.mock('@/shared/api/db', () => ({
+  db: {
+    ...mocks.mockTx,
+    transaction: vi.fn(async (cb) => cb(mocks.mockTx)),
   },
 }));
 
@@ -182,7 +189,7 @@ describe('Channel Actions - Task 4: Channel CRUD & Cascade Delete', () => {
       expect(result.data?.success).toBe(true);
       expect(db.delete).toHaveBeenCalled();
       expect(AuditService.log).toHaveBeenCalledWith(
-        db,
+        expect.any(Object),
         expect.objectContaining({
           action: 'DELETE',
           recordId: channelId,

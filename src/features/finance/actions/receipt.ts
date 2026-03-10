@@ -11,6 +11,7 @@ import { AuditService } from '@/shared/services/audit-service';
 
 /**
  * 获取收款单列表
+ * FN-P-02 Fix: 添加默认限制 50 条
  */
 export async function getReceiptBills() {
   const session = await auth();
@@ -24,6 +25,7 @@ export async function getReceiptBills() {
       items: true,
     },
     orderBy: [desc(receiptBills.createdAt)],
+    limit: 50,
   });
 }
 
@@ -61,24 +63,22 @@ export async function voidReceiptBill(id: string) {
   if (!['DRAFT', 'PENDING_APPROVAL'].includes(bill.status)) {
     throw new Error('当前状态不可撤回');
   }
-
-  await db
-    .update(receiptBills)
-    .set({ status: 'VOIDED', updatedAt: new Date() })
-    .where(and(eq(receiptBills.id, id), eq(receiptBills.tenantId, session.user.tenantId)));
-
-  // F-32: 记录作废审计
-  await AuditService.log(db, {
-    tenantId: session.user.tenantId,
-    userId: session.user.id!,
-    tableName: 'receipt_bills',
-    recordId: id,
-    action: 'UPDATE',
-    oldValues: { status: bill.status },
-    newValues: { status: 'VOIDED' },
-    details: { reason: 'USER_VOID' },
+  await db.transaction(async (tx) => {
+    await tx.update(receiptBills)
+      .set({ status: 'VOIDED', updatedAt: new Date() })
+      .where(and(eq(receiptBills.id, id), eq(receiptBills.tenantId, session.user.tenantId)));
+    await AuditService.log(tx, {
+      tenantId: session.user.tenantId,
+      userId: session.user.id!,
+      tableName: 'receipt_bills',
+      recordId: id,
+      action: 'UPDATE',
+      oldValues: { status: bill.status },
+      newValues: { status: 'VOIDED' },
+      details: { reason: 'USER_VOID' },
+    });
   });
-
+  // F-32: 记录作废审计
   updateTag(`finance-receipt-${session.user.tenantId}`);
   return { success: true };
 }
@@ -86,6 +86,7 @@ export async function voidReceiptBill(id: string) {
 /**
  * 获取客户可用预收款列表
  * 供报价转订单弹窗使用，筛选指定客户名下已核销、有余额的预收款单。
+ * FN-P-02 Fix: 添加默认限制 100 条
  *
  * @param customerId - 客户 ID
  * @returns 可用预收款列表（含 id、receiptNo、remainingAmount）
@@ -107,6 +108,7 @@ export async function getAvailablePrepayments(customerId: string) {
       remainingAmount: true,
     },
     orderBy: [desc(receiptBills.createdAt)],
+    limit: 100,
   });
 
   // 过滤余额大于 0 的单据

@@ -8,6 +8,7 @@ import { eq, and } from 'drizzle-orm';
 import { createSafeAction } from '@/shared/lib/server-action';
 import { flattenApprovalGraph } from '../lib/graph-utils';
 import { revalidatePath } from 'next/cache';
+import { AuditService } from '@/shared/services/audit-service';
 import type { ApprovalNode, ApprovalEdge } from '../schema';
 import { createFlowSchema, saveFlowDefinitionSchema, publishFlowSchema } from '../schema';
 
@@ -17,25 +18,38 @@ const createApprovalFlowActionInternal = createSafeAction(
     const { tenantId } = session.user;
     if (!tenantId) throw new Error('Unauthorized');
 
-    const existing = await db.query.approvalFlows.findFirst({
-      where: and(eq(approvalFlows.code, code), eq(approvalFlows.tenantId, tenantId)),
-    });
+    const flow = await db.transaction(async (tx) => {
+      const existing = await tx.query.approvalFlows.findFirst({
+        where: and(eq(approvalFlows.code, code), eq(approvalFlows.tenantId, tenantId)),
+      });
 
-    if (existing) {
-      return existing;
-    }
+      if (existing) {
+        return existing;
+      }
 
-    const [flow] = await db
-      .insert(approvalFlows)
-      .values({
+      const [newFlow] = await tx
+        .insert(approvalFlows)
+        .values({
+          tenantId,
+          name,
+          code,
+          description,
+          definition: { nodes: [], edges: [] },
+          isActive: false,
+        })
+        .returning();
+
+      await AuditService.log(tx, {
         tenantId,
-        name,
-        code,
-        description,
-        definition: { nodes: [], edges: [] },
-        isActive: false,
-      })
-      .returning();
+        userId: session.user.id,
+        tableName: 'approvalFlows',
+        recordId: newFlow.id,
+        action: 'CREATE_FLOW',
+        newValues: { name, code, description, isActive: false },
+      });
+
+      return newFlow;
+    });
 
     revalidatePath('/settings/approvals');
     return flow;
@@ -57,15 +71,37 @@ const saveFlowDefinitionActionInternal = createSafeAction(
     const { tenantId } = session.user;
     if (!tenantId) throw new Error('Unauthorized');
 
-    const [updated] = await db
-      .update(approvalFlows)
-      .set({ definition, updatedAt: new Date() })
-      .where(and(eq(approvalFlows.id, flowId), eq(approvalFlows.tenantId, tenantId)))
-      .returning({ id: approvalFlows.id });
+    await db.transaction(async (tx) => {
+      const flow = await tx.query.approvalFlows.findFirst({
+        where: and(eq(approvalFlows.id, flowId), eq(approvalFlows.tenantId, tenantId)),
+      });
 
-    if (!updated) {
-      throw new Error('未找到审批流或无权修改');
-    }
+      if (!flow) {
+        throw new Error('未找到审批流或无权修改');
+      }
+
+      const [updated] = await tx
+        .update(approvalFlows)
+        .set({ definition, updatedAt: new Date() })
+        .where(and(eq(approvalFlows.id, flowId), eq(approvalFlows.tenantId, tenantId)))
+        .returning({ id: approvalFlows.id });
+
+      if (!updated) {
+        throw new Error('保存失败');
+      }
+
+      await AuditService.log(tx, {
+        tenantId,
+        userId: session.user.id,
+        tableName: 'approvalFlows',
+        recordId: flowId,
+        action: 'SAVE_FLOW_DEFINITION',
+        oldValues: { definition: flow.definition },
+        newValues: { definition },
+        changedFields: { definition },
+      });
+    });
+
     return { success: true };
   }
 );
@@ -139,6 +175,17 @@ const publishApprovalFlowActionInternal = createSafeAction(
         .update(approvalFlows)
         .set({ isActive: true, updatedAt: new Date() })
         .where(eq(approvalFlows.id, flowId));
+
+      await AuditService.log(tx, {
+        tenantId,
+        userId: session.user.id,
+        tableName: 'approvalFlows',
+        recordId: flowId,
+        action: 'PUBLISH_FLOW',
+        oldValues: { isActive: flow.isActive },
+        newValues: { isActive: true },
+        changedFields: { isActive: true },
+      });
     });
 
     logger.info(`[Approval-Flow] Published flow ${flowId} with ${flatNodes.length} active nodes.`);

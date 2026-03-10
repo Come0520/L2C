@@ -16,6 +16,7 @@ import { getOrders } from '../actions/queries';
 import { toast } from 'sonner';
 import { UrlSyncedTabs } from '@/shared/ui/url-synced-tabs';
 import { DataTableToolbar } from '@/shared/ui/data-table-toolbar';
+import { OrderEmptyState } from './order-empty-state';
 
 /**
  * 订单状态Tabs配置
@@ -147,13 +148,17 @@ export function OrderList() {
 
         {isLoading ? (
           <div className="glass-empty-state flex h-[400px] items-center justify-center rounded-lg border border-dashed">
-            <div className="relative h-full w-full perspective-[1000px]">
-              <RotateCcw className="text-muted-foreground h-8 w-8 animate-spin" />
+            <div className="relative flex flex-col items-center justify-center h-full w-full perspective-[1000px]">
+              <RotateCcw className="text-muted-foreground h-8 w-8 animate-spin mb-4" />
               <p className="text-muted-foreground text-sm font-medium">加载中...</p>
             </div>
           </div>
+        ) : orders.length === 0 ? (
+          <div className="flex-1 w-full overflow-x-auto rounded-md border">
+            <OrderEmptyState />
+          </div>
         ) : (
-          <div className="flex-1 overflow-auto rounded-md border">
+          <div className="flex-1 w-full overflow-x-auto rounded-md border">
             <OrderTable data={orders} />
           </div>
         )}

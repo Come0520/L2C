@@ -71,7 +71,7 @@ export function InstallDispatchDialog({ taskId, workers, trigger }: InstallDispa
       const result = await dispatchInstallTaskAction({
         id: taskId,
         installerId: values.installerId,
-        scheduledDate: values.scheduledDate ? new Date(values.scheduledDate) : undefined,
+        scheduledDate: values.scheduledDate || undefined,
         scheduledTimeSlot: values.scheduledTimeSlot,
         laborFee: values.laborFee ? parseFloat(values.laborFee) : undefined,
         dispatcherNotes: values.dispatcherNotes,

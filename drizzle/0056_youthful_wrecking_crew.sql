@@ -1,0 +1,1 @@
+ALTER TABLE "after_sales_tickets" ADD COLUMN "version" integer DEFAULT 1 NOT NULL;

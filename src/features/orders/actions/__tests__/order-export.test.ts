@@ -28,7 +28,7 @@ vi.mock('@/shared/api/schema', () => ({
 
 vi.mock('@/shared/lib/auth', () => ({
   auth: vi.fn(),
-  checkPermission: vi.fn().mockResolvedValue(undefined),
+  requirePermission: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('@/shared/config/permissions', () => ({

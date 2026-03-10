@@ -12,6 +12,8 @@ import { withMiniprogramAuth } from '../auth-utils';
 import { generateAiRendering } from '@/features/ai-rendering/actions/generate';
 import { getMyRenderingHistory, getCreditBalance } from '@/features/ai-rendering/actions/queries';
 
+export const dynamic = 'force-dynamic';
+
 // ==================== 输入校验 Schema ====================
 
 /** POST 请求 Body 校验 */

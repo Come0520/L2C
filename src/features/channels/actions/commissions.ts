@@ -101,36 +101,35 @@ export async function createCommissionRecord(params: {
   }
 
   const calculationBase = new Decimal(order.totalAmount || 0);
-
-  const [record] = await db
-    .insert(channelCommissions)
-    .values({
-      tenantId,
-      channelId,
-      leadId,
-      orderId,
-      orderAmount: calculationBase.toFixed(2),
-      commissionRate: (result.type === 'COMMISSION' ? result.rate : new Decimal(0)).toFixed(4),
-      amount: result.amount.toFixed(2),
-      commissionType: result.type,
-      status: 'PENDING',
-      formula: result.formula,
-      remark: result.remark,
-      createdBy: session.user.id,
-    })
-    .returning();
-
+    let record;
+    await db.transaction(async (tx) => {
+        [record] = await tx.insert(channelCommissions)
+        .values({
+          tenantId,
+          channelId,
+          leadId,
+          orderId,
+          orderAmount: calculationBase.toFixed(2),
+          commissionRate: (result.type === 'COMMISSION' ? result.rate : new Decimal(0)).toFixed(4),
+          amount: result.amount.toFixed(2),
+          commissionType: result.type,
+          status: 'PENDING',
+          formula: result.formula,
+          remark: result.remark,
+          createdBy: session.user.id,
+        })
+        .returning();
+        await AuditService.log(tx, {
+            tableName: 'channel_commissions',
+            recordId: record.id,
+            action: 'CREATE',
+            userId: session.user.id,
+            tenantId,
+            newValues: record,
+            details: { reason: 'Manual Creation via Action' },
+          });
+      });
   // P1 Fix: Audit Log
-  await AuditService.log(db, {
-    tableName: 'channel_commissions',
-    recordId: record.id,
-    action: 'CREATE',
-    userId: session.user.id,
-    tenantId,
-    newValues: record,
-    details: { reason: 'Manual Creation via Action' },
-  });
-
   revalidatePath('/channels');
   return record;
 }
@@ -284,31 +283,30 @@ export async function voidCommission(id: string, reason: string) {
   if (commission.status !== 'PENDING') {
     throw new Error('只能作废待结算状态的佣金记录');
   }
-
-  const [updated] = await db
-    .update(channelCommissions)
-    .set({ status: 'VOID', remark: validatedReason, updatedAt: new Date() })
-    .where(
-      and(
-        eq(channelCommissions.id, id),
-        eq(channelCommissions.tenantId, tenantId),
-        eq(channelCommissions.status, 'PENDING') // Double check
-      )
-    )
-    .returning();
-
+    let updated;
+    await db.transaction(async (tx) => {
+        [updated] = await tx.update(channelCommissions)
+        .set({ status: 'VOID', remark: validatedReason, updatedAt: new Date() })
+        .where(
+          and(
+            eq(channelCommissions.id, id),
+            eq(channelCommissions.tenantId, tenantId),
+            eq(channelCommissions.status, 'PENDING') // Double check
+          )
+        )
+        .returning();
+        await AuditService.log(tx, {
+            tableName: 'channel_commissions',
+            recordId: updated.id,
+            action: 'VOID',
+            userId: session.user.id,
+            tenantId,
+            oldValues: { status: 'PENDING' },
+            newValues: { status: 'VOID', remark: validatedReason },
+            details: { reason: validatedReason },
+          });
+      });
   // P1 Fix: Audit Log
-  await AuditService.log(db, {
-    tableName: 'channel_commissions',
-    recordId: updated.id,
-    action: 'VOID',
-    userId: session.user.id,
-    tenantId,
-    oldValues: { status: 'PENDING' },
-    newValues: { status: 'VOID', remark: validatedReason },
-    details: { reason: validatedReason },
-  });
-
   revalidatePath('/channels');
   return updated;
 }

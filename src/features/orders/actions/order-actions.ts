@@ -3,7 +3,7 @@
 import { db } from '@/shared/api/db';
 import { orders, paymentSchedules } from '@/shared/api/schema';
 import { eq, and } from 'drizzle-orm';
-import { auth, checkPermission } from '@/shared/lib/auth';
+import { auth, requirePermission } from '@/shared/lib/auth';
 import { updateTag } from 'next/cache';
 import { PERMISSIONS } from '@/shared/config/permissions';
 import { AuditService } from '@/shared/services/audit-service';
@@ -37,7 +37,7 @@ export async function createOrderPayment(data: {
   }
 
   // 权限检查
-  await checkPermission(session, PERMISSIONS.ORDER.OWN_EDIT);
+  await requirePermission(session, PERMISSIONS.ORDER.OWN_EDIT);
 
   const tenantId = session.user.tenantId;
   const userId = session.user.id;

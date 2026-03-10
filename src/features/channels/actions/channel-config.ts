@@ -95,36 +95,35 @@ export async function updateChannelGradeDiscounts(discounts: ChannelGradeDiscoun
       eq(financeConfigs.configKey, configKey)
     ),
   });
-
-  if (existing) {
-    await db
-      .update(financeConfigs)
-      .set({
-        configValue,
-        updatedAt: new Date(),
-      })
-      .where(
-        and(eq(financeConfigs.id, existing.id), eq(financeConfigs.tenantId, session.user.tenantId))
-      );
-  } else {
-    await db.insert(financeConfigs).values({
-      tenantId: session.user.tenantId,
-      configKey,
-      configValue,
-    });
-  }
-
+    await db.transaction(async (tx) => {
+        if (existing) {
+        await db
+          .update(financeConfigs)
+          .set({
+            configValue,
+            updatedAt: new Date(),
+          })
+          .where(
+            and(eq(financeConfigs.id, existing.id), eq(financeConfigs.tenantId, session.user.tenantId))
+          );
+      } else {
+        await tx.insert(financeConfigs).values({
+          tenantId: session.user.tenantId,
+          configKey,
+          configValue,
+        });
+      }
+        await AuditService.log(tx, {
+        tableName: 'finance_configs',
+        recordId: configKey, // Use key as ID for singleton config
+        action: 'UPDATE',
+        userId: session.user.id,
+        tenantId: session.user.tenantId,
+        newValues: validated.data,
+        details: { reason: 'Update channel grade discounts' },
+      });
+      });
   // P1 Fix: Audit Log
-  await AuditService.log(db, {
-    tableName: 'finance_configs',
-    recordId: configKey, // Use key as ID for singleton config
-    action: 'UPDATE',
-    userId: session.user.id,
-    tenantId: session.user.tenantId,
-    newValues: validated.data,
-    details: { reason: 'Update channel grade discounts' },
-  });
-
   revalidatePath('/settings/channels');
   return { success: true };
 }

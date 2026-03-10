@@ -167,21 +167,22 @@ const getOrderProfitabilityInternal = createSafeAction(
       : 0;
 
     // 记录审计日志 F-32
-    await AuditService.log(db, {
-      tenantId,
-      userId: session.user.id!,
-      action: 'VIEW', // 分析属于查看类，但记录审计以备查核
-      tableName: 'orders',
-      recordId: orderId,
-      details: {
-        type: 'PROFIT_ANALYSIS',
-        orderNo: order.orderNo,
-        revenue: revenue.toFixed(2, Decimal.ROUND_HALF_UP),
-        totalCost: totalCost.toFixed(2, Decimal.ROUND_HALF_UP),
-        grossMargin: grossMargin.toFixed(2, Decimal.ROUND_HALF_UP),
-      },
-    });
-
+      await db.transaction(async (tx) => {
+          await AuditService.log(tx, {
+            tenantId,
+            userId: session.user.id!,
+            action: 'VIEW', // 分析属于查看类，但记录审计以备查核
+            tableName: 'orders',
+            recordId: orderId,
+            details: {
+              type: 'PROFIT_ANALYSIS',
+              orderNo: order.orderNo,
+              revenue: revenue.toFixed(2, Decimal.ROUND_HALF_UP),
+              totalCost: totalCost.toFixed(2, Decimal.ROUND_HALF_UP),
+              grossMargin: grossMargin.toFixed(2, Decimal.ROUND_HALF_UP),
+            },
+          });
+        });
     return {
       success: true,
       data: {

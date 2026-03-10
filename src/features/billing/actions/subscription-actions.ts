@@ -8,6 +8,12 @@ import { eq, and, desc } from 'drizzle-orm';
 import { subscriptions, billingPaymentRecords, tenants } from '@/shared/api/schema';
 import { createNativePayOrder } from '../lib/wechat-pay';
 import { createAlipayFaceToFaceOrder } from '../lib/alipay';
+import { auth, checkPermission } from '@/shared/lib/auth';
+import { PERMISSIONS } from '@/shared/config/permissions';
+import { AuditService } from '@/shared/services/audit-service';
+import { createLogger } from '@/shared/lib/logger';
+
+const logger = createLogger('BillingAction');
 
 // ==================== 类型定义 ====================
 
@@ -105,17 +111,32 @@ export async function initiatePayment(
   const nextMonth = new Date(now);
   nextMonth.setMonth(nextMonth.getMonth() + 1);
 
-  await db.insert(subscriptions).values({
-    tenantId,
-    planType,
-    status: 'ACTIVE', // 先占位，Webhook 回调后确认
-    currentPeriodStart: now,
-    currentPeriodEnd: nextMonth,
-    paymentProvider: provider,
-    amountCents: plan.amountCents,
-    currency: 'CNY',
-    autoRenew: true,
-  } as typeof subscriptions.$inferInsert);
+  const session = await auth().catch(() => null);
+
+  await db.transaction(async (tx) => {
+    const [newSub] = await tx.insert(subscriptions).values({
+      tenantId,
+      planType,
+      status: 'PENDING', // 先占位，Webhook 回调后确认
+      currentPeriodStart: now,
+      currentPeriodEnd: nextMonth,
+      paymentProvider: provider,
+      amountCents: plan.amountCents,
+      currency: 'CNY',
+      autoRenew: true,
+    } as typeof subscriptions.$inferInsert).returning();
+
+    if (session?.user) {
+      await AuditService.log(tx, {
+        tableName: 'subscriptions',
+        recordId: newSub.id,
+        action: 'CREATE',
+        userId: session.user.id,
+        tenantId,
+        newValues: newSub as Record<string, unknown>,
+      });
+    }
+  });
 
   // 根据渠道发起支付
   if (provider === 'WECHAT') {
@@ -170,24 +191,41 @@ export async function activateSubscriptionByPayment(
     throw new Error(`无法解析 attach 字段: ${attach}, 错误: ${error}`);
   }
 
-  // 幂等检查：若已处理过该 outTradeNo，直接返回
-  const existingPayment = await db
-    .select({ id: billingPaymentRecords.id })
-    .from(billingPaymentRecords)
-    .where(eq(billingPaymentRecords.externalPaymentId, externalPaymentId))
-    .limit(1);
-
-  if (existingPayment.length > 0) {
-    console.log('[ActivateSubscription] 幂等跳过，已处理过', { outTradeNo, externalPaymentId });
-    return;
+  // 防伪校验：验证回调数据未被篡改跨租户
+  const tenantPrefix = tenantId.replace(/-/g, '').substring(0, 8);
+  if (outTradeNo.split('_')[1] !== tenantPrefix) {
+    logger.error('[ActivateSubscription] Webhook 防伪校验失败', { outTradeNo, attach });
+    throw new Error('Webhook 订单归属校验防伪失败');
   }
 
   const now = new Date();
   const nextMonth = new Date(now);
   nextMonth.setMonth(nextMonth.getMonth() + 1);
 
-  // 事务：同时更新 tenant、写入 subscription 和 payment_record
-  await db.transaction(async (tx) => {
+  await db.transaction(async (tx: any) => {
+    // 行级悲观锁：锁定对应的租户，确保同一时间只有一个 Webhook 线程进入激活流程
+    const protectedTenant = await tx.select()
+      .from(tenants)
+      .where(eq(tenants.id, tenantId))
+      .for('update')
+      .limit(1);
+
+    if (protectedTenant.length === 0) {
+      logger.error('未找到所属租户', { tenantId });
+      throw new Error('未找到所属租户');
+    }
+
+    // 幂等检查：在加锁后校验，若已处理过该 outTradeNo，安全跳过
+    const existingPayment = await tx
+      .select({ id: billingPaymentRecords.id })
+      .from(billingPaymentRecords)
+      .where(eq(billingPaymentRecords.externalPaymentId, externalPaymentId))
+      .limit(1);
+
+    if (existingPayment.length > 0) {
+      logger.info('[ActivateSubscription] 幂等跳过，已处理过', { outTradeNo, externalPaymentId });
+      return;
+    }
     // 1. 更新租户套餐状态
     await tx
       .update(tenants)
@@ -220,7 +258,7 @@ export async function activateSubscriptionByPayment(
     }
 
     // 3. 写入支付流水记录
-    await tx.insert(billingPaymentRecords).values({
+    const [insertedPayment] = await tx.insert(billingPaymentRecords).values({
       tenantId,
       paymentProvider: provider,
       externalPaymentId,
@@ -230,10 +268,20 @@ export async function activateSubscriptionByPayment(
       description: `${PLAN_PRICES[planType]?.label ?? planType} - ${now.toISOString().slice(0, 7)}`,
       paidAt: now,
       rawWebhookPayload: rawPayload as Record<string, unknown>,
-    } as typeof billingPaymentRecords.$inferInsert);
+    } as typeof billingPaymentRecords.$inferInsert).returning();
+
+    // 记录审计日志，考虑到 Webhook 是匿名调用，使用 SYSTEM 作为执行人
+    await AuditService.log(tx, {
+      tableName: 'billing_payment_records',
+      recordId: insertedPayment.id,
+      action: 'CREATE',
+      userId: 'SYSTEM',
+      tenantId,
+      newValues: insertedPayment as Record<string, unknown>,
+    });
   });
 
-  console.log('[ActivateSubscription] 订阅激活成功', {
+  logger.info('[ActivateSubscription] 订阅激活成功', {
     tenantId,
     planType,
     provider,
@@ -300,13 +348,34 @@ export async function renewSubscription(
  * 取消自动续费（不立即降级，等当期到期后再降）
  */
 export async function cancelSubscription(tenantId: string): Promise<void> {
-  await db
-    .update(subscriptions)
-    .set({
-      autoRenew: false,
-      cancelledAt: new Date(),
-      cancelReason: '用户主动取消',
-      updatedAt: new Date(),
-    } as Partial<typeof subscriptions.$inferInsert>)
-    .where(and(eq(subscriptions.tenantId, tenantId), eq(subscriptions.status, 'ACTIVE')));
+  const session = await auth();
+  if (!session?.user?.tenantId || session.user.tenantId !== tenantId) {
+    throw new Error('FORBIDDEN');
+  }
+
+  await checkPermission(session, PERMISSIONS.ADMIN.TENANT_MANAGE);
+
+  await db.transaction(async (tx: any) => {
+    const updatedSubs = await tx
+      .update(subscriptions)
+      .set({
+        autoRenew: false,
+        cancelledAt: new Date(),
+        cancelReason: '用户主动取消',
+        updatedAt: new Date(),
+      } as Partial<typeof subscriptions.$inferInsert>)
+      .where(and(eq(subscriptions.tenantId, tenantId), eq(subscriptions.status, 'ACTIVE')))
+      .returning();
+
+    for (const sub of updatedSubs) {
+      await AuditService.log(tx, {
+        tableName: 'subscriptions',
+        recordId: sub.id,
+        action: 'UPDATE',
+        userId: session.user.id,
+        tenantId,
+        newValues: { autoRenew: false, cancelReason: '用户主动取消' } as Record<string, unknown>,
+      });
+    }
+  });
 }

@@ -2,7 +2,8 @@
 
 import { z } from 'zod';
 import { db } from '@/shared/api/db';
-import { auth } from '@/shared/lib/auth';
+import { auth, requirePermission } from '@/shared/lib/auth';
+import { PERMISSIONS } from '@/shared/config/permissions';
 import { OrderService } from '@/services/order.service';
 import { AuditService } from '@/shared/services/audit-service';
 import { createOrderSchema } from '../action-schemas';
@@ -32,6 +33,10 @@ type CreateOrderInput = z.infer<typeof createOrderSchema>;
 export async function createOrderFromQuote(input: CreateOrderInput) {
   const session = await auth();
   if (!session) throw new Error('Unauthorized');
+
+  // 校验订单创建权限
+  await requirePermission(session, PERMISSIONS.ORDER.OWN_EDIT);
+
   const tenantId = session.user.tenantId;
 
   const rawInput = input && typeof input === 'object' ? input : ({} as CreateOrderInput);

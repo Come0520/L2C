@@ -39,10 +39,7 @@ const createInstallTaskSchema = z.object({
 const dispatchTaskSchema = z.object({
   id: z.string(),
   installerId: z.string().min(1, '必须选择安装师'),
-  scheduledDate: z
-    .string()
-    .optional()
-    .transform((val) => (val ? new Date(val) : undefined)),
+  scheduledDate: z.string().optional(),
   scheduledTimeSlot: z.string().optional(),
   laborFee: z.number().optional(), // 保留向后兼容
   feeBreakdown: z
@@ -403,7 +400,7 @@ const dispatchInstallTaskInternal = createSafeAction(dispatchTaskSchema, async (
     if (data.scheduledDate && data.scheduledTimeSlot) {
       const conflict = await checkSchedulingConflict(
         data.installerId,
-        data.scheduledDate,
+        new Date(data.scheduledDate),
         data.scheduledTimeSlot,
         session.user.tenantId, // 租户隔离 - 移到可选参数之前
         data.id,
@@ -448,7 +445,12 @@ const dispatchInstallTaskInternal = createSafeAction(dispatchTaskSchema, async (
       await db
         .update(installTasks)
         .set({ logisticsReadyStatus: logistics.ready })
-        .where(eq(installTasks.id, data.id));
+        .where(
+          and(
+            eq(installTasks.id, data.id),
+            eq(installTasks.tenantId, session.user.tenantId)
+          )
+        );
     }
 
     const installer = await db.query.users.findFirst({
@@ -465,7 +467,7 @@ const dispatchInstallTaskInternal = createSafeAction(dispatchTaskSchema, async (
         installerName: installer?.name,
         dispatcherId: session.user.id,
         status: 'DISPATCHING', // 已指派，待师傅接单
-        scheduledDate: data.scheduledDate,
+        scheduledDate: data.scheduledDate ? new Date(data.scheduledDate) : null,
         scheduledTimeSlot: data.scheduledTimeSlot,
         laborFee: data.laborFee?.toString(),
         assignedAt: new Date(),
@@ -518,7 +520,7 @@ const dispatchInstallTaskInternal = createSafeAction(dispatchTaskSchema, async (
  * 指派师傅 Action
  * @param data 指派参数
  */
-export async function dispatchInstallTaskAction(data: z.infer<typeof dispatchTaskSchema>) {
+export async function dispatchInstallTaskAction(data: z.input<typeof dispatchTaskSchema>) {
   return dispatchInstallTaskInternal(data);
 }
 
@@ -743,6 +745,10 @@ const confirmInstallationInternal = createSafeAction(
 
       if (!task || !task.installerId) {
         return { success: false, error: '任务信息不完整或未指派师傅' };
+      }
+
+      if (task.status !== 'PENDING_CONFIRM') {
+        return { success: false, error: `无法验收：当前任务状态为 ${task.status}，仅允许验收待确认状态的任务` };
       }
 
       // 1. 更新安装单状态

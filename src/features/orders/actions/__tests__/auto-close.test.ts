@@ -63,6 +63,13 @@ describe('Auto-close Action', () => {
     expect(result.count).toBe(2);
     expect(OrderService.updateOrderStatus).toHaveBeenCalledTimes(2);
     expect(OrderService.updateOrderStatus).toHaveBeenCalledWith('o1', 'COMPLETED', 't1', 0, 'u1');
+
+    // 验证 D4-002 修复：确保查询带有 limit(100) 以防深翻页
+    expect(db.query.orders.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        limit: 100,
+      })
+    );
   });
 
   it('当部分订单处理失败时，应记录错误信息但不中断整体流程', async () => {

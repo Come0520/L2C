@@ -148,15 +148,17 @@ export async function updateProductChannelPrice(input: z.infer<typeof updateChan
 
   // P1 Fix: Audit log
   if (updated) {
-    await AuditService.log(db, {
-      tableName: 'products',
-      recordId: validated.data.productId,
-      action: 'UPDATE',
-      userId: session.user.id,
-      tenantId: session.user.tenantId,
-      newValues: { channelPrice: validated.data.channelPrice },
-      details: { reason: 'Update channel price' },
-    });
+      await db.transaction(async (tx) => {
+          await AuditService.log(tx, {
+            tableName: 'products',
+            recordId: validated.data.productId,
+            action: 'UPDATE',
+            userId: session.user.id,
+            tenantId: session.user.tenantId,
+            newValues: { channelPrice: validated.data.channelPrice },
+            details: { reason: 'Update channel price' },
+          });
+        });
   }
 
   revalidatePath('/settings/channels/products');
@@ -268,15 +270,17 @@ export async function removeFromChannelPool(productId: string) {
 
   // P1 Fix: Audit log
   if (updated) {
-    await AuditService.log(db, {
-      tableName: 'products',
-      recordId: productId,
-      action: 'UPDATE',
-      userId: session.user.id,
-      tenantId: session.user.tenantId,
-      newValues: { channelPrice: null },
-      details: { reason: 'Remove from channel pool' },
-    });
+      await db.transaction(async (tx) => {
+          await AuditService.log(tx, {
+            tableName: 'products',
+            recordId: productId,
+            action: 'UPDATE',
+            userId: session.user.id,
+            tenantId: session.user.tenantId,
+            newValues: { channelPrice: null },
+            details: { reason: 'Remove from channel pool' },
+          });
+        });
   }
 
   revalidatePath('/settings/channels/products');

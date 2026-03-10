@@ -7,7 +7,7 @@
 
 import { db } from '@/shared/api/db';
 import { aiRenderings } from '@/shared/api/schema';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, inArray } from 'drizzle-orm';
 import { auth } from '@/shared/lib/auth';
 import { getPlanLimit } from '@/features/billing/lib/plan-limits';
 
@@ -72,8 +72,12 @@ export async function getCreditBalance(): Promise<CreditBalanceResult> {
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
+
   const successfulRenderings = await db.query.aiRenderings.findMany({
-    where: and(eq(aiRenderings.tenantId, tenantId), eq(aiRenderings.status, 'COMPLETED')),
+    where: and(
+      eq(aiRenderings.tenantId, tenantId),
+      inArray(aiRenderings.status, ['completed', 'pending', 'processing'])
+    ),
     columns: { creditsUsed: true, createdAt: true },
   });
 

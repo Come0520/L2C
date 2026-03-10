@@ -15,6 +15,9 @@ export const metadata: Metadata = {
   description: '手工录入单笔费用或批量导入多条费用',
 };
 
+// 强制动态渲染（构建环境无数据库/Redis 连接，无法预渲染）
+export const dynamic = 'force-dynamic';
+
 export default async function ExpensePage() {
   const session = await auth();
   if (!session?.user?.tenantId) return <div>未授权</div>;

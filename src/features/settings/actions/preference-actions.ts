@@ -88,24 +88,22 @@ const updateUserPreferencesActionInternal = createSafeAction(
         ...existingPrefs,
         ...data,
       };
-
-      await db
-        .update(users)
-        .set({ preferences: newPrefs, updatedAt: new Date() })
-        .where(eq(users.id, userId));
-
+      await db.transaction(async (tx) => {
+          await tx.update(users)
+              .set({ preferences: newPrefs, updatedAt: new Date() })
+              .where(eq(users.id, userId));
+          await AuditService.log(tx, {
+                    tableName: 'users',
+                    recordId: userId,
+                    action: 'UPDATE',
+                    userId: userId,
+                    tenantId: session.user.tenantId,
+                    oldValues: { preferences: existingPrefs },
+                    newValues: { preferences: newPrefs },
+                    changedFields: data,
+                  });
+        });
       // 记录审计日志
-      await AuditService.log(db, {
-        tableName: 'users',
-        recordId: userId,
-        action: 'UPDATE',
-        userId: userId,
-        tenantId: session.user.tenantId,
-        oldValues: { preferences: existingPrefs },
-        newValues: { preferences: newPrefs },
-        changedFields: data,
-      });
-
       // 清除偏好设置缓存
       revalidatePath('/settings/preferences');
 

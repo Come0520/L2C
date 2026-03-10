@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { db } from '@/shared/api/db';
 import { orders } from '@/shared/api/schema/orders';
 import { eq, and } from 'drizzle-orm';
-import { auth, checkPermission } from '@/shared/lib/auth';
+import { auth, requirePermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
 import { AuditService } from '@/shared/services/audit-service';
 import { requestDeliverySchema, updateLogisticsSchema } from '../action-schemas';
@@ -33,7 +33,7 @@ export async function requestDelivery(input: RequestDeliveryInput) {
   if (!session) throw new Error('Unauthorized');
   const tenantId = session.user.tenantId;
 
-  await checkPermission(session, PERMISSIONS.ORDER.ALL_EDIT);
+  await requirePermission(session, PERMISSIONS.ORDER.ALL_EDIT);
 
   const validatedInput = requestDeliverySchema.parse(input);
   const { orderId, company, trackingNo, remark } = validatedInput;
@@ -104,7 +104,7 @@ export async function updateLogistics(input: UpdateLogisticsInput) {
   const tenantId = session.user.tenantId;
 
   try {
-    await checkPermission(session, PERMISSIONS.ORDER.ALL_EDIT);
+    await requirePermission(session, PERMISSIONS.ORDER.ALL_EDIT);
 
     const validatedInput = updateLogisticsSchema.parse(input);
     const { orderId, company, trackingNo } = validatedInput;

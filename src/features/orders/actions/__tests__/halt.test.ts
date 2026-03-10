@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { haltOrderAction, resumeOrderAction, getHaltedOrders } from '../halt';
 import { db } from '@/shared/api/db';
 import { OrderService } from '@/services/order.service';
-import { auth, checkPermission } from '@/shared/lib/auth';
+import { auth, requirePermission } from '@/shared/lib/auth';
 
 vi.mock('@/shared/api/db', () => ({
   db: {
@@ -23,7 +23,7 @@ vi.mock('@/services/order.service', () => ({
 
 vi.mock('@/shared/lib/auth', () => ({
   auth: vi.fn(),
-  checkPermission: vi.fn(),
+  requirePermission: vi.fn(),
 }));
 
 vi.mock('next/cache', () => ({
@@ -39,7 +39,7 @@ describe('Halt Actions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     (auth as any).mockResolvedValue(mockSession);
-    (checkPermission as any).mockResolvedValue(undefined);
+    (requirePermission as any).mockResolvedValue(undefined);
   });
 
   describe('haltOrderAction', () => {
@@ -69,7 +69,7 @@ describe('Halt Actions', () => {
     });
 
     it('权限不足时应拒绝', async () => {
-      (checkPermission as any).mockRejectedValue(new Error('Forbidden'));
+      (requirePermission as any).mockRejectedValue(new Error('Forbidden'));
       const result = await haltOrderAction(input);
       expect(result.success).toBe(false);
       expect(result.error).toBe('Forbidden');

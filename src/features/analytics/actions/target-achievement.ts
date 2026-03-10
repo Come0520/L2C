@@ -26,16 +26,16 @@ export async function getTargetAchievementOverview(params: { year: number; month
     if (tenantId === '__PLATFORM__') {
       return { success: true, data: { totalTarget: 0, totalAchieved: 0, totalRate: 0, details: [] } };
     }
-
-    await AuditService.log(db, {
-      tableName: 'analytics',
-      action: 'VIEW_REPORT',
-      recordId: `target-achievement-overview-${year}-${month}`,
-      userId: session.user.id,
-      tenantId,
-      details: { reportName: 'TargetAchievementOverview', params: { year, month } },
-    });
-
+    await db.transaction(async (tx) => {
+        await AuditService.log(tx, {
+          tableName: 'analytics',
+          action: 'VIEW_REPORT',
+          recordId: `target-achievement-overview-${year}-${month}`,
+          userId: session.user.id,
+          tenantId,
+          details: { reportName: 'TargetAchievementOverview', params: { year, month } },
+        });
+      });
     const data = await unstable_cache(
       async () => {
         // 查询所有销售人员和目标
@@ -137,16 +137,16 @@ export async function getTargetCompletionTrend(params: { year: number; month: nu
     if (tenantId === '__PLATFORM__') {
       return { success: true, data: [] };
     }
-
-    await AuditService.log(db, {
-      tableName: 'analytics',
-      action: 'VIEW_REPORT',
-      recordId: `target-completion-trend-${year}-${month}`,
-      userId: session.user.id,
-      tenantId,
-      details: { reportName: 'TargetCompletionTrend', params: { year, month } },
-    });
-
+    await db.transaction(async (tx) => {
+        await AuditService.log(tx, {
+          tableName: 'analytics',
+          action: 'VIEW_REPORT',
+          recordId: `target-completion-trend-${year}-${month}`,
+          userId: session.user.id,
+          tenantId,
+          details: { reportName: 'TargetCompletionTrend', params: { year, month } },
+        });
+      });
     const data = await unstable_cache(
       async () => {
         // 生成最近12个月的年月列表
@@ -244,16 +244,16 @@ export async function getTargetRiskWarnings(params: { year: number; month: numbe
     if (tenantId === '__PLATFORM__') {
       return { success: true, data: [] };
     }
-
-    await AuditService.log(db, {
-      tableName: 'analytics',
-      action: 'VIEW_REPORT',
-      recordId: `target-risk-warnings-${year}-${month}`,
-      userId: session.user.id,
-      tenantId,
-      details: { reportName: 'TargetRiskWarnings', params: { year, month } },
-    });
-
+    await db.transaction(async (tx) => {
+        await AuditService.log(tx, {
+          tableName: 'analytics',
+          action: 'VIEW_REPORT',
+          recordId: `target-risk-warnings-${year}-${month}`,
+          userId: session.user.id,
+          tenantId,
+          details: { reportName: 'TargetRiskWarnings', params: { year, month } },
+        });
+      });
     const data = await unstable_cache(
       async () => {
         // 获取当月第几天和总天数

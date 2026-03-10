@@ -222,29 +222,29 @@ const createAlertRuleInternal = createSafeAction(
     }
 
     try {
-      await db.insert(riskAlerts).values({
-        tenantId: session.user.tenantId!,
-        riskType: data.condition,
-        riskLevel: 'MEDIUM',
-        title: data.name,
-        description: data.description ?? null,
-        suggestedAction: `模板: ${data.notificationTemplate}, 阈值: ${data.thresholdDays}天`,
-        status: data.isEnabled ? 'OPEN' : 'IGNORED',
-        affectedOrders: [],
-        affectedCount: data.thresholdDays,
-        createdBy: session.user.id,
+      await db.transaction(async (tx) => {
+        await tx.insert(riskAlerts).values({
+          tenantId: session.user.tenantId!,
+          riskType: data.condition,
+          riskLevel: 'MEDIUM',
+          title: data.name,
+          description: data.description ?? null,
+          suggestedAction: `模板: ${data.notificationTemplate}, 阈值: ${data.thresholdDays}天`,
+          status: data.isEnabled ? 'OPEN' : 'IGNORED',
+          affectedOrders: [],
+          affectedCount: data.thresholdDays,
+          createdBy: session.user.id,
+        });
+        await AuditService.log(tx, {
+          tenantId: session.user.tenantId,
+          action: 'CREATE_ALERT_RULE',
+          tableName: 'risk_alerts',
+          recordId: 'new',
+          userId: session.user.id,
+          newValues: data as Record<string, unknown>,
+        });
       });
-
       // 接入 AuditService 审计日志
-      await AuditService.log(db, {
-        tenantId: session.user.tenantId,
-        action: 'CREATE_ALERT_RULE',
-        tableName: 'risk_alerts',
-        recordId: 'new',
-        userId: session.user.id,
-        newValues: data as Record<string, unknown>,
-      });
-
       logger.info(`告警规则已创建: name=${data.name}, condition=${data.condition}`);
       return { success: true };
     } catch (error) {
@@ -301,21 +301,21 @@ const deleteAlertRuleInternal = createSafeAction(
 
     try {
       // 确保只能删除自己租户的规则
-      await db
-        .delete(riskAlerts)
-        .where(
-          and(eq(riskAlerts.id, data.ruleId), eq(riskAlerts.tenantId, session.user.tenantId!))
-        );
-
-      // 接入 AuditService 审计日志
-      await AuditService.log(db, {
-        tenantId: session.user.tenantId,
-        action: 'DELETE_ALERT_RULE',
-        tableName: 'risk_alerts',
-        recordId: data.ruleId,
-        userId: session.user.id,
-        newValues: { deletedRuleId: data.ruleId },
+      await db.transaction(async (tx) => {
+        await tx.delete(riskAlerts)
+          .where(
+            and(eq(riskAlerts.id, data.ruleId), eq(riskAlerts.tenantId, session.user.tenantId!))
+          );
+        await AuditService.log(tx, {
+          tenantId: session.user.tenantId,
+          action: 'DELETE_ALERT_RULE',
+          tableName: 'risk_alerts',
+          recordId: data.ruleId,
+          userId: session.user.id,
+          newValues: { deletedRuleId: data.ruleId },
+        });
       });
+      // 接入 AuditService 审计日志
       logger.info(`告警规则已删除: ruleId=${data.ruleId}`);
       return { success: true };
     } catch (error) {
@@ -357,29 +357,33 @@ const updateAlertRuleInternal = createSafeAction(
         dbUpdate.suggestedAction = `模板: ${updateData.notificationTemplate}, 阈值: ${updateData.thresholdDays}天`;
       }
 
-      const result = await db
-        .update(riskAlerts)
-        .set(dbUpdate)
-        .where(and(eq(riskAlerts.id, ruleId), eq(riskAlerts.tenantId, session.user.tenantId!)))
-        .returning({ id: riskAlerts.id });
+      await db.transaction(async (tx) => {
+        const result = await tx
+          .update(riskAlerts)
+          .set(dbUpdate)
+          .where(and(eq(riskAlerts.id, ruleId), eq(riskAlerts.tenantId, session.user.tenantId!)))
+          .returning({ id: riskAlerts.id });
 
-      if (!result.length) {
-        return { success: false, error: '未找到该告警规则或无权操作' };
-      }
+        if (!result.length) {
+          throw new Error('未找到该告警规则或无权操作');
+        }
 
-      // 接入 AuditService 审计日志
-      await AuditService.log(db, {
-        tenantId: session.user.tenantId,
-        action: 'UPDATE_ALERT_RULE',
-        tableName: 'risk_alerts',
-        recordId: ruleId,
-        userId: session.user.id,
-        newValues: updateData as Record<string, unknown>,
+        await AuditService.log(tx, {
+          tenantId: session.user.tenantId,
+          action: 'UPDATE_ALERT_RULE',
+          tableName: 'risk_alerts',
+          recordId: ruleId,
+          userId: session.user.id,
+          newValues: updateData as Record<string, unknown>,
+        });
       });
 
       logger.info(`告警规则已更新: ruleId=${ruleId}`);
       return { success: true };
     } catch (error) {
+      if (error instanceof Error && error.message === '未找到该告警规则或无权操作') {
+        return { success: false, error: error.message };
+      }
       logger.error('更新告警规则失败:', error);
       return { success: false, error: '更新告警规则失败' };
     }
@@ -416,15 +420,16 @@ const sendBulkNotificationInternal = createSafeAction(
     try {
       // 实际实现应查询 targetRoles 对应的用户列表并由 L3/L4 异步发信微服务接管下发
       // 当前骨架版：仅记录审计日志和日志
-      await AuditService.log(db, {
-        tenantId: session.user.tenantId,
-        action: 'SEND_BULK_NOTIFICATION',
-        tableName: 'notifications',
-        recordId: 'bulk',
-        userId: session.user.id,
-        newValues: data as Record<string, unknown>,
+      await db.transaction(async (tx) => {
+        await AuditService.log(tx, {
+          tenantId: session.user.tenantId,
+          action: 'SEND_BULK_NOTIFICATION',
+          tableName: 'notifications',
+          recordId: 'bulk',
+          userId: session.user.id,
+          newValues: data as Record<string, unknown>,
+        });
       });
-
       logger.info(`批量通知已发送: roles=${data.targetRoles.join(',')}, title=${data.title}`);
       return { success: true, data: { sentCount: 0, targetRoles: data.targetRoles } };
     } catch (error) {

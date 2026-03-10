@@ -108,7 +108,7 @@ const getCachedPermissionMatrix = (tenantId: string) =>
       return { roles: rolesData, permissionGroups };
     },
     [`permission-matrix-${tenantId}`],
-    { tags: ['permission-matrix', `permission-matrix-${tenantId}`] }
+    { tags: ['permission-matrix', `permission-matrix-${tenantId}`], revalidate: 300 }
   );
 
 /**
@@ -237,7 +237,7 @@ export async function saveRoleOverride(
             updatedAt: new Date(),
             updatedBy: userId,
           })
-          .where(eq(roleOverrides.id, existing.id));
+          .where(and(eq(roleOverrides.id, existing.id), eq(roleOverrides.tenantId, tenantId)));
 
         // 记录更新日志
         await AuditService.log(tx, {
@@ -381,6 +381,8 @@ export async function saveAllRoleOverrides(
   try {
     // 使用单个大事务确保批量操作的原子性
     await db.transaction(async (tx) => {
+      const auditPromises: Promise<void>[] = [];
+
       for (const override of overrides) {
         const { roleCode, addedPermissions, removedPermissions } = override;
 
@@ -409,21 +411,23 @@ export async function saveAllRoleOverrides(
               updatedAt: new Date(),
               updatedBy: userId,
             })
-            .where(eq(roleOverrides.id, existing.id));
+            .where(and(eq(roleOverrides.id, existing.id), eq(roleOverrides.tenantId, tenantId)));
 
-          await AuditService.log(tx, {
-            tableName: 'role_overrides',
-            recordId: existing.id,
-            action: 'UPDATE',
-            userId: session.user.id,
-            tenantId: session.user.tenantId,
-            oldValues: {
-              addedPermissions: existing.addedPermissions,
-              removedPermissions: existing.removedPermissions,
-            },
-            newValues: { addedPermissions: finalAdded, removedPermissions: finalRemoved },
-            changedFields: { roleCode },
-          });
+          auditPromises.push(
+            AuditService.log(tx, {
+              tableName: 'role_overrides',
+              recordId: existing.id,
+              action: 'UPDATE',
+              userId: session.user.id,
+              tenantId: session.user.tenantId,
+              oldValues: {
+                addedPermissions: existing.addedPermissions,
+                removedPermissions: existing.removedPermissions,
+              },
+              newValues: { addedPermissions: finalAdded, removedPermissions: finalRemoved },
+              changedFields: { roleCode },
+            })
+          );
         } else {
           const [newOverride] = await tx
             .insert(roleOverrides)
@@ -436,16 +440,20 @@ export async function saveAllRoleOverrides(
             })
             .returning({ id: roleOverrides.id });
 
-          await AuditService.log(tx, {
-            tableName: 'role_overrides',
-            recordId: newOverride.id,
-            action: 'CREATE',
-            userId: session.user.id,
-            tenantId: session.user.tenantId,
-            newValues: { roleCode, addedPermissions: finalAdded, removedPermissions: finalRemoved },
-          });
+          auditPromises.push(
+            AuditService.log(tx, {
+              tableName: 'role_overrides',
+              recordId: newOverride.id,
+              action: 'CREATE',
+              userId: session.user.id,
+              tenantId: session.user.tenantId,
+              newValues: { roleCode, addedPermissions: finalAdded, removedPermissions: finalRemoved },
+            })
+          );
         }
       }
+
+      await Promise.allSettled(auditPromises);
     });
 
     revalidatePath('/settings/roles', 'page');

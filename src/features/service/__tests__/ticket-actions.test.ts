@@ -103,16 +103,16 @@ vi.mock('@/shared/api/db', () => {
       }),
       update: vi.fn(() => ({
         set: vi.fn(() => ({
-          where: mockUpdateWhere,
+          where: vi.fn(() => ({ returning: mockUpdateWhere })),
         })),
-        where: mockUpdateWhere,
+        where: vi.fn(() => ({ returning: mockUpdateWhere })),
       })),
       // updateTicketStatus 源码在 db.transaction 内调用 tx.update
       transaction: vi.fn(async (cb: (tx: any) => Promise<any>) => {
         const tx: any = {
           update: vi.fn(() => ({
             set: vi.fn(() => ({
-              where: mockUpdateWhere,
+              where: vi.fn(() => ({ returning: mockUpdateWhere })),
             })),
           })),
           insert: vi.fn(() => ({ values: vi.fn().mockResolvedValue([]) })),
@@ -218,7 +218,7 @@ describe('Service Feature - Ticket Actions', () => {
 
   describe('updateTicketStatus', () => {
     it('应当成功更新工单状态', async () => {
-      mockUpdateWhere.mockResolvedValueOnce([]);
+      mockUpdateWhere.mockResolvedValueOnce([{ id: 'ticket-123' }]);
 
       const result = await updateTicketStatus('ticket-123', 'PROCESSING', 'Resolving issue');
 

@@ -84,11 +84,13 @@ export async function saveQuoteModeConfig(
     const data = validated.data;
 
     await db.transaction(async (tx) => {
-      // 获取当前租户设置
-      const tenant = await tx.query.tenants.findFirst({
-        where: eq(tenants.id, tenantId),
-        columns: { settings: true },
-      });
+      // 获取当前租户设置并加上排他锁防并发写入异常
+      const tenant = await tx
+        .select({ settings: tenants.settings })
+        .from(tenants)
+        .where(eq(tenants.id, tenantId))
+        .for('update')
+        .then((res) => res[0]);
 
       if (!tenant) {
         throw new Error('租户不存在');

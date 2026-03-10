@@ -27,6 +27,16 @@ vi.mock('@/shared/api/db', () => {
     query: {
       tenants: { findFirst: mocks.dbFindFirst },
     },
+    select: vi.fn(() => ({
+      from: vi.fn(() => ({
+        where: vi.fn(() => ({
+          for: vi.fn(async () => {
+            const res = await mocks.dbFindFirst();
+            return [res];
+          }),
+        })),
+      })),
+    })),
     update: vi.fn().mockReturnValue({
       set: vi.fn().mockReturnValue({
         where: mocks.dbUpdateWhere,

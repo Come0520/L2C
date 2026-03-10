@@ -75,15 +75,16 @@ export async function getChannelStats(channelId: string): Promise<ChannelStats |
   logger.info('[channels] Fetching channel stats', { channelId, userId: session.user.id });
 
   // P1 Fix: Audit log
-  await AuditService.log(db, {
-    tableName: 'channels',
-    recordId: channelId,
-    action: 'VIEW',
-    userId: session.user.id,
-    tenantId,
-    details: { type: 'channel_details_stats' },
-  });
-
+    await db.transaction(async (tx) => {
+        await AuditService.log(tx, {
+        tableName: 'channels',
+        recordId: channelId,
+        action: 'VIEW',
+        userId: session.user.id,
+        tenantId,
+        details: { type: 'channel_details_stats' },
+      });
+      });
   // P8 Fix: Use cache for stats
   const getCachedStats = unstable_cache(
     async (cid: string, tid: string) => _getChannelStatsInternal(cid, tid),

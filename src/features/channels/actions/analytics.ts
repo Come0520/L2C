@@ -52,15 +52,16 @@ export async function getChannelAnalytics(
   logger.info('[channels] Fetching channel analytics', { userId: session.user.id, params });
 
   // P1 Fix: Add audit log (Action: VIEW)
-  await AuditService.log(db, {
-    tableName: 'channels',
-    recordId: 'ANALYTICS',
-    action: 'VIEW',
-    userId: session.user.id,
-    tenantId,
-    details: { params },
-  });
-
+    await db.transaction(async (tx) => {
+        await AuditService.log(tx, {
+        tableName: 'channels',
+        recordId: 'ANALYTICS',
+        action: 'VIEW',
+        userId: session.user.id,
+        tenantId,
+        details: { params },
+      });
+      });
   // P8 Fix: Cache analytics
   const getCachedAnalytics = unstable_cache(
     async (p: GetChannelAnalyticsParams | undefined, tid: string) =>

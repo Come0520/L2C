@@ -53,14 +53,16 @@ export async function updateRoomGroups(groups: RoomGroup[]): Promise<void> {
   await QuoteConfigService.updateRoomGroups(session.user.tenantId, validated.data);
 
   // 记录审计日志
-  await AuditService.log(db, {
-    tableName: 'tenants',
-    recordId: session.user.tenantId,
-    action: 'UPDATE',
-    userId: session.user.id,
-    tenantId: session.user.tenantId,
-    oldValues: { roomGroups: oldGroups },
-    newValues: { roomGroups: validated.data },
-    changedFields: { roomGroups: validated.data },
-  });
+    await db.transaction(async (tx) => {
+        await AuditService.log(tx, {
+        tableName: 'tenants',
+        recordId: session.user.tenantId,
+        action: 'UPDATE',
+        userId: session.user.id,
+        tenantId: session.user.tenantId,
+        oldValues: { roomGroups: oldGroups },
+        newValues: { roomGroups: validated.data },
+        changedFields: { roomGroups: validated.data },
+      });
+      });
 }

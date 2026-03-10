@@ -41,16 +41,16 @@ const getCashFlowForecastAction = createSafeAction(
     const todayStr = today.toISOString().split('T')[0];
     const forecastEndDateStr = forecastEndDate.toISOString().split('T')[0];
     const tenantId = session.user.tenantId;
-
-    await AuditService.log(db, {
-      tableName: 'analytics',
-      action: 'VIEW_REPORT',
-      recordId: `cash-flow-forecast-${tenantId}-${params.forecastDays}`,
-      userId: session.user.id,
-      tenantId,
-      details: { reportName: 'CashFlowForecast', params: { forecastDays: params.forecastDays } },
-    });
-
+      await db.transaction(async (tx) => {
+          await AuditService.log(tx, {
+            tableName: 'analytics',
+            action: 'VIEW_REPORT',
+            recordId: `cash-flow-forecast-${tenantId}-${params.forecastDays}`,
+            userId: session.user.id,
+            tenantId,
+            details: { reportName: 'CashFlowForecast', params: { forecastDays: params.forecastDays } },
+          });
+        });
     return unstable_cache(
       async () => {
         logger.info('现金流预测查询开始', { tenantId, forecastDays: params.forecastDays });

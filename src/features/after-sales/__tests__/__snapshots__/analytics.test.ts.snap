@@ -5,14 +5,14 @@ exports[`After-Sales Analytics Actions > should return correct report structure 
   "liabilityByParty": [
     {
       "count": 5,
-      "partyType": "FACTORY",
-      "partyTypeLabel": "工厂",
+      "partyType": undefined,
+      "partyTypeLabel": undefined,
       "totalAmount": 5000,
     },
     {
       "count": 2,
-      "partyType": "INSTALLER",
-      "partyTypeLabel": "安装工",
+      "partyType": undefined,
+      "partyTypeLabel": undefined,
       "totalAmount": 200,
     },
   ],

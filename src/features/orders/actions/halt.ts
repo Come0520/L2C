@@ -12,7 +12,7 @@
 import { db } from '@/shared/api/db';
 import { orders } from '@/shared/api/schema';
 import { eq, and, inArray } from 'drizzle-orm';
-import { auth, checkPermission } from '@/shared/lib/auth';
+import { auth, requirePermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
 import { updateTag } from 'next/cache';
 import { z } from 'zod';
@@ -34,7 +34,7 @@ export async function haltOrderAction(input: z.infer<typeof haltOrderSchema>) {
     }
 
     // 权限检查
-    await checkPermission(session, PERMISSIONS.ORDER.OWN_EDIT);
+    await requirePermission(session, PERMISSIONS.ORDER.OWN_EDIT);
 
     // 从入参中获取 version 用于乐观并发控制
     const versionNum = 'version' in data ? Number(data.version) : 0;
@@ -79,7 +79,7 @@ export async function resumeOrderAction(input: z.infer<typeof resumeOrderSchema>
     }
 
     // 权限检查
-    await checkPermission(session, PERMISSIONS.ORDER.OWN_EDIT);
+    await requirePermission(session, PERMISSIONS.ORDER.OWN_EDIT);
 
     const versionNum = 'version' in data ? Number(data.version) : 0;
 
@@ -122,7 +122,7 @@ export async function getHaltedOrders(params?: { limit?: number; offset?: number
   }
 
   // 权限检查：需要订单查看权限
-  await checkPermission(session, PERMISSIONS.ORDER.VIEW);
+  await requirePermission(session, PERMISSIONS.ORDER.VIEW);
 
   const tenantId = session.user.tenantId;
   const limit = params?.limit ?? 50;

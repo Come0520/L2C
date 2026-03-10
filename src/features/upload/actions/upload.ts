@@ -187,15 +187,16 @@ export async function uploadFileAction(formData: FormData) {
     logger.info('[Upload] 文件物理存储成功', { filepath, tenantId: session.user.tenantId });
 
     // 审计日志 (第 1 处：上传成功)
-    await AuditService.log(db, {
-      tenantId: session.user.tenantId,
-      action: 'UPLOAD_FILE',
-      tableName: 'uploads',
-      recordId: filename,
-      userId: session.user.id,
-      newValues: { fileName: file.name, fileSize: file.size, url: fileUrl },
-    });
-
+    await db.transaction(async (tx) => {
+        await AuditService.log(tx, {
+          tenantId: session.user.tenantId,
+          action: 'UPLOAD_FILE',
+          tableName: 'uploads',
+          recordId: filename,
+          userId: session.user.id,
+          newValues: { fileName: file.name, fileSize: file.size, url: fileUrl },
+        });
+      });
     logger.info('[Upload] 文件上传流程全完成', { fileUrl, userId: session.user.id });
 
     return { success: true, url: fileUrl };
@@ -221,15 +222,16 @@ export async function deleteUploadedFileAction(fileId: string) {
   logger.info('[Upload] 接收文件删除请求', { fileId, userId: session.user.id });
 
   // 审计日志 (第 2 处：删除成功)
-  await AuditService.log(db, {
-    action: 'DELETE',
-    tableName: 'uploads',
-    recordId: fileId,
-    tenantId: session.user.tenantId,
-    userId: session.user.id,
-    details: { note: 'File record deleted from system' },
-  });
-
+    await db.transaction(async (tx) => {
+        await AuditService.log(tx, {
+        action: 'DELETE',
+        tableName: 'uploads',
+        recordId: fileId,
+        tenantId: session.user.tenantId,
+        userId: session.user.id,
+        details: { note: 'File record deleted from system' },
+      });
+      });
   logger.info('[Upload] 文件删除成功', { fileId });
   return { success: true };
 }

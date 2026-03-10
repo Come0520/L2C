@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createChangeRequestAction, approveChangeRequestAction } from '../change-order';
-import { auth, checkPermission } from '@/shared/lib/auth';
+import { auth, requirePermission } from '@/shared/lib/auth';
 import { ChangeOrderService } from '@/services/change-order.service';
 import { submitApproval } from '@/features/approval/actions/submission';
 
 vi.mock('@/shared/lib/auth', () => ({
   auth: vi.fn(),
-  checkPermission: vi.fn(),
+  requirePermission: vi.fn(),
 }));
 
 vi.mock('@/services/change-order.service', () => ({
@@ -28,7 +28,7 @@ describe('Change Order Actions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     (auth as any).mockResolvedValue(mockSession);
-    (checkPermission as any).mockResolvedValue(undefined);
+    (requirePermission as any).mockResolvedValue(undefined);
   });
 
   describe('createChangeRequestAction', () => {
@@ -75,7 +75,7 @@ describe('Change Order Actions', () => {
     });
 
     it('权限不足时应拒绝审批', async () => {
-      (checkPermission as any).mockRejectedValue(new Error('No permission'));
+      (requirePermission as any).mockRejectedValue(new Error('No permission'));
       await expect(approveChangeRequestAction('req1')).rejects.toThrow('No permission');
     });
   });

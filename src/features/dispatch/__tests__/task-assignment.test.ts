@@ -13,8 +13,9 @@ vi.mock('@/shared/lib/auth', () => ({
   auth: vi.fn(),
 }));
 
-vi.mock('@/shared/api/db', () => ({
-  db: {
+vi.mock('@/shared/api/db', () => {
+  const dbMock = {
+    transaction: vi.fn(async (cb) => cb(dbMock)),
     query: {
       users: {
         findFirst: vi.fn(),
@@ -27,8 +28,9 @@ vi.mock('@/shared/api/db', () => ({
         })),
       })),
     })),
-  },
-}));
+  };
+  return { db: dbMock };
+});
 
 vi.mock('@/shared/services/audit-service', () => ({
   AuditService: {

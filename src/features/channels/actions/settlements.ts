@@ -205,6 +205,7 @@ export async function getSettlements(params: GetSettlementsParams) {
 
   const tenantId = session.user.tenantId;
   const { channelId, status, page = 1, pageSize = 20 } = params;
+  const limit = Math.min(Math.max(pageSize, 1), 100);
 
   let whereClause = eq(channelSettlements.tenantId, tenantId);
 
@@ -221,12 +222,12 @@ export async function getSettlements(params: GetSettlementsParams) {
     whereClause = and(whereClause, eq(channelSettlements.status, status)) as typeof whereClause;
   }
 
-  const offset = (page - 1) * pageSize;
+  const offset = (page - 1) * limit;
 
   const [data, totalItems] = await Promise.all([
     db.query.channelSettlements.findMany({
       where: whereClause,
-      limit: pageSize,
+      limit: limit,
       offset,
       orderBy: [desc(channelSettlements.createdAt)],
       with: {
@@ -239,7 +240,7 @@ export async function getSettlements(params: GetSettlementsParams) {
   return {
     data,
     totalItems: totalItems,
-    totalPages: Math.ceil(totalItems / pageSize),
+    totalPages: Math.ceil(totalItems / limit),
     currentPage: page,
   };
 }
@@ -311,19 +312,34 @@ export async function submitSettlementForApproval(id: string) {
 
   const tenantId = session.user.tenantId;
 
-  const [updated] = await db
-    .update(channelSettlements)
-    .set({
-      status: 'PENDING',
-    })
-    .where(
-      and(
-        eq(channelSettlements.id, id),
-        eq(channelSettlements.tenantId, tenantId),
-        eq(channelSettlements.status, 'DRAFT')
+  const updated = await db.transaction(async (tx) => {
+    const [settlement] = await tx
+      .update(channelSettlements)
+      .set({
+        status: 'PENDING',
+      })
+      .where(
+        and(
+          eq(channelSettlements.id, id),
+          eq(channelSettlements.tenantId, tenantId),
+          eq(channelSettlements.status, 'DRAFT')
+        )
       )
-    )
-    .returning();
+      .returning();
+
+    if (settlement) {
+      await AuditService.log(tx, {
+        tableName: 'channel_settlements',
+        recordId: id,
+        action: 'UPDATE',
+        userId: session.user.id,
+        tenantId,
+        newValues: { status: 'PENDING' },
+        details: { reason: 'Submit for approval' },
+      });
+    }
+    return settlement;
+  });
 
   revalidatePath('/channels');
   revalidatePath('/finance/settlements');
@@ -342,8 +358,8 @@ export async function submitSettlementForApproval(id: string) {
  * @returns {Promise<any>} 结算单连同新生成的支付单事务提交对象
  * @throws {Error} 未授权，无效状态或是自审批违反隔离原则引发的异常
  */
-export async function approveSettlement(id: string) {
-  logger.info('[channels] 开始审批结算单', { id });
+export async function approveSettlement(id: string, paymentMethod: string = 'BANK') {
+  logger.info('[channels] 开始审批结算单', { id, paymentMethod });
   const session = await auth();
   if (!session?.user?.tenantId) throw new Error('Unauthorized');
 
@@ -400,7 +416,7 @@ export async function approveSettlement(id: string) {
         payeeName: settlement.channel.contactName || settlement.channel.name,
         amount: settlement.finalAmount,
         status: 'PENDING',
-        paymentMethod: 'BANK', // 默认银行转账
+        paymentMethod,
         proofUrl: '', // 待付款后补充
         recordedBy: session.user.id,
         remark: `渠道结算付款 - ${settlement.settlementNo}`,

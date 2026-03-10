@@ -43,19 +43,19 @@ const getProfitMarginAnalysisAction = createSafeAction(
       : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
     const endDate = params.endDate ? new Date(params.endDate) : new Date();
     const tenantId = session.user.tenantId;
-
-    await AuditService.log(db, {
-      tableName: 'analytics',
-      action: 'VIEW_REPORT',
-      recordId: `profit-margin-${tenantId}`,
-      userId: session.user.id,
-      tenantId,
-      details: {
-        reportName: 'ProfitMarginAnalysis',
-        params: { startDate, endDate, groupBy: params.groupBy },
-      },
-    });
-
+      await db.transaction(async (tx) => {
+          await AuditService.log(tx, {
+            tableName: 'analytics',
+            action: 'VIEW_REPORT',
+            recordId: `profit-margin-${tenantId}`,
+            userId: session.user.id,
+            tenantId,
+            details: {
+              reportName: 'ProfitMarginAnalysis',
+              params: { startDate, endDate, groupBy: params.groupBy },
+            },
+          });
+        });
     return unstable_cache(
       async () => {
         try {

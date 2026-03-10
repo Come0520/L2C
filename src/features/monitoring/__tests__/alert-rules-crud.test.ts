@@ -67,6 +67,43 @@ vi.mock('@/shared/api/db', () => {
           returning: vi.fn().mockResolvedValue([{ id: 'del-id' }]),
         })),
       })),
+      transaction: vi.fn(async (callback) => {
+        // mock tx object chaining back to the mocked db methods
+        const tx = {
+          insert: vi.fn(() => ({ values: vi.fn(() => ({ returning: vi.fn().mockResolvedValue([{ id: 'test-id' }]) })) })),
+          update: vi.fn(() => ({
+            set: vi.fn(() => ({
+              where: vi.fn(() => {
+                const arr = (globalThis as any).__failUpdateCrud ? [] : [{ id: 'rule-test' }];
+                const obj = Promise.resolve(arr) as any;
+                obj.returning = vi.fn().mockResolvedValue(arr);
+                return obj;
+              }),
+            })),
+          })),
+          delete: vi.fn(() => ({ where: vi.fn(() => ({ returning: vi.fn().mockResolvedValue([{ id: 'del-id' }]) })) })),
+          query: {
+            notificationPreferences: {
+              findMany: vi.fn().mockResolvedValue([]),
+              findFirst: vi.fn().mockResolvedValue(null),
+            },
+            riskAlerts: {
+              findMany: vi.fn().mockResolvedValue([]),
+              findFirst: vi.fn().mockResolvedValue(null),
+            },
+          },
+          select: vi.fn(() => ({
+            from: vi.fn(() => ({
+              where: vi.fn(() => ({
+                limit: vi.fn(() => ({
+                  offset: vi.fn().mockResolvedValue([{ id: '1', title: 'test', status: 'OPEN' }]),
+                })),
+              })),
+            })),
+          })),
+        };
+        return callback(tx);
+      }),
     },
   };
 });

@@ -12,7 +12,6 @@ import { AuditService } from '@/shared/services/audit-service';
 import { redis } from '@/shared/lib/redis';
 import { checkRateLimit } from '@/shared/middleware/rate-limit';
 import { headers } from 'next/headers';
-import {} from 'next/cache';
 import { ShowroomShareItemSnapshot } from '../types';
 import { ShowroomError, ShowroomErrors } from '../errors';
 import { createLogger } from '@/shared/lib/logger';
@@ -40,47 +39,47 @@ export async function createShareLink(input: z.input<typeof createShareLinkSchem
 
   try {
     const itemsSnapshot: ShowroomShareItemSnapshot[] = items;
-    const [shareId] = await db
-      .insert(showroomShares)
-      .values({
+    const newShare = await db.transaction(async (tx) => {
+      const [insertedShare] = await tx.insert(showroomShares)
+        .values({
+          tenantId: session.user.tenantId,
+          salesId: session.user.id,
+          itemsSnapshot: itemsSnapshot,
+          expiresAt: expiresAt,
+          passwordHash: password ? createHash('sha256').update(password).digest('hex') : null,
+          maxViews: maxViews || null,
+          allowCustomerShare: allowCustomerShare ? 1 : 0,
+          isActive: 1,
+        })
+        .returning({ id: showroomShares.id, allowCustomerShare: showroomShares.allowCustomerShare });
+      await AuditService.log(tx, {
+        tableName: 'showroom_shares',
+        recordId: insertedShare.id,
+        action: 'CREATE',
+        userId: session.user.id,
         tenantId: session.user.tenantId,
-        salesId: session.user.id,
-        itemsSnapshot: itemsSnapshot,
-        expiresAt: expiresAt,
-        passwordHash: password ? createHash('sha256').update(password).digest('hex') : null,
-        maxViews: maxViews || null,
-        allowCustomerShare: allowCustomerShare ? 1 : 0,
-        isActive: 1,
-      })
-      .returning({ id: showroomShares.id, allowCustomerShare: showroomShares.allowCustomerShare });
-
-    // 记录审计日志
-    await AuditService.log(db, {
-      tableName: 'showroom_shares',
-      recordId: shareId.id,
-      action: 'CREATE',
-      userId: session.user.id,
-      tenantId: session.user.tenantId,
-      newValues: {
-        items,
-        expiresInDays,
-        expiresAt,
-        hasPassword: !!password,
-        maxViews,
-        allowCustomerShare,
-      } as Record<string, unknown>,
+        newValues: {
+          items,
+          expiresInDays,
+          expiresAt,
+          hasPassword: !!password,
+          maxViews,
+          allowCustomerShare,
+        } as Record<string, unknown>,
+      });
+      return insertedShare;
     });
-
+    // 记录审计日志
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-    const url = `${baseUrl}/showroom/share/${shareId.id}`;
+    const url = `${baseUrl}/showroom/share/${newShare.id}`;
 
     logger.info('创建展厅共享链接成功', {
-      shareId: shareId.id,
+      shareId: newShare.id,
       tenantId: session.user.tenantId,
       salesId: session.user.id,
     });
 
-    return { id: shareId.id, url };
+    return { id: newShare.id, url };
   } catch (error) {
     logger.error('创建展厅共享链接失败', { error, input });
     throw new ShowroomError(ShowroomErrors.INTERNAL_ERROR);
@@ -145,12 +144,37 @@ export async function getShareContent(input: z.input<typeof getShareContentSchem
   // 身份锁定检查：allowCustomerShare=0 时锁定首个访客
   if (share.allowCustomerShare === 0 && visitorUserId) {
     if (!share.lockedToUserId) {
-      // 首次访问：绑定当前用户
-      await db
+      // 首次访问：防并发绑定，使用 where lockedToUserId IS NULL 确保原子性
+      const [updated] = await db
         .update(showroomShares)
         .set({ lockedToUserId: visitorUserId })
-        .where(eq(showroomShares.id, shareId));
-      logger.info('展厅分享身份锁定成功', { shareId, visitorUserId });
+        .where(
+          and(
+            eq(showroomShares.id, shareId),
+            sql`${showroomShares.lockedToUserId} IS NULL`
+          )
+        )
+        .returning({ lockedToUserId: showroomShares.lockedToUserId });
+
+      if (updated) {
+        logger.info('展厅分享身份锁定成功', { shareId, visitorUserId });
+      } else {
+        // 如果更新返回为空，说明在并发期间已经被其他请求锁定了
+        // 获取最新的 lockedToUserId 来检测是否是当前用户自己
+        const currentShare = await db.query.showroomShares.findFirst({
+          where: eq(showroomShares.id, shareId),
+          columns: { lockedToUserId: true }
+        });
+
+        if (currentShare?.lockedToUserId !== visitorUserId) {
+          logger.warn('展厅分享并发身份验证失败，已被其他用户锁定', {
+            shareId,
+            visitorUserId,
+            lockedTo: currentShare?.lockedToUserId,
+          });
+          throw new ShowroomError(ShowroomErrors.SHARE_LOCKED);
+        }
+      }
     } else if (share.lockedToUserId !== visitorUserId) {
       // 非绑定用户：拒绝访问
       logger.warn('展厅分享身份验证失败，非绑定用户', {
@@ -296,13 +320,15 @@ export async function deactivateShareLink(input: z.input<typeof deactivateShareS
       .returning();
 
     if (updated) {
-      await AuditService.log(db, {
-        tableName: 'showroom_shares',
-        recordId: shareId,
-        action: 'UPDATE',
-        userId: session.user.id,
-        tenantId: session.user.tenantId,
-        newValues: { isActive: 0 } as Record<string, unknown>,
+      await db.transaction(async (tx) => {
+        await AuditService.log(tx, {
+          tableName: 'showroom_shares',
+          recordId: shareId,
+          action: 'UPDATE',
+          userId: session.user.id,
+          tenantId: session.user.tenantId,
+          newValues: { isActive: 0 } as Record<string, unknown>,
+        });
       });
       logger.info('停用分享链接成功', { shareId, tenantId: session.user.tenantId });
     }

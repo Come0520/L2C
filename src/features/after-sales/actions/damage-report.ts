@@ -8,7 +8,7 @@ import { eq, and } from 'drizzle-orm';
 import { afterSalesTickets, afterSalesDamageReports, liabilityNotices } from '@/shared/api/schema';
 import { generateNoticeNo } from '../utils'; // We'll adapt this for Damage Report below mapping
 import { AuditService } from '@/shared/services/audit-service';
-import { checkDeductionAllowed, LiablePartyType } from '../logic/deduction-safety';
+import { checkMultipleDeductionsAllowed } from '../logic/deduction-safety';
 import { logger } from '@/shared/lib/logger';
 import { liablePartyTypeEnum } from '@/shared/api/schema/enums';
 
@@ -45,17 +45,21 @@ const createDamageReportAction = createSafeAction(
       }
 
       // 2. Deduction Safety Checks for all liable parties BEFORE starting transaction
-      for (const liability of data.liabilities) {
-        if (liability.amount > 0) {
-          const checkResult = await checkDeductionAllowed(
-            liability.liablePartyType as LiablePartyType,
-            liability.liablePartyId || '',
-            liability.amount
-          );
-          if (!checkResult.allowed) {
+      // 2. Batch Deduction Safety Checks (P2: Fix N+1 Query)
+      if (data.liabilities && data.liabilities.length > 0) {
+        const checkResults = await checkMultipleDeductionsAllowed(
+          data.liabilities.map((l) => ({
+            partyType: l.liablePartyType,
+            partyId: l.liablePartyId || '',
+            amount: l.amount.toString(),
+          }))
+        );
+
+        for (let i = 0; i < checkResults.length; i++) {
+          if (!checkResults[i].allowed) {
             return {
               success: false,
-              message: `[${liability.liablePartyType}] 额度校验失败: ${checkResult.message}`,
+              message: `[${data.liabilities[i].liablePartyType}] 额度校验失败: ${checkResults[i].message}`,
             };
           }
         }

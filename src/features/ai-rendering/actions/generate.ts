@@ -19,15 +19,15 @@
  */
 
 import { db } from '@/shared/api/db';
-import { aiRenderings, aiCurtainStyleTemplates } from '@/shared/api/schema';
-import { eq } from 'drizzle-orm';
+import { aiRenderings, aiCurtainStyleTemplates, tenants } from '@/shared/api/schema';
+import { eq, and, inArray } from 'drizzle-orm';
 import { revalidateTag } from 'next/cache';
 import { auth } from '@/shared/lib/auth';
 import { fileService } from '@/shared/services/file-service';
+import { getPlanLimit } from '@/features/billing/lib/plan-limits';
 import { calculateCreditsCost } from '../lib/credits';
 import { buildPrompt, generateRendering, CURTAIN_STYLE_PROMPT_MAP } from '../lib/gemini-client';
 import { addWatermark, doesImageNeedWatermark } from '../lib/watermark';
-import { getCreditBalance } from './queries';
 
 // ==================== 输入验证 ====================
 
@@ -101,65 +101,86 @@ export async function generateAiRendering(
     retryCount,
   });
 
-  // === Step 3: 积分余额校验（仅扣费时检查）===
-  if (creditsNeeded > 0) {
-    const balance = await getCreditBalance();
-    if (balance.remaining < creditsNeeded) {
-      return {
-        success: false,
-        error: `积分不足：当月剩余 ${balance.remaining} 点，本次需要 ${creditsNeeded} 点。请联系管理员增加额度。`,
-      };
-    }
-  }
-
-  // === Step 4: 解析款式 Prompt（优先从数据库读取，回退到硬编码 Map） ===
-  let curtainStyleName: string;
-  let curtainStylePrompt: string;
-
-  // 尝试从数据库读取（平台管理页面配置的模板）
-  const [dbTemplate] = await db
-    .select({ name: aiCurtainStyleTemplates.name, promptFragment: aiCurtainStyleTemplates.promptFragment })
-    .from(aiCurtainStyleTemplates)
-    .where(eq(aiCurtainStyleTemplates.id, input.curtainStyleId))
-    .limit(1);
-
-  if (dbTemplate) {
-    curtainStyleName = dbTemplate.name;
-    curtainStylePrompt = dbTemplate.promptFragment ?? dbTemplate.name;
-  } else {
-    // 回退到代码内置的款式映射（兼容旧数据）
-    const styleEntry = CURTAIN_STYLE_PROMPT_MAP[input.curtainStyleId];
-    curtainStyleName = styleEntry?.name ?? input.curtainStyleId;
-    curtainStylePrompt = styleEntry?.prompt ?? input.curtainStyleId;
-  }
-
-  // === Step 5: 创建渲染记录（PENDING 状态）===
+  // === Step 3, 4, 5: 事务中锁定并预扣费，创建 PENDING 记录 ===
+  let curtainStyleName: string = '';
+  let curtainStylePrompt: string = '';
   let renderingId: string | undefined;
-  try {
-    const [record] = await db
-      .insert(aiRenderings)
-      .values({
-        tenantId,
-        userId,
-        originalImageUrl: `data:image/jpeg;base64,${input.originalImageBase64.slice(0, 20)}...`,
-        curtainStyleId: null, // curtainStyleId 在 schema 中关联的是 UUID，当前用字符串 key，不关联
-        fabricSource: input.fabricSource,
-        userNotes: input.userNotes ?? null,
-        status: 'pending',
-        creditsUsed: 0,
-        retryCount,
-        aiPrompt: buildPrompt({
-          curtainStyleName,
-          curtainStylePrompt,
-          fabricDescription: input.fabricDescription,
-          userNotes: input.userNotes ?? null,
-          cameraAngle: null,
-        }),
-      })
-      .returning({ id: aiRenderings.id });
 
-    renderingId = record?.id;
+  try {
+    renderingId = await db.transaction(async (tx) => {
+      // 1. 获取行锁，防止高并发透支积分
+      await tx.select({ id: tenants.id }).from(tenants).where(eq(tenants.id, tenantId)).for('update');
+
+      // 2. 扣费校验（在事务内重新计算）
+      if (creditsNeeded > 0) {
+        const total = getPlanLimit(planType as any, 'aiRenderingCredits');
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+        const usedRecords = await tx.query.aiRenderings.findMany({
+          // 将 pending 和 processing 都计入消耗，避免并发透支，一旦 failed 则自动退回
+          where: and(
+            eq(aiRenderings.tenantId, tenantId),
+            inArray(aiRenderings.status, ['completed', 'pending', 'processing'])
+          ),
+          columns: { creditsUsed: true, createdAt: true },
+        });
+
+        const used = usedRecords
+          .filter((r) => r.createdAt >= startOfMonth)
+          .reduce((sum, r) => sum + (r.creditsUsed ?? 0), 0);
+
+        const remaining = Number.isFinite(total) ? Math.max(0, total - used) : 9999;
+        if (remaining < creditsNeeded) {
+          throw new Error(`积分不足：当月剩余 ${remaining} 点，本次需要 ${creditsNeeded} 点。请联系管理员增加额度。`);
+        }
+      }
+
+      // 3. 解析款式 Prompt
+      const [dbTemplate] = await tx
+        .select({ name: aiCurtainStyleTemplates.name, promptFragment: aiCurtainStyleTemplates.promptFragment })
+        .from(aiCurtainStyleTemplates)
+        .where(eq(aiCurtainStyleTemplates.id, input.curtainStyleId))
+        .limit(1);
+
+      if (dbTemplate) {
+        curtainStyleName = dbTemplate.name;
+        curtainStylePrompt = dbTemplate.promptFragment ?? dbTemplate.name;
+      } else {
+        const styleEntry = CURTAIN_STYLE_PROMPT_MAP[input.curtainStyleId];
+        curtainStyleName = styleEntry?.name ?? input.curtainStyleId;
+        curtainStylePrompt = styleEntry?.prompt ?? input.curtainStyleId;
+      }
+
+      // 4. 创建渲染记录（预占额度）
+      const [record] = await tx
+        .insert(aiRenderings)
+        .values({
+          tenantId,
+          userId,
+          originalImageUrl: `data:image/jpeg;base64,${input.originalImageBase64.slice(0, 20)}...`,
+          curtainStyleId: null, // 当前不支持强关联
+          fabricSource: input.fabricSource,
+          userNotes: input.userNotes ?? null,
+          status: 'pending',
+          creditsUsed: creditsNeeded, // 直接预扣费
+          retryCount,
+          aiPrompt: buildPrompt({
+            curtainStyleName,
+            curtainStylePrompt,
+            fabricDescription: input.fabricDescription,
+            userNotes: input.userNotes ?? null,
+            cameraAngle: null,
+          }),
+        })
+        .returning({ id: aiRenderings.id });
+
+      return record.id;
+    });
   } catch (dbErr) {
+    if (dbErr instanceof Error && dbErr.message.includes('积分不足')) {
+      return { success: false, error: dbErr.message };
+    }
     console.error('[AI Rendering] 创建记录失败:', dbErr);
     return { success: false, error: '创建渲染任务失败，请重试' };
   }

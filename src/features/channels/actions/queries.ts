@@ -42,7 +42,7 @@ export async function getChannels(params: GetChannelsParams) {
   logger.info('[channels] Fetching channels list', { userId: session.user.id, params });
 
   // P1 Fix: Audit log
-  await AuditService.log(db, {
+  await AuditService.log(db as any, {
     tableName: 'channels',
     recordId: 'LIST',
     action: 'VIEW',
@@ -50,7 +50,6 @@ export async function getChannels(params: GetChannelsParams) {
     tenantId,
     details: { params },
   });
-
   // 性能修复（P0-2）：直接调用模块顶层缓存函数
   // 原实现在函数体内动态创建 unstable_cache，导致每次调用都是新的缓存实例，命中率为零
   return _getChannelsCached(params, tenantId);

@@ -13,8 +13,8 @@ vi.mock('@/shared/lib/auth', () => ({
   auth: vi.fn(),
 }));
 
-vi.mock('@/shared/api/db', () => ({
-  db: {
+vi.mock('@/shared/api/db', () => {
+  const dbMock = {
     query: {
       users: {
         findFirst: vi.fn().mockResolvedValue({
@@ -40,8 +40,13 @@ vi.mock('@/shared/api/db', () => ({
         onConflictDoUpdate: vi.fn().mockResolvedValue([]),
       })),
     })),
-  },
-}));
+    transaction: vi.fn(),
+  };
+
+  dbMock.transaction.mockImplementation(async (cb: any) => cb(dbMock));
+
+  return { db: dbMock };
+});
 
 vi.mock('@/shared/lib/logger', () => ({
   logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn() },

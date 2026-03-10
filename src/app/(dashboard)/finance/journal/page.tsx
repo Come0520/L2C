@@ -33,11 +33,10 @@ const statusMap: Record<
   REVERSED: { label: '已冲销', variant: 'destructive' },
 };
 
-export default async function JournalPage({
-  searchParams,
-}: {
-  searchParams: { status?: string; periodId?: string };
+export default async function JournalPage(props: {
+  searchParams: Promise<{ status?: string; periodId?: string }>;
 }) {
+  const searchParams = await props.searchParams;
   const entries = await getJournalEntries({
     status: searchParams.status,
     periodId: searchParams.periodId,

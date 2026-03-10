@@ -152,37 +152,36 @@ export async function createPackage(input: z.infer<typeof createPackageSchema>) 
     const tenantId = session.user!.tenantId;
 
     const validated = createPackageSchema.parse(input);
-
-    const [created] = await db
-      .insert(productPackages)
-      .values({
+    let created;
+    await db.transaction(async (tx) => {
+      [created] = await tx.insert(productPackages)
+        .values({
+          tenantId,
+          packageNo: validated.packageNo,
+          packageName: validated.packageName,
+          packageType: validated.packageType,
+          packagePrice: String(validated.packagePrice),
+          originalPrice: validated.originalPrice ? String(validated.originalPrice) : undefined,
+          description: validated.description,
+          rules: validated.rules || {},
+          overflowMode: validated.overflowMode,
+          overflowPrice: validated.overflowPrice ? String(validated.overflowPrice) : undefined,
+          overflowDiscountRate: validated.overflowDiscountRate
+            ? String(validated.overflowDiscountRate)
+            : undefined,
+          startDate: validated.startDate ? new Date(validated.startDate) : undefined,
+          endDate: validated.endDate ? new Date(validated.endDate) : undefined,
+        })
+        .returning();
+      await AuditService.log(tx, {
         tenantId,
-        packageNo: validated.packageNo,
-        packageName: validated.packageName,
-        packageType: validated.packageType,
-        packagePrice: String(validated.packagePrice),
-        originalPrice: validated.originalPrice ? String(validated.originalPrice) : undefined,
-        description: validated.description,
-        rules: validated.rules || {},
-        overflowMode: validated.overflowMode,
-        overflowPrice: validated.overflowPrice ? String(validated.overflowPrice) : undefined,
-        overflowDiscountRate: validated.overflowDiscountRate
-          ? String(validated.overflowDiscountRate)
-          : undefined,
-        startDate: validated.startDate ? new Date(validated.startDate) : undefined,
-        endDate: validated.endDate ? new Date(validated.endDate) : undefined,
-      })
-      .returning();
-
-    await AuditService.log(db, {
-      tenantId,
-      userId: session.user.id,
-      tableName: 'product_packages',
-      recordId: created.id,
-      action: 'CREATE',
-      newValues: { packageData: created },
+        userId: session.user.id,
+        tableName: 'product_packages',
+        recordId: created.id,
+        action: 'CREATE',
+        newValues: { packageData: created },
+      });
     });
-
     revalidatePath('/products/packages');
     return { success: true, data: created };
   } catch (error) {
@@ -222,22 +221,21 @@ export async function updatePackage(id: string, input: z.infer<typeof updatePack
       updateData.overflowDiscountRate = String(validated.overflowDiscountRate);
     if (validated.startDate) updateData.startDate = new Date(validated.startDate);
     if (validated.endDate) updateData.endDate = new Date(validated.endDate);
-
-    const [updated] = await db
-      .update(productPackages)
-      .set({ ...updateData, updatedAt: new Date() })
-      .where(and(eq(productPackages.id, id), eq(productPackages.tenantId, tenantId)))
-      .returning();
-
-    await AuditService.log(db, {
-      tenantId,
-      userId: session.user.id,
-      tableName: 'product_packages',
-      recordId: id,
-      action: 'UPDATE',
-      newValues: { updatedFields: updateData },
+    let updated;
+    await db.transaction(async (tx) => {
+      [updated] = await tx.update(productPackages)
+        .set({ ...updateData, updatedAt: new Date() })
+        .where(and(eq(productPackages.id, id), eq(productPackages.tenantId, tenantId)))
+        .returning();
+      await AuditService.log(tx, {
+        tenantId,
+        userId: session.user.id,
+        tableName: 'product_packages',
+        recordId: id,
+        action: 'UPDATE',
+        newValues: { updatedFields: updateData },
+      });
     });
-
     revalidatePath('/products/packages');
     return { success: true, data: updated };
   } catch (error) {
@@ -261,22 +259,21 @@ export async function deletePackage(id: string) {
     const tenantId = session.user!.tenantId;
 
     // 先删除关联的商品
-    await db.delete(packageProducts).where(eq(packageProducts.packageId, id));
-
-    // 再删除套餐
-    await db
-      .delete(productPackages)
-      .where(and(eq(productPackages.id, id), eq(productPackages.tenantId, tenantId)));
-
-    await AuditService.log(db, {
-      tenantId,
-      userId: session.user.id,
-      tableName: 'product_packages',
-      recordId: id,
-      action: 'DELETE',
-      newValues: { action: 'PACKAGE_DELETED' },
+    await db.transaction(async (tx) => {
+      await tx.delete(packageProducts).where(eq(packageProducts.packageId, id));
+      await db
+        .delete(productPackages)
+        .where(and(eq(productPackages.id, id), eq(productPackages.tenantId, tenantId)));
+      await AuditService.log(tx, {
+        tenantId,
+        userId: session.user.id,
+        tableName: 'product_packages',
+        recordId: id,
+        action: 'DELETE',
+        newValues: { action: 'PACKAGE_DELETED' },
+      });
     });
-
+    // 再删除套餐
     revalidatePath('/products/packages');
     return { success: true };
   } catch (error) {
@@ -298,22 +295,21 @@ export async function togglePackageStatus(id: string, isActive: boolean) {
   try {
     const session = await requireSession();
     const tenantId = session.user!.tenantId;
-
-    const [updated] = await db
-      .update(productPackages)
-      .set({ isActive, updatedAt: new Date() })
-      .where(and(eq(productPackages.id, id), eq(productPackages.tenantId, tenantId)))
-      .returning();
-
-    await AuditService.log(db, {
-      tenantId,
-      userId: session.user.id,
-      tableName: 'product_packages',
-      recordId: id,
-      action: 'UPDATE',
-      newValues: { action: 'TOGGLE_STATUS', isActive },
+    let updated;
+    await db.transaction(async (tx) => {
+      [updated] = await tx.update(productPackages)
+        .set({ isActive, updatedAt: new Date() })
+        .where(and(eq(productPackages.id, id), eq(productPackages.tenantId, tenantId)))
+        .returning();
+      await AuditService.log(tx, {
+        tenantId,
+        userId: session.user.id,
+        tableName: 'product_packages',
+        recordId: id,
+        action: 'UPDATE',
+        newValues: { action: 'TOGGLE_STATUS', isActive },
+      });
     });
-
     revalidatePath('/products/packages');
     return { success: true, data: updated };
   } catch (error) {
@@ -382,28 +378,27 @@ export async function addPackageProduct(
     const tenantId = session.user!.tenantId;
 
     const validated = packageProductSchema.parse(input);
-
-    const [created] = await db
-      .insert(packageProducts)
-      .values({
+    let created;
+    await db.transaction(async (tx) => {
+      [created] = await tx.insert(packageProducts)
+        .values({
+          tenantId,
+          packageId,
+          productId: validated.productId,
+          isRequired: validated.isRequired ?? false,
+          minQuantity: validated.minQuantity ? String(validated.minQuantity) : undefined,
+          maxQuantity: validated.maxQuantity ? String(validated.maxQuantity) : undefined,
+        })
+        .returning();
+      await AuditService.log(tx, {
         tenantId,
-        packageId,
-        productId: validated.productId,
-        isRequired: validated.isRequired ?? false,
-        minQuantity: validated.minQuantity ? String(validated.minQuantity) : undefined,
-        maxQuantity: validated.maxQuantity ? String(validated.maxQuantity) : undefined,
-      })
-      .returning();
-
-    await AuditService.log(db, {
-      tenantId,
-      userId: session.user.id,
-      tableName: 'product_packages',
-      recordId: packageId,
-      action: 'CREATE',
-      newValues: { action: 'ADD_PRODUCT', product: created },
+        userId: session.user.id,
+        tableName: 'product_packages',
+        recordId: packageId,
+        action: 'CREATE',
+        newValues: { action: 'ADD_PRODUCT', product: created },
+      });
     });
-
     revalidatePath('/products/packages');
     return { success: true, data: created };
   } catch (error) {
@@ -425,22 +420,20 @@ export async function removePackageProduct(packageId: string, productId: string)
   try {
     const session = await requireSession();
     const tenantId = session.user!.tenantId;
-
-    await db
-      .delete(packageProducts)
-      .where(
-        and(eq(packageProducts.packageId, packageId), eq(packageProducts.productId, productId))
-      );
-
-    await AuditService.log(db, {
-      tenantId,
-      userId: session.user.id,
-      tableName: 'product_packages',
-      recordId: packageId,
-      action: 'DELETE',
-      newValues: { action: 'REMOVE_PRODUCT', productId },
+    await db.transaction(async (tx) => {
+      await tx.delete(packageProducts)
+        .where(
+          and(eq(packageProducts.packageId, packageId), eq(packageProducts.productId, productId))
+        );
+      await AuditService.log(tx, {
+        tenantId,
+        userId: session.user.id,
+        tableName: 'product_packages',
+        recordId: packageId,
+        action: 'DELETE',
+        newValues: { action: 'REMOVE_PRODUCT', productId },
+      });
     });
-
     revalidatePath('/products/packages');
     return { success: true };
   } catch (error) {

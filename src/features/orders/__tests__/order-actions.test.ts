@@ -31,7 +31,7 @@ vi.mock('@/shared/api/db', () => ({
 
 vi.mock('@/shared/lib/auth', () => ({
   auth: vi.fn(),
-  checkPermission: vi.fn().mockResolvedValue(true),
+  requirePermission: vi.fn().mockResolvedValue(true),
 }));
 
 vi.mock('@/services/order.service', () => ({

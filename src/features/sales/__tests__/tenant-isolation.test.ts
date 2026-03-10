@@ -30,9 +30,10 @@ const mockDbFindManyQuotes = vi.fn();
 const mockDbInsertOnConflict = vi.fn().mockResolvedValue([]);
 const mockDbSelectFrom = vi.fn();
 
-vi.mock('@/shared/api/db', () => ({
-  db: {
+vi.mock('@/shared/api/db', () => {
+  const dbMock = {
     query: {
+      users: { findFirst: vi.fn().mockResolvedValue({ id: 'user-a-id', role: 'sales', tenantId: 'tenant-a-id' }) },
       salesTargets: { findFirst: (...args: any[]) => mockDbFindFirstTargets(...args) },
       quotes: { findMany: (...args: any[]) => mockDbFindManyQuotes(...args) },
     },
@@ -49,8 +50,13 @@ vi.mock('@/shared/api/db', () => ({
         onConflictDoUpdate: mockDbInsertOnConflict,
       })),
     })),
-  },
-}));
+    transaction: vi.fn(),
+  };
+
+  dbMock.transaction.mockImplementation(async (cb: any) => cb(dbMock));
+
+  return { db: dbMock };
+});
 
 // ===== 常量 =====
 const TENANT_A = 'tenant-a-id';

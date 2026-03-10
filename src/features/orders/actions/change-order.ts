@@ -1,7 +1,7 @@
 'use server';
 
 import { z } from 'zod';
-import { auth, checkPermission } from '@/shared/lib/auth';
+import { auth, requirePermission } from '@/shared/lib/auth';
 import type { Session } from 'next-auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
 import { ChangeOrderService } from '@/services/change-order.service';
@@ -46,7 +46,7 @@ export async function createChangeRequestAction(input: z.infer<typeof createChan
   const tenantId = getTenantId(session);
 
   // 权限检查：需要订单编辑权限
-  await checkPermission(session, PERMISSIONS.ORDER.OWN_EDIT);
+  await requirePermission(session, PERMISSIONS.ORDER.OWN_EDIT);
 
   try {
     const result = await ChangeOrderService.createRequest(input.orderId, tenantId, {
@@ -98,7 +98,7 @@ export async function approveChangeRequestAction(requestId: string) {
   const tenantId = getTenantId(session);
 
   // 权限检查：需要审批权限
-  await checkPermission(session, PERMISSIONS.FINANCE.APPROVE);
+  await requirePermission(session, PERMISSIONS.FINANCE.APPROVE);
 
   try {
     await ChangeOrderService.approveRequest(requestId, tenantId, session.user.id);
@@ -125,7 +125,7 @@ export async function rejectChangeRequestAction(requestId: string, reason?: stri
   const tenantId = getTenantId(session);
 
   // 权限检查：需要审批权限
-  await checkPermission(session, PERMISSIONS.FINANCE.APPROVE);
+  await requirePermission(session, PERMISSIONS.FINANCE.APPROVE);
 
   try {
     await ChangeOrderService.rejectRequest(requestId, tenantId, session.user.id, reason);

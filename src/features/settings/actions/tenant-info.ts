@@ -271,23 +271,22 @@ export async function uploadTenantLogo(
     const logoUrl = uploadResult.url as string;
 
     // 更新数据库
-    await db
-      .update(tenants)
-      .set({
-        logoUrl,
-        updatedAt: new Date(),
-      })
-      .where(eq(tenants.id, session.user.tenantId));
-
-    // 记录审计日志
-    await AuditService.log(db, {
-      tableName: 'tenants',
-      recordId: tenantId,
-      action: 'UPDATE_INFO',
-      userId: session.user.id,
-      newValues: { logoUrl },
+    await db.transaction(async (tx) => {
+      await tx.update(tenants)
+        .set({
+          logoUrl,
+          updatedAt: new Date(),
+        })
+        .where(eq(tenants.id, session.user.tenantId));
+      await AuditService.log(tx, {
+        tableName: 'tenants',
+        recordId: tenantId,
+        action: 'UPDATE_INFO',
+        userId: session.user.id,
+        newValues: { logoUrl },
+      });
     });
-
+    // 记录审计日志
     revalidatePath('/settings/general');
     return { success: true, logoUrl };
   } catch (error) {
@@ -343,23 +342,22 @@ export async function uploadLandingCover(
     const landingCoverUrl = uploadResult.url as string;
 
     // 更新数据库
-    await db
-      .update(tenants)
-      .set({
-        landingCoverUrl,
-        updatedAt: new Date(),
-      })
-      .where(eq(tenants.id, session.user.tenantId));
-
-    // 记录审计日志
-    await AuditService.log(db, {
-      tableName: 'tenants',
-      recordId: tenantId,
-      action: 'UPDATE_INFO',
-      userId: session.user.id,
-      newValues: { landingCoverUrl },
+    await db.transaction(async (tx) => {
+      await tx.update(tenants)
+        .set({
+          landingCoverUrl,
+          updatedAt: new Date(),
+        })
+        .where(eq(tenants.id, session.user.tenantId));
+      await AuditService.log(tx, {
+        tableName: 'tenants',
+        recordId: tenantId,
+        action: 'UPDATE_INFO',
+        userId: session.user.id,
+        newValues: { landingCoverUrl },
+      });
     });
-
+    // 记录审计日志
     revalidatePath('/settings/general');
     return { success: true, coverUrl: landingCoverUrl };
   } catch (error) {
@@ -506,12 +504,12 @@ export async function submitVerification(data: {
         .where(eq(tenants.id, tenantId));
 
       // 记录审计日志
-      await AuditService.log(db, {
+      await AuditService.log(tx, {
         tableName: 'tenants',
         recordId: tenantId,
         action: 'SUBMIT_VERIFICATION',
         userId: session.user.id,
-        newValues: data,
+        newValues: validated.data,
       });
     });
 

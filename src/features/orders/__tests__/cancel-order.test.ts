@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { requestCancelOrder } from '../actions/cancel';
 import { db } from '@/shared/api/db';
-import { auth, checkPermission } from '@/shared/lib/auth';
+import { auth, requirePermission } from '@/shared/lib/auth';
 import { submitApproval } from '@/features/approval/actions/submission';
 import { AuditService } from '@/shared/services/audit-service';
 
@@ -68,7 +68,7 @@ vi.mock('@/services/customer-status.service', () => ({
 
 vi.mock('@/shared/lib/auth', () => ({
   auth: vi.fn(),
-  checkPermission: vi.fn(),
+  requirePermission: vi.fn(),
 }));
 
 vi.mock('@/features/approval/actions/submission', () => ({
@@ -83,7 +83,9 @@ vi.mock('@/shared/services/audit-service', () => ({
 
 vi.mock('next/cache', () => ({
   revalidateTag: vi.fn(),
+  revalidatePath: vi.fn(),
   updateTag: vi.fn(),
+  unstable_cache: vi.fn((fn) => fn),
 }));
 
 describe('Order Cancellation', () => {
@@ -105,7 +107,7 @@ describe('Order Cancellation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     (auth as any).mockResolvedValue(mockSession);
-    (checkPermission as any).mockResolvedValue(true);
+    (requirePermission as any).mockResolvedValue(true);
   });
 
   it('should successfully submit cancellation request for valid order', async () => {

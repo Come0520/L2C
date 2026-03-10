@@ -136,36 +136,35 @@ export async function updateWeeklyTarget(
         )
       )
       .limit(1);
-
-    if (existing.length > 0) {
-      await db
-        .update(salesWeeklyTargets)
-        .set({
+    await db.transaction(async (tx) => {
+      if (existing.length > 0) {
+        await tx
+          .update(salesWeeklyTargets)
+          .set({
+            targetAmount: String(amount),
+            updatedAt: new Date(),
+            updatedBy: session.user.id,
+          })
+          .where(eq(salesWeeklyTargets.id, existing[0].id));
+      } else {
+        await tx.insert(salesWeeklyTargets).values({
+          tenantId,
+          userId,
+          year,
+          week,
           targetAmount: String(amount),
-          updatedAt: new Date(),
           updatedBy: session.user.id,
-        })
-        .where(eq(salesWeeklyTargets.id, existing[0].id));
-    } else {
-      await db.insert(salesWeeklyTargets).values({
+        });
+      }
+      await AuditService.log(tx, {
+        tableName: 'sales_weekly_targets',
+        recordId: userId,
+        action: 'UPDATE_WEEKLY_TARGET',
+        details: { year, week, amount },
+        userId: session.user.id,
         tenantId,
-        userId,
-        year,
-        week,
-        targetAmount: String(amount),
-        updatedBy: session.user.id,
       });
-    }
-
-    await AuditService.log(db, {
-      tableName: 'sales_weekly_targets',
-      recordId: userId,
-      action: 'UPDATE_WEEKLY_TARGET',
-      details: { year, week, amount },
-      userId: session.user.id,
-      tenantId,
     });
-
     return { success: true };
   } catch (error) {
     logger.error('[sales][weekly-targets] 更新周目标异常', { error });

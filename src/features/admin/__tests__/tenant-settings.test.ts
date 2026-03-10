@@ -41,8 +41,8 @@ vi.mock('@/shared/services/audit-service', () => ({
 const mockDbFindFirstTenants = vi.fn().mockResolvedValue(null);
 const mockDbUpdateReturning = vi.fn().mockResolvedValue([{ id: 'tenant-id' }]);
 
-vi.mock('@/shared/api/db', () => ({
-  db: {
+vi.mock('@/shared/api/db', () => {
+  const dbMock = {
     query: {
       tenants: {
         findFirst: (...args: any[]) => mockDbFindFirstTenants(...args),
@@ -55,8 +55,14 @@ vi.mock('@/shared/api/db', () => ({
         })),
       })),
     })),
-  },
-}));
+  };
+  return {
+    db: {
+      ...dbMock,
+      transaction: vi.fn(async (callback) => callback(dbMock)),
+    },
+  };
+});
 
 vi.mock('@/shared/lib/logger', () => ({
   logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn() },

@@ -2,7 +2,7 @@
 
 import { db } from '@/shared/api/db';
 import { afterSalesTickets, customers, orders } from '@/shared/api/schema';
-import { eq, desc, and, count, ilike, or } from 'drizzle-orm';
+import { eq, desc, and, count, ilike, or, sql } from 'drizzle-orm';
 import { auth, checkPermission } from '@/shared/lib/auth';
 import { revalidatePath } from 'next/cache';
 import { logger } from '@/shared/lib/logger';
@@ -158,16 +158,26 @@ export async function updateTicketStatus(
     }
 
     await db.transaction(async (tx) => {
-      await tx
+      const [updatedTicket] = await tx
         .update(afterSalesTickets)
         .set({
           status, // Schema enum
           resolution: result || undefined,
           updatedAt: new Date(),
+          version: sql`${afterSalesTickets.version} + 1`,
         })
         .where(
-          and(eq(afterSalesTickets.id, id), eq(afterSalesTickets.tenantId, session.user.tenantId))
-        );
+          and(
+            eq(afterSalesTickets.id, id),
+            eq(afterSalesTickets.tenantId, session.user.tenantId),
+            eq(afterSalesTickets.version, existingTicket.version)
+          )
+        )
+        .returning({ id: afterSalesTickets.id });
+
+      if (!updatedTicket) {
+        throw new Error('工单已被其他用户更新，请刷新重试 (并发保护)');
+      }
 
       // [SV-R-03] Write Audit log
       await AuditService.recordFromSession(

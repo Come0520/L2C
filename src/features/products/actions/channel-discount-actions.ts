@@ -5,6 +5,13 @@
  *
  * 提供渠道等级折扣的配置管理功能：
  * - 全局默认折扣配置（存储在 tenants.settings）
+'use server';
+
+/**
+ * 渠道等级折扣 Server Actions
+ *
+ * 提供渠道等级折扣的配置管理功能：
+ * - 全局默认折扣配置（存储在 tenants.settings）
  * - 品类/商品覆盖规则（存储在 channel_discount_overrides 表）
  */
 
@@ -12,7 +19,8 @@ import { db } from '@/shared/api/db';
 import { channelDiscountOverrides } from '@/shared/api/schema/supply-chain';
 import { tenants } from '@/shared/api/schema/infrastructure';
 import { eq, and, desc } from 'drizzle-orm';
-import { auth } from '@/shared/lib/auth';
+import { auth, checkPermission } from '@/shared/lib/auth';
+import { PERMISSIONS } from '@/shared/config/permissions';
 import { revalidatePath, unstable_cache, updateTag } from 'next/cache';
 import { z } from 'zod';
 import { AuditService } from '@/shared/services/audit-service';
@@ -100,7 +108,7 @@ const getCachedGlobalDiscountConfig = (tenantId: string) =>
       };
     },
     [`global-discount-${tenantId}`],
-    { tags: ['global-discount', `global-discount-${tenantId}`] }
+    { tags: ['global-discount', `global-discount-${tenantId}`], revalidate: 3600 }
   );
 
 /**
@@ -130,7 +138,10 @@ export async function getGlobalDiscountConfig() {
  */
 export async function updateGlobalDiscountConfig(input: z.infer<typeof globalDiscountSchema>) {
   try {
-    const tenantId = await getTenantIdFromSession();
+    const session = await auth();
+    await checkPermission(session, PERMISSIONS.PRODUCTS.MANAGE);
+    const tenantId = session!.user!.tenantId;
+    const userId = session!.user!.id;
     const validated = globalDiscountSchema.parse(input);
 
     // 获取当前 settings
@@ -145,28 +156,27 @@ export async function updateGlobalDiscountConfig(input: z.infer<typeof globalDis
     const currentSettings = (tenant.settings as Record<string, unknown>) || {};
 
     // 更新 channelDiscounts 配置
-    await db
-      .update(tenants)
-      .set({
-        settings: {
-          ...currentSettings,
-          channelDiscounts: validated,
-        },
-        updatedAt: new Date(),
-      })
-      .where(eq(tenants.id, tenantId));
-
-    await AuditService.log(db, {
-      tenantId,
-      userId: 'system', // 配置类更新暂用 system 标识
-      tableName: 'tenants',
-      recordId: tenantId,
-      action: 'UPDATE',
-      oldValues: { channelDiscounts: currentSettings.channelDiscounts },
-      newValues: { channelDiscounts: validated },
-      details: { action: 'UPDATE_GLOBAL_DISCOUNT' },
+    await db.transaction(async (tx) => {
+      await tx.update(tenants)
+        .set({
+          settings: {
+            ...currentSettings,
+            channelDiscounts: validated,
+          },
+          updatedAt: new Date(),
+        })
+        .where(eq(tenants.id, tenantId));
+      await AuditService.log(tx, {
+        tenantId,
+        userId,
+        tableName: 'tenants',
+        recordId: tenantId,
+        action: 'UPDATE',
+        oldValues: { channelDiscounts: currentSettings.channelDiscounts },
+        newValues: { channelDiscounts: validated },
+        details: { action: 'UPDATE_GLOBAL_DISCOUNT' },
+      });
     });
-
     // 失效全局折扣缓存
     updateTag(`global-discount-${tenantId}`);
     revalidatePath('/settings/products');
@@ -213,7 +223,10 @@ export async function getDiscountOverrides() {
  */
 export async function createDiscountOverride(input: z.infer<typeof overrideSchema>) {
   try {
-    const tenantId = await getTenantIdFromSession();
+    const session = await auth();
+    await checkPermission(session, PERMISSIONS.PRODUCTS.MANAGE);
+    const tenantId = session!.user!.tenantId;
+    const userId = session!.user!.id;
     const validated = overrideSchema.parse(input);
 
     // 检查是否已存在相同的覆盖规则
@@ -228,32 +241,32 @@ export async function createDiscountOverride(input: z.infer<typeof overrideSchem
     if (existing) {
       throw new Error('该覆盖规则已存在');
     }
-
-    const [override] = await db
-      .insert(channelDiscountOverrides)
-      .values({
+    let createdOverride;
+    await db.transaction(async (tx) => {
+      const [override] = await tx.insert(channelDiscountOverrides)
+        .values({
+          tenantId,
+          scope: validated.scope,
+          targetId: validated.targetId,
+          targetName: validated.targetName,
+          sLevelDiscount: validated.sLevelDiscount?.toString(),
+          aLevelDiscount: validated.aLevelDiscount?.toString(),
+          bLevelDiscount: validated.bLevelDiscount?.toString(),
+          cLevelDiscount: validated.cLevelDiscount?.toString(),
+        })
+        .returning();
+      createdOverride = override;
+      await AuditService.log(tx, {
         tenantId,
-        scope: validated.scope,
-        targetId: validated.targetId,
-        targetName: validated.targetName,
-        sLevelDiscount: validated.sLevelDiscount?.toString(),
-        aLevelDiscount: validated.aLevelDiscount?.toString(),
-        bLevelDiscount: validated.bLevelDiscount?.toString(),
-        cLevelDiscount: validated.cLevelDiscount?.toString(),
-      })
-      .returning();
-
-    await AuditService.log(db, {
-      tenantId,
-      userId: 'system',
-      tableName: 'channel_discount_overrides',
-      recordId: override.id,
-      action: 'CREATE',
-      newValues: override,
+        userId,
+        tableName: 'channel_discount_overrides',
+        recordId: override.id,
+        action: 'CREATE',
+        newValues: override,
+      });
     });
-
     revalidatePath('/settings/products');
-    return { data: override };
+    return { data: createdOverride };
   } catch (error) {
     return { error: error instanceof Error ? error.message : '创建覆盖规则失败' };
   }
@@ -274,7 +287,10 @@ export async function updateDiscountOverride(
   input: Partial<z.infer<typeof overrideSchema>>
 ) {
   try {
-    const tenantId = await getTenantIdFromSession();
+    const session = await auth();
+    await checkPermission(session, PERMISSIONS.PRODUCTS.MANAGE);
+    const tenantId = session!.user!.tenantId;
+    const userId = session!.user!.id;
 
     // 验证规则存在且属于当前租户
     const existing = await db.query.channelDiscountOverrides.findFirst({
@@ -287,40 +303,40 @@ export async function updateDiscountOverride(
     if (!existing) {
       throw new Error('覆盖规则不存在');
     }
-
-    const [updated] = await db
-      .update(channelDiscountOverrides)
-      .set({
-        ...(input.targetName !== undefined && { targetName: input.targetName }),
-        ...(input.sLevelDiscount !== undefined && {
-          sLevelDiscount: input.sLevelDiscount.toString(),
-        }),
-        ...(input.aLevelDiscount !== undefined && {
-          aLevelDiscount: input.aLevelDiscount.toString(),
-        }),
-        ...(input.bLevelDiscount !== undefined && {
-          bLevelDiscount: input.bLevelDiscount.toString(),
-        }),
-        ...(input.cLevelDiscount !== undefined && {
-          cLevelDiscount: input.cLevelDiscount.toString(),
-        }),
-        updatedAt: new Date(),
-      })
-      .where(eq(channelDiscountOverrides.id, id))
-      .returning();
-
-    await AuditService.log(db, {
-      tenantId,
-      userId: 'system',
-      tableName: 'channel_discount_overrides',
-      recordId: updated.id,
-      action: 'UPDATE',
-      newValues: input,
-      oldValues: { id },
+    let updatedOverride;
+    await db.transaction(async (tx) => {
+      const [updated] = await tx.update(channelDiscountOverrides)
+        .set({
+          ...(input.targetName !== undefined && { targetName: input.targetName }),
+          ...(input.sLevelDiscount !== undefined && {
+            sLevelDiscount: input.sLevelDiscount.toString(),
+          }),
+          ...(input.aLevelDiscount !== undefined && {
+            aLevelDiscount: input.aLevelDiscount.toString(),
+          }),
+          ...(input.bLevelDiscount !== undefined && {
+            bLevelDiscount: input.bLevelDiscount.toString(),
+          }),
+          ...(input.cLevelDiscount !== undefined && {
+            cLevelDiscount: input.cLevelDiscount.toString(),
+          }),
+          updatedAt: new Date(),
+        })
+        .where(and(eq(channelDiscountOverrides.id, id), eq(channelDiscountOverrides.tenantId, tenantId)))
+        .returning();
+      updatedOverride = updated;
+      await AuditService.log(tx, {
+        tenantId,
+        userId,
+        tableName: 'channel_discount_overrides',
+        recordId: updated.id,
+        action: 'UPDATE',
+        newValues: input,
+        oldValues: { id },
+      });
     });
-
     revalidatePath('/settings/products');
-    return { data: updated };
+    return { data: updatedOverride };
   } catch (error) {
     return { error: error instanceof Error ? error.message : '更新覆盖规则失败' };
   }
@@ -336,7 +352,10 @@ export async function updateDiscountOverride(
  */
 export async function deleteDiscountOverride(id: string) {
   try {
-    const tenantId = await getTenantIdFromSession();
+    const session = await auth();
+    await checkPermission(session, PERMISSIONS.PRODUCTS.MANAGE);
+    const tenantId = session!.user!.tenantId;
+    const userId = session!.user!.id;
 
     // 验证规则存在且属于当前租户
     const existing = await db.query.channelDiscountOverrides.findFirst({
@@ -349,18 +368,17 @@ export async function deleteDiscountOverride(id: string) {
     if (!existing) {
       throw new Error('覆盖规则不存在');
     }
-
-    await db.delete(channelDiscountOverrides).where(eq(channelDiscountOverrides.id, id));
-
-    await AuditService.log(db, {
-      tenantId,
-      userId: 'system',
-      tableName: 'channel_discount_overrides',
-      recordId: id,
-      action: 'DELETE',
-      oldValues: { id },
+    await db.transaction(async (tx) => {
+      await tx.delete(channelDiscountOverrides).where(and(eq(channelDiscountOverrides.id, id), eq(channelDiscountOverrides.tenantId, tenantId)));
+      await AuditService.log(tx, {
+        tenantId,
+        userId,
+        tableName: 'channel_discount_overrides',
+        recordId: id,
+        action: 'DELETE',
+        oldValues: { id },
+      });
     });
-
     revalidatePath('/settings/products');
     return { success: true };
   } catch (error) {

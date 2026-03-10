@@ -50,13 +50,18 @@ vi.mock('@/shared/api/db', () => ({
 // Mock auth library
 vi.mock('@/shared/lib/auth', () => ({
   auth: vi.fn(),
-  checkPermission: vi.fn().mockResolvedValue(true),
+  requirePermission: vi.fn().mockResolvedValue(true),
 }));
 
 vi.mock('@/features/approval/actions/submission', () => ({
   submitApproval: vi.fn().mockResolvedValue({ success: true, approvalId: 'app-1' }),
 }));
-vi.mock('next/cache');
+vi.mock('next/cache', () => ({
+  revalidateTag: vi.fn(),
+  revalidatePath: vi.fn(),
+  updateTag: vi.fn(),
+  unstable_cache: vi.fn((fn) => fn),
+}));
 
 describe('Change Order Actions', () => {
   const VALID_ORDER_ID = '123e4567-e89b-12d3-a456-426614174000';

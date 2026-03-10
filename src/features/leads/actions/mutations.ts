@@ -80,16 +80,16 @@ export async function createLead(input: z.infer<typeof createLeadSchema>) {
       tenantId,
       leadNo: result.lead.leadNo,
     });
-
-    await AuditService.log(db, {
-      tenantId: tenantId,
-      userId: userId,
-      tableName: 'leads',
-      recordId: result.lead.id,
-      action: 'CREATE',
-      newValues: { data },
-    });
-
+    await db.transaction(async (tx) => {
+        await AuditService.log(tx, {
+          tenantId: tenantId,
+          userId: userId,
+          tableName: 'leads',
+          recordId: result.lead.id,
+          action: 'CREATE',
+          newValues: { data },
+        });
+      });
     updateTag(`leads-${tenantId}`);
     revalidatePath('/leads');
     return { success: true, data: result.lead };
@@ -156,16 +156,16 @@ export async function updateLead(input: z.infer<typeof updateLeadSchema>) {
     );
 
     logger.info('[leads] 更新线索成功:', { leadId: id, tenantId: session.user.tenantId });
-
-    await AuditService.log(db, {
-      tenantId: session.user.tenantId,
-      userId: session.user.id,
-      tableName: 'leads',
-      recordId: id,
-      action: 'UPDATE',
-      newValues: { updatedFields: data },
-    });
-
+    await db.transaction(async (tx) => {
+        await AuditService.log(tx, {
+          tenantId: session.user.tenantId,
+          userId: session.user.id,
+          tableName: 'leads',
+          recordId: id,
+          action: 'UPDATE',
+          newValues: { updatedFields: data },
+        });
+      });
     revalidatePath('/leads');
     revalidatePath(`/leads/${id}`);
     updateTag(`leads-${session.user.tenantId}`);
@@ -224,16 +224,16 @@ export async function assignLead(input: z.infer<typeof assignLeadSchema>) {
       newSalesId: salesId,
       tenantId: session.user.tenantId,
     });
-
-    await AuditService.log(db, {
-      tenantId: session.user.tenantId,
-      userId: session.user.id,
-      tableName: 'leads',
-      recordId: id,
-      action: 'UPDATE',
-      newValues: { action: 'ASSIGN', salesId },
-    });
-
+    await db.transaction(async (tx) => {
+        await AuditService.log(tx, {
+          tenantId: session.user.tenantId,
+          userId: session.user.id,
+          tableName: 'leads',
+          recordId: id,
+          action: 'UPDATE',
+          newValues: { action: 'ASSIGN', salesId },
+        });
+      });
     revalidatePath('/leads');
     updateTag(`leads-${session.user.tenantId}`);
     updateTag(`lead-${session.user.tenantId}-${id}`);
@@ -278,16 +278,16 @@ export async function addFollowup(input: z.infer<typeof addLeadFollowupSchema>) 
     await LeadService.addActivity(leadId, data, tenantId, userId, version);
 
     logger.info('[leads] 添加跟进记录成功:', { leadId, tenantId });
-
-    await AuditService.log(db, {
-      tenantId: tenantId,
-      userId: userId,
-      tableName: 'leads',
-      recordId: leadId,
-      action: 'CREATE',
-      newValues: { activityData: data },
-    });
-
+    await db.transaction(async (tx) => {
+        await AuditService.log(tx, {
+          tenantId: tenantId,
+          userId: userId,
+          tableName: 'leads',
+          recordId: leadId,
+          action: 'CREATE',
+          newValues: { activityData: data },
+        });
+      });
     revalidatePath(`/leads/${leadId}`);
     revalidatePath('/leads');
     updateTag(`leads-${tenantId}`);
@@ -328,16 +328,16 @@ export async function voidLead(input: z.infer<typeof voidLeadSchema>) {
     await LeadService.voidLead(id, reason, session.user.tenantId, session.user.id, version);
 
     logger.info('[leads] 作废线索成功:', { leadId: id, tenantId: session.user.tenantId });
-
-    await AuditService.log(db, {
-      tenantId: session.user.tenantId,
-      userId: session.user.id,
-      tableName: 'leads',
-      recordId: id,
-      action: 'UPDATE',
-      newValues: { action: 'VOID', reason },
-    });
-
+    await db.transaction(async (tx) => {
+        await AuditService.log(tx, {
+          tenantId: session.user.tenantId,
+          userId: session.user.id,
+          tableName: 'leads',
+          recordId: id,
+          action: 'UPDATE',
+          newValues: { action: 'VOID', reason },
+        });
+      });
     revalidatePath('/leads');
     updateTag(`leads-${session.user.tenantId}`);
     updateTag(`lead-${session.user.tenantId}-${id}`);
@@ -392,16 +392,16 @@ export async function releaseToPool(input: z.infer<typeof releaseToPoolSchema>) 
     );
 
     logger.info('[leads] 释放线索至公海成功:', { leadId, tenantId: session.user.tenantId });
-
-    await AuditService.log(db, {
-      tenantId: session.user.tenantId,
-      userId: session.user.id,
-      tableName: 'leads',
-      recordId: leadId,
-      action: 'UPDATE',
-      newValues: { action: 'RELEASE_TO_POOL' },
-    });
-
+    await db.transaction(async (tx) => {
+        await AuditService.log(tx, {
+          tenantId: session.user.tenantId,
+          userId: session.user.id,
+          tableName: 'leads',
+          recordId: leadId,
+          action: 'UPDATE',
+          newValues: { action: 'RELEASE_TO_POOL' },
+        });
+      });
     revalidatePath('/leads');
     updateTag(`leads-${session.user.tenantId}`);
     updateTag(`lead-${session.user.tenantId}-${leadId}`);
@@ -452,16 +452,16 @@ export async function claimFromPool(input: z.infer<typeof claimFromPoolSchema>) 
       tenantId: session.user.tenantId,
       userId: session.user.id,
     });
-
-    await AuditService.log(db, {
-      tenantId: session.user.tenantId,
-      userId: session.user.id,
-      tableName: 'leads',
-      recordId: leadId,
-      action: 'UPDATE',
-      newValues: { action: 'CLAIM_FROM_POOL' },
-    });
-
+    await db.transaction(async (tx) => {
+        await AuditService.log(tx, {
+          tenantId: session.user.tenantId,
+          userId: session.user.id,
+          tableName: 'leads',
+          recordId: leadId,
+          action: 'UPDATE',
+          newValues: { action: 'CLAIM_FROM_POOL' },
+        });
+      });
     revalidatePath('/leads');
     updateTag(`leads-${session.user.tenantId}`);
     updateTag(`lead-${session.user.tenantId}-${leadId}`);
@@ -514,16 +514,16 @@ export async function convertLead(input: z.infer<typeof convertLeadSchema>) {
     );
 
     logger.info('[leads] 转化线索为客户成功:', { leadId, newCustomerId, tenantId });
-
-    await AuditService.log(db, {
-      tenantId: tenantId,
-      userId: userId,
-      tableName: 'leads',
-      recordId: leadId,
-      action: 'UPDATE',
-      newValues: { action: 'CONVERT_TO_CUSTOMER', newCustomerId },
-    });
-
+    await db.transaction(async (tx) => {
+        await AuditService.log(tx, {
+          tenantId: tenantId,
+          userId: userId,
+          tableName: 'leads',
+          recordId: leadId,
+          action: 'UPDATE',
+          newValues: { action: 'CONVERT_TO_CUSTOMER', newCustomerId },
+        });
+      });
     revalidatePath('/leads');
     // Also revalidate customers list as a new customer might be created
     revalidatePath('/customers');
@@ -637,16 +637,16 @@ export async function importLeads(data: unknown[]) {
     tenantId,
     userId,
   });
-
-  await AuditService.log(db, {
-    tenantId: tenantId,
-    userId: userId,
-    tableName: 'leads',
-    recordId: importBatchId,
-    action: 'CREATE',
-    newValues: { successCount, errorCount: errors.length, importBatchId },
-  });
-
+    await db.transaction(async (tx) => {
+        await AuditService.log(tx, {
+        tenantId: tenantId,
+        userId: userId,
+        tableName: 'leads',
+        recordId: importBatchId,
+        action: 'CREATE',
+        newValues: { successCount, errorCount: errors.length, importBatchId },
+      });
+      });
   revalidatePath('/leads');
   updateTag(`leads-${tenantId}`);
   return { successCount, errors };

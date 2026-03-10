@@ -585,6 +585,7 @@ export const financeAuditActionEnum = pgEnum('finance_audit_action', [
 
 /** 订阅状态 */
 export const subscriptionStatusEnum = pgEnum('subscription_status', [
+  'PENDING', // 待支付/初始占位
   'ACTIVE', // 正常生效
   'PAST_DUE', // 已过期但在宽限期内
   'CANCELLED', // 用户主动取消

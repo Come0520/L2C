@@ -208,23 +208,25 @@ export async function updateWorkerSkills(workerId: string, skillTypes: string[])
   }
 
   try {
-    // 1. 删除现有技能
-    await db
-      .delete(workerSkills)
-      .where(
-        and(eq(workerSkills.tenantId, session.user.tenantId), eq(workerSkills.workerId, workerId))
-      );
+    await db.transaction(async (tx) => {
+      // 1. 删除现有技能
+      await tx
+        .delete(workerSkills)
+        .where(
+          and(eq(workerSkills.tenantId, session.user.tenantId), eq(workerSkills.workerId, workerId))
+        );
 
-    // 2. 插入新技能
-    if (skillTypes.length > 0) {
-      await db.insert(workerSkills).values(
-        skillTypes.map((skill) => ({
-          tenantId: session.user.tenantId,
-          workerId,
-          skillType: skill as (typeof workerSkills.$inferInsert)['skillType'],
-        }))
-      );
-    }
+      // 2. 插入新技能
+      if (skillTypes.length > 0) {
+        await tx.insert(workerSkills).values(
+          skillTypes.map((skill) => ({
+            tenantId: session.user.tenantId,
+            workerId,
+            skillType: skill as (typeof workerSkills.$inferInsert)['skillType'],
+          }))
+        );
+      }
+    });
 
     return { success: true };
   } catch (error) {

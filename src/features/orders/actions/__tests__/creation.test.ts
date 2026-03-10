@@ -48,7 +48,7 @@ vi.mock('@/features/channels/logic/commission.service', () => ({
 
 vi.mock('@/shared/lib/auth', () => ({
   auth: vi.fn(),
-  checkPermission: vi.fn(),
+  requirePermission: vi.fn(),
 }));
 
 vi.mock('@/shared/api/schema', () => ({

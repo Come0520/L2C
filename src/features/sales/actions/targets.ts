@@ -242,49 +242,51 @@ export async function updateSalesTarget(
       ),
     });
 
-    await db
-      .insert(salesTargets)
-      .values({
-        tenantId: session.user.tenantId,
-        userId,
-        year,
-        month,
-        targetAmount: String(amount),
-        updatedBy: session.user.id,
-      })
-      .onConflictDoUpdate({
-        target: [salesTargets.tenantId, salesTargets.userId, salesTargets.year, salesTargets.month],
-        set: {
+    await db.transaction(async (tx) => {
+      await tx
+        .insert(salesTargets)
+        .values({
+          tenantId: session.user.tenantId,
+          userId,
+          year,
+          month,
           targetAmount: String(amount),
-          updatedAt: new Date(),
           updatedBy: session.user.id,
-        },
-      });
+        })
+        .onConflictDoUpdate({
+          target: [salesTargets.tenantId, salesTargets.userId, salesTargets.year, salesTargets.month],
+          set: {
+            targetAmount: String(amount),
+            updatedAt: new Date(),
+            updatedBy: session.user.id,
+          },
+        });
 
-    if (oldTarget) {
-      logger.info(
-        `[sales][targets] Successfully updated target: ${oldTarget.id}, from ${oldTarget.targetAmount} to ${amount}`
-      );
-      await AuditService.log(db, {
-        action: 'UPDATE',
-        tableName: 'sales_targets',
-        recordId: oldTarget.id,
-        userId: session.user.id,
-        tenantId: session.user.tenantId,
-        oldValues: { targetAmount: oldTarget.targetAmount },
-        newValues: { targetAmount: String(amount), userId, year, month },
-      });
-    } else {
-      logger.info(`[sales][targets] Successfully created target for ${userId}, amount: ${amount}`);
-      await AuditService.log(db, {
-        action: 'CREATE',
-        tableName: 'sales_targets',
-        recordId: `${userId}-${year}-${month}`,
-        userId: session.user.id,
-        tenantId: session.user.tenantId,
-        newValues: { targetAmount: String(amount), userId, year, month },
-      });
-    }
+      if (oldTarget) {
+        logger.info(
+          `[sales][targets] Successfully updated target: ${oldTarget.id}, from ${oldTarget.targetAmount} to ${amount}`
+        );
+        await AuditService.log(tx, {
+          action: 'UPDATE',
+          tableName: 'sales_targets',
+          recordId: oldTarget.id,
+          userId: session.user.id,
+          tenantId: session.user.tenantId,
+          oldValues: { targetAmount: oldTarget.targetAmount },
+          newValues: { targetAmount: String(amount), userId, year, month },
+        });
+      } else {
+        logger.info(`[sales][targets] Successfully created target for ${userId}, amount: ${amount}`);
+        await AuditService.log(tx, {
+          action: 'CREATE',
+          tableName: 'sales_targets',
+          recordId: `${userId}-${year}-${month}`,
+          userId: session.user.id,
+          tenantId: session.user.tenantId,
+          newValues: { targetAmount: String(amount), userId, year, month },
+        });
+      }
+    });
 
     // 批量失效相关缓存
     const { revalidateTag } = await import('next/cache');
@@ -397,27 +399,29 @@ export async function adjustSalesTarget(
       return { success: false, error: 'Target amount cannot be negative' };
     }
 
-    await db
-      .update(salesTargets)
-      .set({
-        targetAmount: String(newAmount),
-        updatedAt: new Date(),
-        updatedBy: session.user.id,
-      })
-      .where(eq(salesTargets.id, oldTarget.id));
+    await db.transaction(async (tx) => {
+      await tx
+        .update(salesTargets)
+        .set({
+          targetAmount: String(newAmount),
+          updatedAt: new Date(),
+          updatedBy: session.user.id,
+        })
+        .where(eq(salesTargets.id, oldTarget.id));
 
-    logger.info(
-      `[sales][targets] Successfully adjusted target ${oldTarget.id} by ${adjustAmount}, new total: ${newAmount}`
-    );
-    await AuditService.log(db, {
-      action: 'ADJUST_TARGET_VALUE',
-      tableName: 'sales_targets',
-      recordId: oldTarget.id,
-      userId: session.user.id,
-      tenantId: session.user.tenantId,
-      oldValues: { targetAmount: oldTarget.targetAmount },
-      newValues: { targetAmount: String(newAmount) },
-      details: { adjustAmount, reason },
+      logger.info(
+        `[sales][targets] Successfully adjusted target ${oldTarget.id} by ${adjustAmount}, new total: ${newAmount}`
+      );
+      await AuditService.log(tx, {
+        action: 'ADJUST_TARGET_VALUE',
+        tableName: 'sales_targets',
+        recordId: oldTarget.id,
+        userId: session.user.id,
+        tenantId: session.user.tenantId,
+        oldValues: { targetAmount: oldTarget.targetAmount },
+        newValues: { targetAmount: String(newAmount) },
+        details: { adjustAmount, reason },
+      });
     });
 
     const { revalidateTag } = await import('next/cache');

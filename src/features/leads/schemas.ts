@@ -186,9 +186,23 @@ export const getLeadTimelineLogsSchema = z
   })
   .describe('拉取单个线索详细时间线操作日志的请求结构');
 
-export const analyticsDateRangeSchema = z.object({
-  from: z.date().optional(),
-  to: z.date().optional(),
-});
+export const analyticsDateRangeSchema = z
+  .object({
+    from: z.date().optional(),
+    to: z.date().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.from && data.to) {
+      const diffMs = data.to.getTime() - data.from.getTime();
+      const diffDays = diffMs / (1000 * 60 * 60 * 24);
+      if (diffDays > 365) {
+        ctx.addIssue({
+          code: 'custom',
+          message: '数据查询跨度不能超过 365 天',
+          path: ['from'],
+        });
+      }
+    }
+  });
 
 export type LeadFormValues = z.infer<typeof leadSchema>;

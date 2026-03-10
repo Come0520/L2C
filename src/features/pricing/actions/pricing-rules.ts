@@ -106,36 +106,32 @@ export const createPricingRuleAction = createSafeAction(
     /** 校验当前操作人是否具有系统设置的写权限 */
     await checkPermission(session, 'settings:write');
     try {
-      /**
-       * 向持久层发起新增操作
-       * @description entityType/category/unitType 因 Drizzle 强类型限制使用 as never 强转
-       * baseFee 若无设定则默认为 '0' 以防计算出错
-       */
-      const [newRule] = await db
-        .insert(laborRates)
-        .values({
-          entityType: params.entityType as never,
-          entityId: params.entityId,
-          category: params.category as never,
-          unitType: params.unitType as never,
-          unitPrice: params.unitPrice,
-          baseFee: params.baseFee ?? '0',
+      const newRule = await db.transaction(async (tx) => {
+        const [insertedRule] = await tx.insert(laborRates)
+          .values({
+            entityType: params.entityType as never,
+            entityId: params.entityId,
+            category: params.category as never,
+            unitType: params.unitType as never,
+            unitPrice: params.unitPrice,
+            baseFee: params.baseFee ?? '0',
+            tenantId: session.user.tenantId,
+          })
+          .returning();
+
+        logger.info('成功创建定价规则', { ruleId: insertedRule.id, tenantId: session.user.tenantId });
+
+        await AuditService.log(tx, {
+          tableName: 'labor_rates',
+          recordId: insertedRule.id,
+          action: 'CREATE',
           tenantId: session.user.tenantId,
-        })
-        .returning();
+          userId: session.user.id,
+          newValues: insertedRule,
+        });
 
-      logger.info('成功创建定价规则', { ruleId: newRule.id, tenantId: session.user.tenantId });
-
-      /** 记录全量合规审计日志：新增操作 (CREATE) */
-      await AuditService.log(db, {
-        tableName: 'labor_rates',
-        recordId: newRule.id,
-        action: 'CREATE',
-        tenantId: session.user.tenantId,
-        userId: session.user.id,
-        newValues: newRule,
+        return insertedRule;
       });
-
       return { success: true, data: newRule };
     } catch (error) {
       logger.error('创建定价规则失败', { error, params });
@@ -178,38 +174,34 @@ export const updatePricingRuleAction = createSafeAction(
         });
         return { success: false, error: '未找到定价规则' };
       }
+      const updatedRule = await db.transaction(async (tx) => {
+        const [result] = await tx.update(laborRates)
+          .set({
+            entityType: params.entityType as never,
+            entityId: params.entityId,
+            category: params.category as never,
+            unitType: params.unitType as never,
+            unitPrice: params.unitPrice,
+            baseFee: params.baseFee ?? '0',
+            updatedAt: new Date(),
+          })
+          .where(and(eq(laborRates.id, params.id), eq(laborRates.tenantId, session.user.tenantId)))
+          .returning();
 
-      /**
-       * 执行可变属性覆写
-       * @description 根据 params 更新对应维度的参数，并刷新 updatedAt 时间戳。
-       */
-      const [updatedRule] = await db
-        .update(laborRates)
-        .set({
-          entityType: params.entityType as never,
-          entityId: params.entityId,
-          category: params.category as never,
-          unitType: params.unitType as never,
-          unitPrice: params.unitPrice,
-          baseFee: params.baseFee ?? '0',
-          updatedAt: new Date(),
-        })
-        .where(and(eq(laborRates.id, params.id), eq(laborRates.tenantId, session.user.tenantId)))
-        .returning();
+        logger.info('成功修改定价规则', { ruleId: result.id, tenantId: session.user.tenantId });
 
-      logger.info('成功修改定价规则', { ruleId: updatedRule.id, tenantId: session.user.tenantId });
+        await AuditService.log(tx, {
+          tableName: 'labor_rates',
+          recordId: params.id,
+          action: 'UPDATE',
+          tenantId: session.user.tenantId,
+          userId: session.user.id,
+          oldValues: existingRule,
+          newValues: result,
+        });
 
-      /** 记录包含前后快照变更的审计日志 (UPDATE) */
-      await AuditService.log(db, {
-        tableName: 'labor_rates',
-        recordId: params.id,
-        action: 'UPDATE',
-        tenantId: session.user.tenantId,
-        userId: session.user.id,
-        oldValues: existingRule,
-        newValues: updatedRule,
+        return result;
       });
-
       return { success: true, data: updatedRule };
     } catch (error) {
       logger.error('修改定价规则异常', { error, id: params.id });
@@ -249,24 +241,19 @@ export const deletePricingRuleAction = createSafeAction(
         });
         return { success: false, error: '未找到定价规则' };
       }
-
-      /** 持久层执行 DELETE 指令 */
-      await db
-        .delete(laborRates)
-        .where(and(eq(laborRates.id, id), eq(laborRates.tenantId, session.user.tenantId)));
-
-      logger.info('成功删除定价规则', { ruleId: id, tenantId: session.user.tenantId });
-
-      /** 在审计链路中留存已被清理掉的原有配置 (DELETE 操作仅需要 oldValues) */
-      await AuditService.log(db, {
-        tableName: 'labor_rates',
-        recordId: id,
-        action: 'DELETE',
-        tenantId: session.user.tenantId,
-        userId: session.user.id,
-        oldValues: existingRule,
+      await db.transaction(async (tx) => {
+        await tx.delete(laborRates)
+          .where(and(eq(laborRates.id, id), eq(laborRates.tenantId, session.user.tenantId)));
+        logger.info('成功删除定价规则', { ruleId: id, tenantId: session.user.tenantId });
+        await AuditService.log(tx, {
+          tableName: 'labor_rates',
+          recordId: id,
+          action: 'DELETE',
+          tenantId: session.user.tenantId,
+          userId: session.user.id,
+          oldValues: existingRule,
+        });
       });
-
       return { success: true };
     } catch (error) {
       logger.error('删除定价规则异常', { error, id });
@@ -289,7 +276,6 @@ const batchUpdatePricingRuleSchema = z.object({
  * 批量更新定价规则 (Server Action)
  *
  * @description 支持在单个事务（或批量流水线）内同时提交多笔定制规则的更改。
- * 因当前实现架构的限制，本处主要演示并落实日志层级的要求，后续可通过 transaction 完善实现。
  *
  * @param {z.infer<typeof batchUpdatePricingRuleSchema>} params - 包含多个完整规则对象数组的请求
  * @param {Object} context - Server Action 上下文
@@ -306,20 +292,42 @@ export const batchUpdatePricingRuleAction = createSafeAction(
       if (rules.length === 0) return { success: true };
 
       logger.info('请求批量更新定价规则', { count: rules.length });
+      await db.transaction(async (tx) => {
+        for (const rule of rules) {
+          // Verify rule exists and belongs to tenant
+          const existingRule = await tx.query.laborRates.findFirst({
+            where: (rates, { eq, and }) =>
+              and(eq(rates.id, rule.id), eq(rates.tenantId, session.user.tenantId)),
+          });
 
-      /**
-       * 批量操作目前为了保持审计记录统一要求写入一条综合日志，
-       * 实际落地中可逐条分别记录或记入特定的 bulk 专表内。
-       */
-      await AuditService.log(db, {
-        tableName: 'labor_rates',
-        recordId: 'batch', // Dummy identifier
-        action: 'UPDATE',
-        tenantId: session.user.tenantId,
-        userId: session.user.id,
-        newValues: { updatedCount: rules.length },
+          if (!existingRule) {
+            throw new Error(`未找到定价规则 (${rule.id}) 或跨租户访问`);
+          }
+
+          const [updatedRule] = await tx.update(laborRates)
+            .set({
+              entityType: rule.entityType as never,
+              entityId: rule.entityId,
+              category: rule.category as never,
+              unitType: rule.unitType as never,
+              unitPrice: rule.unitPrice,
+              baseFee: rule.baseFee ?? '0',
+              updatedAt: new Date(),
+            })
+            .where(and(eq(laborRates.id, rule.id), eq(laborRates.tenantId, session.user.tenantId)))
+            .returning();
+
+          await AuditService.log(tx, {
+            tableName: 'labor_rates',
+            recordId: rule.id,
+            action: 'UPDATE',
+            tenantId: session.user.tenantId,
+            userId: session.user.id,
+            oldValues: existingRule,
+            newValues: updatedRule,
+          });
+        }
       });
-
       logger.info('完成批量更新定价规则', { count: rules.length });
 
       return { success: true };

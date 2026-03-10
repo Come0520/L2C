@@ -5,7 +5,7 @@ import { orders } from '@/shared/api/schema/orders';
 
 import { eq, and } from 'drizzle-orm';
 import { z } from 'zod';
-import { auth, checkPermission } from '@/shared/lib/auth';
+import { auth, requirePermission } from '@/shared/lib/auth';
 import type { Session } from 'next-auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
 import { AuditService } from '@/shared/services/audit-service';
@@ -72,7 +72,7 @@ export async function cancelOrderAction(input: z.infer<typeof cancelOrderSchema>
   if (!user || !user.id) throw new Error('Unauthorized');
   const tenantId = getTenantId(session);
 
-  await checkPermission(session, PERMISSIONS.ORDER.ALL_EDIT);
+  await requirePermission(session, PERMISSIONS.ORDER.ALL_EDIT);
 
   const validated = cancelOrderSchema.parse(input);
 
@@ -132,7 +132,7 @@ export async function confirmInstallationAction(input: z.infer<typeof confirmIns
   if (!user || !user.id) throw new Error('Unauthorized');
   const tenantId = getTenantId(session);
 
-  await checkPermission(session, PERMISSIONS.ORDER.ALL_EDIT); // 使用统一权限项
+  await requirePermission(session, PERMISSIONS.ORDER.ALL_EDIT); // 使用统一权限项
 
   try {
     const validated = confirmInstallationSchema.parse(input);
@@ -171,7 +171,7 @@ export async function customerAcceptAction(
   if (!user || !user.id) throw new Error('Unauthorized');
   const tenantId = getTenantId(session);
 
-  await checkPermission(session, PERMISSIONS.ORDER.ALL_EDIT);
+  await requirePermission(session, PERMISSIONS.ORDER.ALL_EDIT);
 
   try {
     const validated = requestCustomerConfirmationSchema.parse(input);
@@ -208,7 +208,7 @@ export async function closeOrderAction(input: z.infer<typeof closeOrderSchema>) 
   if (!user || !user.id) throw new Error('Unauthorized');
   const tenantId = getTenantId(session);
 
-  await checkPermission(session, PERMISSIONS.ORDER.ALL_EDIT);
+  await requirePermission(session, PERMISSIONS.ORDER.ALL_EDIT);
 
   const validated = closeOrderSchema.parse(input);
 

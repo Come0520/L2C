@@ -167,16 +167,16 @@ export async function restoreLeadAction(
       tenantId,
       targetStatus: txResult.targetStatus,
     });
-
-    await AuditService.log(db, {
-      tenantId,
-      userId,
-      tableName: 'leads',
-      recordId: id,
-      action: 'UPDATE',
-      newValues: { action: 'RESTORE', status: txResult.targetStatus, reason },
-    });
-
+    await db.transaction(async (tx) => {
+        await AuditService.log(tx, {
+          tenantId,
+          userId,
+          tableName: 'leads',
+          recordId: id,
+          action: 'UPDATE',
+          newValues: { action: 'RESTORE', status: txResult.targetStatus, reason },
+        });
+      });
     return { success: true, targetStatus: txResult.targetStatus };
   } catch (error: unknown) {
     logger.error('[leads] 恢复作废线索失败:', {

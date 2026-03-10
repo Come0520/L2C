@@ -30,20 +30,29 @@ vi.mock('@/shared/lib/auth', () => ({
   })),
 }));
 
-vi.mock('@/shared/api/db', () => ({
-  db: {
-    query: {
-      quoteItems: { findMany: mockQuoteItemsExecute },
-      workerSkills: { findMany: mockWorkerSkillsExecute },
-    },
+vi.mock('@/shared/api/db', () => {
+  const mockTx = {
     delete: vi.fn(() => ({
       where: mockDeleteWhere,
     })),
     insert: vi.fn(() => ({
       values: mockInsertValues,
     })),
-  },
-}));
+    query: {
+      quoteItems: { findMany: mockQuoteItemsExecute },
+      workerSkills: { findMany: mockWorkerSkillsExecute },
+    },
+  };
+
+  return {
+    db: {
+      query: mockTx.query,
+      delete: mockTx.delete,
+      insert: mockTx.insert,
+      transaction: vi.fn(async (cb) => cb(mockTx)),
+    },
+  };
+});
 
 vi.mock('next/cache', () => ({
   unstable_cache: (cb: any) => cb,

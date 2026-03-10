@@ -53,10 +53,11 @@ describe('Sales 业务逻辑', () => {
   describe('getSalesRanking (销售排名)', () => {
     it('应根据完成金额准确排序并分配排名', async () => {
       mockDbFindManyUsers.mockResolvedValue([USER_1, USER_2]);
-      // 用户 1 目标 1000, 用户 2 目标 1000
-      mockDbFindFirstTargets.mockImplementation(({ where }: any) => {
-        return Promise.resolve({ targetAmount: '1000' });
-      });
+      // 模拟两个用户的目标
+      mockDbFindManyTargets.mockResolvedValue([
+        { userId: 'u1', targetAmount: '1000' },
+        { userId: 'u2', targetAmount: '1000' },
+      ]);
       // 用户 1 完成 500, 用户 2 完成 800
       mockDbFindManyQuotes.mockResolvedValue([
         {
@@ -91,7 +92,7 @@ describe('Sales 业务逻辑', () => {
       vi.setSystemTime(mockDate);
 
       mockDbFindManyUsers.mockResolvedValue([USER_1]);
-      mockDbFindFirstTargets.mockResolvedValue({ targetAmount: '10000' });
+      mockDbFindManyTargets.mockResolvedValue([{ userId: 'u1', targetAmount: '10000' }]);
       // 此时过去了 50% 时间，如果完成金额只有 3000，则预测月底完成 6000 (60%)
       mockDbFindManyQuotes.mockResolvedValue([
         {
@@ -122,7 +123,7 @@ describe('Sales 业务逻辑', () => {
 
     it('无目标设置时完成率应为 0', async () => {
       mockDbFindManyUsers.mockResolvedValue([USER_1]);
-      mockDbFindFirstTargets.mockResolvedValue(null);
+      mockDbFindManyTargets.mockResolvedValue([]);
       const result = await getSalesRanking();
       expect(result.data![0].completionRate).toBe(0);
     });

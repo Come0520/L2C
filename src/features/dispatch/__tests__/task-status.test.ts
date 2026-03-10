@@ -12,8 +12,9 @@ vi.mock('@/shared/lib/auth', () => ({
   auth: vi.fn(),
 }));
 
-vi.mock('@/shared/api/db', () => ({
-  db: {
+vi.mock('@/shared/api/db', () => {
+  const dbMock = {
+    transaction: vi.fn(async (cb) => cb(dbMock)),
     update: vi.fn(() => ({
       set: vi.fn(() => ({
         where: vi.fn(() => ({
@@ -21,8 +22,9 @@ vi.mock('@/shared/api/db', () => ({
         })),
       })),
     })),
-  },
-}));
+  };
+  return { db: dbMock };
+});
 
 vi.mock('@/shared/services/audit-service', () => ({
   AuditService: {
@@ -86,7 +88,8 @@ describe('Dispatch Status Flow Logic', () => {
       expect.objectContaining({
         action: 'ILLEGAL_ACCESS_ATTEMPT',
         tableName: 'measure_tasks',
-      })
+      }),
+      expect.anything()
     );
   });
 
@@ -127,7 +130,8 @@ describe('Dispatch Status Flow Logic', () => {
       expect.objectContaining({
         action: 'ILLEGAL_ACCESS_ATTEMPT',
         tableName: 'install_tasks',
-      })
+      }),
+      expect.anything()
     );
   });
 

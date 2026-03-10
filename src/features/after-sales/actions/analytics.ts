@@ -27,13 +27,21 @@ const getCachedQualityAnalytics = unstable_cache(
       dateConditions.push(sql`${liabilityNotices.confirmedAt} <= ${new Date(endDate)}`);
     }
 
+    const ticketDateConditions: SQL[] = [];
+    if (startDate) {
+      ticketDateConditions.push(sql`${afterSalesTickets.createdAt} >= ${new Date(startDate)}`);
+    }
+    if (endDate) {
+      ticketDateConditions.push(sql`${afterSalesTickets.createdAt} <= ${new Date(endDate)}`);
+    }
+
     const [liabilityByParty, ticketsByType, ticketsByStatus] = await Promise.all([
       // 1. 按责任方类型统计定责单
       db
         .select({
-          liablePartyType: liabilityNotices.liablePartyType,
+          partyType: liabilityNotices.liablePartyType,
           count: count(liabilityNotices.id),
-          totalAmount: sum(sql`CAST(${liabilityNotices.amount} AS DECIMAL)`),
+          totalAmount: sum(liabilityNotices.amount),
         })
         .from(liabilityNotices)
         .where(
@@ -49,20 +57,30 @@ const getCachedQualityAnalytics = unstable_cache(
       db
         .select({
           type: afterSalesTickets.type,
-          count: count(afterSalesTickets.id),
+          count: count(),
         })
         .from(afterSalesTickets)
-        .where(eq(afterSalesTickets.tenantId, tenantId))
+        .where(
+          and(
+            eq(afterSalesTickets.tenantId, tenantId),
+            ...ticketDateConditions // P1 FIX (AS-P-02): 补充日期过滤条件
+          )
+        )
         .groupBy(afterSalesTickets.type),
 
       // 3. 按状态统计
       db
         .select({
           status: afterSalesTickets.status,
-          count: count(afterSalesTickets.id),
+          count: count(),
         })
         .from(afterSalesTickets)
-        .where(eq(afterSalesTickets.tenantId, tenantId))
+        .where(
+          and(
+            eq(afterSalesTickets.tenantId, tenantId),
+            ...ticketDateConditions // P1 FIX (AS-P-02): 补充日期过滤条件
+          )
+        )
         .groupBy(afterSalesTickets.status),
     ]);
 
@@ -109,8 +127,8 @@ const getAfterSalesQualityAnalyticsAction = createSafeAction(
 
     return {
       liabilityByParty: liabilityByParty.map((item) => ({
-        partyType: item.liablePartyType,
-        partyTypeLabel: partyTypeLabels[item.liablePartyType || ''] || item.liablePartyType,
+        partyType: item.partyType,
+        partyTypeLabel: partyTypeLabels[item.partyType || ''] || item.partyType,
         count: Number(item.count),
         totalAmount: parseFloat(item.totalAmount?.toString() || '0'),
       })),

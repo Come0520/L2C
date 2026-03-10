@@ -129,8 +129,8 @@ export async function updateUser(
     if (currentUserId !== id) {
       const currentRoles = (existingUser.roles as string[]) || [];
       const isRemovingAdmin =
-        (currentRoles.includes('ADMIN') || currentRoles.includes('ADMIN')) &&
-        !(validated.data.roles.includes('ADMIN') || validated.data.roles.includes('ADMIN'));
+        currentRoles.includes('ADMIN') &&
+        !validated.data.roles.includes('ADMIN');
 
       if (isRemovingAdmin) {
         const adminCount = await db
@@ -139,7 +139,7 @@ export async function updateUser(
           .where(and(eq(users.tenantId, tenantId), eq(users.isActive, true), ne(users.id, id)));
 
         const hasOtherAdmin = adminCount.some(
-          (u) => (u.roles as string[]).includes('ADMIN') || (u.roles as string[]).includes('ADMIN')
+          (u) => (u.roles as string[]).includes('ADMIN')
         );
         if (!hasOtherAdmin) {
           return { success: false, error: '无法移除最后一个管理员角色' };
@@ -150,8 +150,6 @@ export async function updateUser(
     // 主角色同步逻辑改进：优先选择管理员角色
     let primaryRole = validated.data.roles[0];
     if (validated.data.roles.includes('ADMIN')) {
-      primaryRole = 'ADMIN';
-    } else if (validated.data.roles.includes('ADMIN')) {
       primaryRole = 'ADMIN';
     } else if (validated.data.roles.includes('MANAGER')) {
       primaryRole = 'MANAGER';
@@ -170,7 +168,7 @@ export async function updateUser(
     }
 
     await db.transaction(async (tx) => {
-      await tx.update(users).set(updateData).where(eq(users.id, id));
+      await tx.update(users).set(updateData).where(and(eq(users.id, id), eq(users.tenantId, tenantId)));
 
       // 精确化审计日志：只记录真实变更的字段
       const oldValues: Record<string, unknown> = {};
@@ -423,33 +421,32 @@ export async function generateUserMagicLink(targetUserId: string): Promise<{
         )
       );
 
-    // 3. 生成新的 Magic Link token（有效期 24 小时）
+    // 3. 生成新的 Magic Link token（有效期 1 小时）
     const magicToken = uuidv4();
-    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
-
-    await db.insert(verificationCodes).values({
-      userId: targetUser.id,
-      code: Math.floor(100000 + Math.random() * 900000).toString(), // 验证码字段占位
-      token: magicToken,
-      type: 'MAGIC_LOGIN',
-      expiresAt,
+    const expiresAt = new Date(Date.now() + 1 * 60 * 60 * 1000); // 1小时有效期
+    await db.transaction(async (tx) => {
+      await tx.insert(verificationCodes).values({
+        userId: targetUser.id,
+        code: Math.floor(100000 + Math.random() * 900000).toString(), // 验证码字段占位
+        token: magicToken,
+        type: 'MAGIC_LOGIN',
+        expiresAt,
+      });
+      await AuditService.log(tx, {
+        tenantId,
+        userId: currentUserId!,
+        tableName: 'users',
+        recordId: targetUser.id,
+        action: 'MAGIC_LINK_GENERATED',
+        details: {
+          targetUserId: targetUser.id,
+          targetUserName: targetUser.name,
+          expiresAt: expiresAt.toISOString(),
+          generatedBy: currentUserId,
+        },
+      });
     });
-
     // 4. 记录明确的审计日志
-    await AuditService.log(db, {
-      tenantId,
-      userId: currentUserId!,
-      tableName: 'users',
-      recordId: targetUser.id,
-      action: 'MAGIC_LINK_GENERATED',
-      details: {
-        targetUserId: targetUser.id,
-        targetUserName: targetUser.name,
-        expiresAt: expiresAt.toISOString(),
-        generatedBy: currentUserId,
-      },
-    });
-
     // 5. 构造 URL 并返回
     const baseUrl =
       process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';

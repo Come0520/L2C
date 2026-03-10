@@ -74,6 +74,10 @@ vi.mock('@/shared/api/db', () => {
         },
       },
       update: vi.fn().mockImplementation(createUpdateChain),
+      transaction: vi.fn(async (cb) => cb({
+        update: vi.fn().mockImplementation(createUpdateChain),
+        query: { users: { findFirst: mocks.dbFindFirst } }
+      })),
     },
   };
 });

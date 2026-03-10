@@ -4,7 +4,8 @@ import { z } from 'zod';
 import { db } from '@/shared/api/db';
 import { showroomItems } from '@/shared/api/schema/showroom';
 import { eq, and, desc, sql, or, inArray } from 'drizzle-orm';
-import { auth } from '@/shared/lib/auth';
+import { auth, checkPermission } from '@/shared/lib/auth';
+import { PERMISSIONS } from '@/shared/config/permissions';
 import { updateTag } from 'next/cache';
 import {
   createShowroomItemSchema,
@@ -35,6 +36,12 @@ const logger = createLogger('ShowroomItemsAction');
 export async function getShowroomItems(input: z.input<typeof getShowroomItemsSchema>) {
   const session = await auth();
   if (!session?.user?.tenantId) throw new ShowroomError(ShowroomErrors.UNAUTHORIZED);
+
+  try {
+    await checkPermission(session, PERMISSIONS.SHOWROOM.VIEW);
+  } catch {
+    throw new ShowroomError(ShowroomErrors.FORBIDDEN);
+  }
 
   // __PLATFORM__ 是平台级租户，非普通商户，跳过数据库查询直接返回空列表
   // 防止无效 UUID 语法错误传递至 PostgreSQL
@@ -221,26 +228,26 @@ export async function createShowroomItem(input: z.input<typeof createShowroomIte
   const score = calculateScore(data);
 
   try {
-    const [newItem] = await db
-      .insert(showroomItems)
-      .values({
-        ...data,
+    const newItem = await db.transaction(async (tx) => {
+      const [insertedItem] = await tx.insert(showroomItems)
+        .values({
+          ...data,
+          tenantId: session.user.tenantId,
+          createdBy: session.user.id,
+          score: score,
+        })
+        .returning();
+      await AuditService.log(tx, {
+        tableName: 'showroom_items',
+        recordId: insertedItem.id,
+        action: 'CREATE',
+        userId: session.user.id,
         tenantId: session.user.tenantId,
-        createdBy: session.user.id,
-        score: score,
-      })
-      .returning();
-
-    // 记录审计日志
-    await AuditService.log(db, {
-      tableName: 'showroom_items',
-      recordId: newItem.id,
-      action: 'CREATE',
-      userId: session.user.id,
-      tenantId: session.user.tenantId,
-      newValues: newItem as Record<string, unknown>,
+        newValues: insertedItem as Record<string, unknown>,
+      });
+      return insertedItem;
     });
-
+    // 记录审计日志
     await invalidateShowroomCache(session.user.tenantId);
 
     logger.info('创建展厅素材成功', {
@@ -296,27 +303,27 @@ export async function updateShowroomItem(input: z.input<typeof updateShowroomIte
   const score = calculateScore(mergedData);
 
   try {
-    const [updatedItem] = await db
-      .update(showroomItems)
-      .set({
-        ...data,
-        score,
-        updatedBy: session.user.id,
-        updatedAt: new Date(),
-      })
-      .where(and(eq(showroomItems.id, id), eq(showroomItems.tenantId, session.user.tenantId)))
-      .returning();
-
-    await AuditService.log(db, {
-      tableName: 'showroom_items',
-      recordId: id,
-      action: 'UPDATE',
-      userId: session.user.id,
-      tenantId: session.user.tenantId,
-      oldValues: existing as Record<string, unknown>,
-      newValues: updatedItem as Record<string, unknown>,
+    const updatedItem = await db.transaction(async (tx) => {
+      const [patchedItem] = await tx.update(showroomItems)
+        .set({
+          ...data,
+          score,
+          updatedBy: session.user.id,
+          updatedAt: new Date(),
+        })
+        .where(and(eq(showroomItems.id, id), eq(showroomItems.tenantId, session.user.tenantId)))
+        .returning();
+      await AuditService.log(tx, {
+        tableName: 'showroom_items',
+        recordId: id,
+        action: 'UPDATE',
+        userId: session.user.id,
+        tenantId: session.user.tenantId,
+        oldValues: existing as Record<string, unknown>,
+        newValues: patchedItem as Record<string, unknown>,
+      });
+      return patchedItem;
     });
-
     updateTag(`showroom-item-${id}`);
     await invalidateShowroomCache(session.user.tenantId);
 
@@ -356,20 +363,19 @@ export async function deleteShowroomItem(input: z.input<typeof deleteShowroomIte
   }
 
   try {
-    await db
-      .update(showroomItems)
-      .set({ status: 'ARCHIVED', updatedAt: new Date(), updatedBy: session.user.id })
-      .where(eq(showroomItems.id, id));
-
-    await AuditService.log(db, {
-      tableName: 'showroom_items',
-      recordId: id,
-      action: 'DELETE',
-      userId: session.user.id,
-      tenantId: session.user.tenantId,
-      oldValues: existing as Record<string, unknown>,
+    await db.transaction(async (tx) => {
+      await tx.update(showroomItems)
+        .set({ status: 'ARCHIVED', updatedAt: new Date(), updatedBy: session.user.id })
+        .where(and(eq(showroomItems.id, id), eq(showroomItems.tenantId, session.user.tenantId)));
+      await AuditService.log(tx, {
+        tableName: 'showroom_items',
+        recordId: id,
+        action: 'DELETE',
+        userId: session.user.id,
+        tenantId: session.user.tenantId,
+        oldValues: existing as Record<string, unknown>,
+      });
     });
-
     updateTag(`showroom-item-${id}`);
     await invalidateShowroomCache(session.user.tenantId);
 

@@ -390,14 +390,16 @@ export async function deleteCustomerAddress(id: string, version?: number) {
     }
 
     // 记录审计日志
-    await AuditService.log(db, {
-      tableName: 'customer_addresses',
-      recordId: id,
-      action: 'DELETE',
-      userId: session.user.id,
-      details: { customerId: existingAddr.customerId },
-      tenantId: session.user.tenantId,
-    });
+    await db.transaction(async (tx) => {
+        await AuditService.log(tx, {
+          tableName: 'customer_addresses',
+          recordId: id,
+          action: 'DELETE',
+          userId: session.user.id,
+          details: { customerId: existingAddr.customerId },
+          tenantId: session.user.tenantId,
+        });
+      });
   } catch (error) {
     logger.error('[customers] 删除客户地址失败:', {
       error,

@@ -45,16 +45,16 @@ const getSalesFunnelAction = createSafeAction(salesFunnelSchema, async (params, 
     ? new Date(params.startDate)
     : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
   const endDate = params.endDate ? new Date(params.endDate) : new Date();
-
-  await AuditService.log(db, {
-    tableName: 'analytics',
-    action: 'VIEW_REPORT',
-    recordId: `sales-funnel-${tenantId}-${salesId || 'all'}`,
-    userId: session.user.id,
-    tenantId,
-    details: { reportName: 'SalesFunnel', params: { startDate, endDate, salesId } },
-  });
-
+    await db.transaction(async (tx) => {
+        await AuditService.log(tx, {
+        tableName: 'analytics',
+        action: 'VIEW_REPORT',
+        recordId: `sales-funnel-${tenantId}-${salesId || 'all'}`,
+        userId: session.user.id,
+        tenantId,
+        details: { reportName: 'SalesFunnel', params: { startDate, endDate, salesId } },
+      });
+      });
   return unstable_cache(
     async () => {
       if (tenantId === '__PLATFORM__') {

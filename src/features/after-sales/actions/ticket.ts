@@ -296,7 +296,7 @@ const updateTicketStatusAction = createSafeAction(updateStatusSchema, async (dat
   // 安全校验：确保工单属于当前租户
   const ticket = await db.query.afterSalesTickets.findFirst({
     where: and(eq(afterSalesTickets.id, data.ticketId), eq(afterSalesTickets.tenantId, tenantId)),
-    columns: { id: true, status: true },
+    columns: { id: true, status: true, version: true },
   });
 
   if (!ticket) {
@@ -311,19 +311,31 @@ const updateTicketStatusAction = createSafeAction(updateStatusSchema, async (dat
     };
   }
 
-  await db
+  // 乐观锁检查 (AS-P-03): 如果传入了期望版本号，则进行校验
+  if (data.expectedVersion !== undefined && ticket.version !== data.expectedVersion) {
+    return { success: false, message: '工单已被修改，请刷新后重试 (版本过期)' };
+  }
+
+  const result = await db
     .update(afterSalesTickets)
     .set({
       status: data.status,
       resolution: data.resolution,
       updatedAt: new Date(),
+      version: ticket.version + 1, // 版本号自增
     })
     .where(
       and(
         eq(afterSalesTickets.id, data.ticketId),
-        eq(afterSalesTickets.tenantId, tenantId) // P0 FIX (R2-01): 强制租户隔离
+        eq(afterSalesTickets.tenantId, tenantId),
+        eq(afterSalesTickets.version, ticket.version) // 严格版乐观锁：数据库层面再次校验
       )
-    );
+    )
+    .returning({ updatedId: afterSalesTickets.id });
+
+  if (result.length === 0) {
+    return { success: false, message: '并发更新失败，工单已被修改，请刷新重试' };
+  }
 
   // 记录审计日志
   await AuditService.recordFromSession(session, 'after_sales_tickets', data.ticketId, 'UPDATE', {
@@ -386,7 +398,7 @@ export const getTicketLogs = cache(async (ticketId: string) => {
  * @param ticketId - 待核算结案的工单 UUID
  * @returns 返回标记系统内部财务确认节点成功的消息
  */
-export async function closeResolutionCostClosure(ticketId: string) {
+export async function closeResolutionCostClosure(ticketId: string, expectedVersion?: number) {
   const session = await auth();
   if (!session?.user?.id || !session?.user?.tenantId) return { success: false, error: '未授权' };
   if (session.user.tenantId === '__PLATFORM__') return { success: false, error: '平台管理员不能操作工单' };
@@ -400,6 +412,9 @@ export async function closeResolutionCostClosure(ticketId: string) {
     });
 
     if (!ticket) return { success: false, error: '工单不存在或无权操作' };
+    if (expectedVersion !== undefined && ticket.version !== expectedVersion) {
+      return { success: false, error: '工单已被修改，请刷新后重试 (版本过期)' };
+    }
 
     // 使用精度较高的计算，防止丢精度
     const actualCost = new Decimal(ticket.totalActualCost || 0);
@@ -409,20 +424,27 @@ export async function closeResolutionCostClosure(ticketId: string) {
     const computedLoss = actualCost.minus(actualDeduction);
     const internalLoss = computedLoss.isNegative() ? new Decimal(0) : computedLoss;
 
-    await db
+    const result = await db
       .update(afterSalesTickets)
       .set({
         internalLoss: internalLoss.toString(),
         status: 'CLOSED',
         closedAt: new Date(),
         updatedAt: new Date(),
+        version: ticket.version + 1, // 版本自增
       })
       .where(
         and(
           eq(afterSalesTickets.id, ticketId),
-          eq(afterSalesTickets.tenantId, session.user.tenantId)
+          eq(afterSalesTickets.tenantId, session.user.tenantId),
+          eq(afterSalesTickets.version, ticket.version) // 乐观锁保障
         )
-      ); // 安全保护
+      )
+      .returning({ updatedId: afterSalesTickets.id });
+
+    if (result.length === 0) {
+      return { success: false, error: '并发结案失败，工单已被修改' };
+    } // 安全保护
 
     await AuditService.recordFromSession(session, 'after_sales_tickets', ticketId, 'UPDATE', {
       changed: { internalLoss: internalLoss.toString(), status: 'CLOSED' },

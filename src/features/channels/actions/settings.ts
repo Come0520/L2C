@@ -83,16 +83,18 @@ export async function updateAttributionSettingsAction(
 
     // P1 Fix: Audit Log
     if (data.attributionModel !== model) {
-      await AuditService.log(db, {
-        tableName: 'tenants',
-        recordId: session.user.tenantId,
-        action: 'UPDATE',
-        userId: session.user.id,
-        tenantId: session.user.tenantId,
-        newValues: { channelAttributionModel: data.attributionModel },
-        oldValues: { channelAttributionModel: model },
-        details: { reason: 'Update attribution settings' },
-      });
+        await db.transaction(async (tx) => {
+            await AuditService.log(tx, {
+                tableName: 'tenants',
+                recordId: session.user.tenantId,
+                action: 'UPDATE',
+                userId: session.user.id,
+                tenantId: session.user.tenantId,
+                newValues: { channelAttributionModel: data.attributionModel },
+                oldValues: { channelAttributionModel: model },
+                details: { reason: 'Update attribution settings' },
+              });
+          });
     }
 
     return { success: true, data: { success: true } };

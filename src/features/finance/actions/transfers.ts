@@ -233,7 +233,9 @@ export async function createInternalTransfer(input: z.infer<typeof createTransfe
           fromTransactionId: fromTransaction.id,
           toTransactionId: toTransaction.id,
         })
-        .where(eq(internalTransfers.id, transfer.id));
+        .where(
+          and(eq(internalTransfers.id, transfer.id), eq(internalTransfers.tenantId, tenantId))
+        );
 
       updateTag(`finance-transfer-${tenantId}`);
 
@@ -412,7 +414,9 @@ export async function cancelInternalTransfer(transferId: string, reason?: string
         await tx
           .update(internalTransfers)
           .set({ status: 'COMPLETED' })
-          .where(eq(internalTransfers.id, transferId));
+          .where(
+            and(eq(internalTransfers.id, transferId), eq(internalTransfers.tenantId, tenantId))
+          );
         return {
           success: false,
           error: `目标账户余额不足，无法冲销。当前余额: ¥${toBalance.toFixed(2, Decimal.ROUND_HALF_UP)}`,
@@ -516,7 +520,7 @@ export async function cancelInternalTransfer(transferId: string, reason?: string
             : `冲销原因: ${reason || '无'}`,
           updatedAt: new Date(),
         })
-        .where(eq(internalTransfers.id, transferId));
+        .where(and(eq(internalTransfers.id, transferId), eq(internalTransfers.tenantId, tenantId)));
 
       updateTag(`finance-transfer-${tenantId}`);
       updateTag(`finance-transfer-detail-${transfer.id}`);

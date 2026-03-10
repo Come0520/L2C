@@ -29,16 +29,16 @@ export async function getQuarterlyComparison(params: { year: number }) {
       ];
       return { success: true, data: initialData };
     }
-
-    await AuditService.log(db, {
-      tableName: 'analytics',
-      action: 'VIEW_REPORT',
-      recordId: `quarterly-comparison-${year}`,
-      userId: session.user.id,
-      tenantId,
-      details: { reportName: 'QuarterlyComparison', params: { year } },
-    });
-
+    await db.transaction(async (tx) => {
+        await AuditService.log(tx, {
+          tableName: 'analytics',
+          action: 'VIEW_REPORT',
+          recordId: `quarterly-comparison-${year}`,
+          userId: session.user.id,
+          tenantId,
+          details: { reportName: 'QuarterlyComparison', params: { year } },
+        });
+      });
     const data = await unstable_cache(
       async () => {
         // 1. 获取全年的各月度目标
@@ -122,16 +122,16 @@ export async function getAnnualTargetProgress(params: { year: number }) {
     if (tenantId === '__PLATFORM__') {
       return { success: true, data: { year, totalTarget: 0, totalAchieved: 0, completionRate: 0 } };
     }
-
-    await AuditService.log(db, {
-      tableName: 'analytics',
-      action: 'VIEW_REPORT',
-      recordId: `annual-target-progress-${year}`,
-      userId: session.user.id,
-      tenantId,
-      details: { reportName: 'AnnualTargetProgress', params: { year } },
-    });
-
+    await db.transaction(async (tx) => {
+        await AuditService.log(tx, {
+          tableName: 'analytics',
+          action: 'VIEW_REPORT',
+          recordId: `annual-target-progress-${year}`,
+          userId: session.user.id,
+          tenantId,
+          details: { reportName: 'AnnualTargetProgress', params: { year } },
+        });
+      });
     const data = await unstable_cache(
       async () => {
         // 1. 获取全年的年度目标之和（整个团队汇总）

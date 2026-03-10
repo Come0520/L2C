@@ -39,6 +39,7 @@ export async function getInstallTasks(filters?: { status?: string; search?: stri
         items: true,
       },
       orderBy: [desc(installTasks.createdAt)],
+      limit: 100, // [P1 防线] 限制查询条数，防止大库耗尽内存
     });
     return { success: true, data: list };
   } catch {

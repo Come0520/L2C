@@ -94,13 +94,15 @@ const createChannelAction = createSafeAction(channelSchema, async (data, ctx) =>
 
     // 记录审计日志
     if (result[0]) {
-      await AuditService.log(db, {
-        tableName: 'market_channels',
-        recordId: result[0].id,
-        action: 'CREATE',
-        userId: session.user.id,
-        tenantId: session.user.tenantId,
-        newValues: result[0],
+      await db.transaction(async (tx) => {
+        await AuditService.log(tx, {
+          tableName: 'market_channels',
+          recordId: result[0].id,
+          action: 'CREATE',
+          userId: session.user.id,
+          tenantId: session.user.tenantId,
+          newValues: result[0],
+        });
       });
     }
 
@@ -138,35 +140,34 @@ const updateChannelAction = createSafeAction(channelSchema, async (data, ctx) =>
         eq(marketChannels.tenantId, session.user.tenantId)
       ),
     });
+    const id = data.id;
     if (!existingChannel) {
       return { success: false, error: '渠道不存在或无权操作' };
     }
-
-    await db
-      .update(marketChannels)
-      .set({
-        name: data.name,
-        code: data.code,
-        parentId: data.parentId,
-        isActive: data.isActive,
-        updatedAt: new Date(),
-      })
-      .where(
-        and(eq(marketChannels.id, data.id), eq(marketChannels.tenantId, session.user.tenantId))
-      );
-
-    // 记录审计日志
-    await AuditService.log(db, {
-      tableName: 'market_channels',
-      recordId: data.id,
-      action: 'UPDATE',
-      userId: session.user.id,
-      tenantId: session.user.tenantId,
-      oldValues: existingChannel,
-      newValues: { ...existingChannel, ...data },
-      changedFields: data,
+    await db.transaction(async (tx) => {
+      await tx.update(marketChannels)
+        .set({
+          name: data.name,
+          code: data.code,
+          parentId: data.parentId,
+          isActive: data.isActive,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(eq(marketChannels.id, id), eq(marketChannels.tenantId, session.user.tenantId))
+        );
+      await AuditService.log(tx, {
+        tableName: 'market_channels',
+        recordId: id,
+        action: 'UPDATE',
+        userId: session.user.id,
+        tenantId: session.user.tenantId,
+        oldValues: existingChannel,
+        newValues: { ...existingChannel, ...data },
+        changedFields: data,
+      });
     });
-
+    // 记录审计日志
     revalidatePath('/settings/channels');
     return { success: true, message: '渠道更新成功' };
   } catch (_error) {
@@ -201,6 +202,7 @@ const deleteChannelAction = createSafeAction(z.object({ id: z.string() }), async
         eq(marketChannels.tenantId, session.user.tenantId)
       ),
     });
+    const id = data.id;
     if (!existingChannel) {
       return { success: false, error: '渠道不存在或无权操作' };
     }
@@ -212,23 +214,21 @@ const deleteChannelAction = createSafeAction(z.object({ id: z.string() }), async
     if (childChannel) {
       return { success: false, error: '该渠道下存在子渠道，无法删除' };
     }
-
-    await db
-      .delete(marketChannels)
-      .where(
-        and(eq(marketChannels.id, data.id), eq(marketChannels.tenantId, session.user.tenantId))
-      );
-
-    // 记录审计日志
-    await AuditService.log(db, {
-      tableName: 'market_channels',
-      recordId: data.id,
-      action: 'DELETE',
-      userId: session.user.id,
-      tenantId: session.user.tenantId,
-      oldValues: existingChannel,
+    await db.transaction(async (tx) => {
+      await tx.delete(marketChannels)
+        .where(
+          and(eq(marketChannels.id, id), eq(marketChannels.tenantId, session.user.tenantId))
+        );
+      await AuditService.log(tx, {
+        tableName: 'market_channels',
+        recordId: id,
+        action: 'DELETE',
+        userId: session.user.id,
+        tenantId: session.user.tenantId,
+        oldValues: existingChannel,
+      });
     });
-
+    // 记录审计日志
     revalidatePath('/settings/channels');
     return { success: true, message: '渠道删除成功' };
   } catch (_error) {

@@ -4,7 +4,7 @@ import { db } from '@/shared/api/db';
 import { orders } from '@/shared/api/schema';
 import { eq, desc, and, ilike, sql, inArray } from 'drizzle-orm';
 import { createSafeAction } from '@/shared/lib/server-action';
-import { checkPermission } from '@/shared/lib/auth';
+import { requirePermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
 import { z } from 'zod';
 import { unstable_cache } from 'next/cache';
@@ -179,7 +179,7 @@ const _getCachedPaymentSchedules = unstable_cache(
 // createSafeAction 内部实现
 const getOrdersInternal = createSafeAction(getOrdersSchema, async (params, { session }) => {
   // 权限检查：需要订单查看权限
-  await checkPermission(session, PERMISSIONS.ORDER.VIEW);
+  await requirePermission(session, PERMISSIONS.ORDER.VIEW);
 
   const page = params.page || 1;
   const pageSize = params.pageSize || 10;
@@ -206,7 +206,7 @@ const getOrdersInternal = createSafeAction(getOrdersSchema, async (params, { ses
 
 const getOrderByIdInternal = createSafeAction(getOrderByIdSchema, async (params, { session }) => {
   // 权限检查：需要订单查看权限
-  await checkPermission(session, PERMISSIONS.ORDER.VIEW);
+  await requirePermission(session, PERMISSIONS.ORDER.VIEW);
 
   if (session.user.tenantId === '__PLATFORM__') {
     throw new Error('Order not found');

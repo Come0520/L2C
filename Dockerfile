@@ -1,6 +1,6 @@
-FROM node:22-alpine AS base
+# 锁定 Node.js 精确版本，确保线上线下一致
+FROM node:22.21.1-alpine AS base
 
-ENV COREPACK_NPM_REGISTRY=https://registry.npmmirror.com
 ENV NPM_CONFIG_REGISTRY=https://registry.npmmirror.com
 
 FROM base AS deps
@@ -10,7 +10,8 @@ WORKDIR /app
 
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
-RUN corepack enable
+# 使用 npm 全局安装 pnpm，避免 corepack 的 symlink 问题
+RUN npm install -g pnpm@9.15.0
 
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
@@ -22,7 +23,7 @@ COPY . .
 
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
-RUN corepack enable
+RUN npm install -g pnpm@9.15.0
 
 ENV NEXT_TELEMETRY_DISABLED 1
 
@@ -63,7 +64,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
 
 ENV PNPM_HOME="/app/.pnpm"
 ENV PATH="/app/.local/bin:$PNPM_HOME:$PATH"
-RUN corepack enable pnpm
+RUN npm install -g pnpm@9.15.0
 
 USER nextjs
 
@@ -84,7 +85,7 @@ WORKDIR /app
 
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
-RUN corepack enable
+RUN npm install -g pnpm@9.15.0
 
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile

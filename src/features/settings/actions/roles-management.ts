@@ -71,7 +71,6 @@ export async function syncSystemRoles() {
   const userId = session.user.id;
 
   logger.info(`用户 ${userId} 正在启动系统角色同步`, { tenantId });
-
   try {
     // 使用事务确保原子性
     const results = await db.transaction(async (tx) => {
@@ -111,19 +110,19 @@ export async function syncSystemRoles() {
         }
       }
 
+      if (syncResults.length > 0) {
+        await AuditService.log(tx, {
+          tableName: 'roles',
+          recordId: 'SYSTEM_SYNC',
+          action: 'UPDATE',
+          userId: session.user.id,
+          tenantId: session.user.tenantId,
+          newValues: { syncedRoles: syncResults },
+        });
+      }
+
       return syncResults;
     });
-
-    if (results.length > 0) {
-      await AuditService.log(db, {
-        tableName: 'roles',
-        recordId: 'SYSTEM_SYNC',
-        action: 'UPDATE',
-        userId: session.user.id,
-        tenantId: session.user.tenantId,
-        newValues: { syncedRoles: results },
-      });
-    }
 
     revalidatePath('/settings/roles');
     revalidatePath('/settings/users');
@@ -308,25 +307,24 @@ export async function updateRole(
       }
       updateData.permissions = validated.data.permissions;
     }
-
-    await db.update(roles).set(updateData).where(eq(roles.id, id));
-
-    // 记录更新日志
-    await AuditService.log(db, {
-      tableName: 'roles',
-      recordId: id,
-      action: 'UPDATE',
-      userId: session.user.id,
-      tenantId: session.user.tenantId,
-      oldValues: { name: role.name, description: role.description, permissions: role.permissions },
-      newValues: {
-        name: validated.data.name,
-        description: validated.data.description,
-        permissions: updateData.permissions,
-      },
-      changedFields: updateData,
+    await db.transaction(async (tx) => {
+      await tx.update(roles).set(updateData).where(eq(roles.id, id));
+      await AuditService.log(tx, {
+        tableName: 'roles',
+        recordId: id,
+        action: 'UPDATE',
+        userId: session.user.id,
+        tenantId: session.user.tenantId,
+        oldValues: { name: role.name, description: role.description, permissions: role.permissions },
+        newValues: {
+          name: validated.data.name,
+          description: validated.data.description,
+          permissions: updateData.permissions,
+        },
+        changedFields: updateData,
+      });
     });
-
+    // 记录更新日志
     logger.info(`用户 ${session.user.id} 成功更新角色: ${id}`, {
       tenantId,
       name: validated.data.name,

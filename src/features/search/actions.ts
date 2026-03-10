@@ -641,49 +641,53 @@ const globalSearchActionInternal = createSafeAction(
 
       // 接入 AuditService
       // 1. 记录基础搜索审计
-      await AuditService.log(db, {
-        action: 'SEARCH',
-        tableName: 'search_log',
-        recordId: userId,
-        tenantId,
-        userId,
-        details: {
-          keyword: query.trim().slice(0, 50),
-          scope,
-          resultCount: totalResultCount,
-          durationMs: Date.now() - startTime,
-        },
-      });
-
+      await db.transaction(async (tx) => {
+          await AuditService.log(tx, {
+              action: 'SEARCH',
+              tableName: 'search_log',
+              recordId: userId,
+              tenantId,
+              userId,
+              details: {
+                keyword: query.trim().slice(0, 50),
+                scope,
+                resultCount: totalResultCount,
+                durationMs: Date.now() - startTime,
+              },
+            });
+        });
       // 2. 针对特定敏感实体的搜索结果记录预警审计
       if (results.finances.length > 0 || results.customers.length > 0) {
-        await AuditService.log(db, {
-          action: 'ACCESS',
-          tableName: 'data_privacy',
-          recordId: 'sensitive_search_detected',
-          tenantId,
-          userId,
-          details: {
-            reason: '搜索结果包含敏感财务或客户数据',
-            financeCount: results.finances.length,
-            customerCount: results.customers.length,
-          },
-        });
+          await db.transaction(async (tx) => {
+              await AuditService.log(tx, {
+                    action: 'ACCESS',
+                    tableName: 'data_privacy',
+                    recordId: 'sensitive_search_detected',
+                    tenantId,
+                    userId,
+                    details: {
+                      reason: '搜索结果包含敏感财务或客户数据',
+                      financeCount: results.finances.length,
+                      customerCount: results.customers.length,
+                    },
+                  });
+            });
       }
 
       // 3. 结果最终交付确认审计
-      await AuditService.log(db, {
-        action: 'DETAIL',
-        tableName: 'search_delivery',
-        recordId: `delivery-${Date.now()}`,
-        tenantId,
-        userId,
-        details: {
-          deliveryStatus: 'SUCCESS',
-          recipientUserId: userId,
-        },
-      });
-
+      await db.transaction(async (tx) => {
+          await AuditService.log(tx, {
+              action: 'DETAIL',
+              tableName: 'search_delivery',
+              recordId: `delivery-${Date.now()}`,
+              tenantId,
+              userId,
+              details: {
+                deliveryStatus: 'SUCCESS',
+                recipientUserId: userId,
+              },
+            });
+        });
       logger.info('[Search] 搜索结果组装完成并准备返回', {
         userId,
         totalDelivered: totalResultCount,

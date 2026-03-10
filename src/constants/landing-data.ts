@@ -393,6 +393,37 @@ export interface VersionRecord {
 
 export const versionHistory: VersionRecord[] = [
   {
+    id: 'v1.3.8',
+    version: 'v1.3.8',
+    date: '2026-03-11',
+    title: '全站八维安全审计与十大模块加固',
+    description:
+      '完成 admin、analytics、channels、dashboard、products、settings、ai-rendering 等十大核心模块的八维深度审计，修复 P0/P1 级安全漏洞（TOCTOU、IDOR、跨租户越权），引入乐观锁并发控制、事务完整性保障和审计日志全覆盖。',
+    contributors: ['长城（开发者）'],
+    updates: [
+      {
+        type: 'fix',
+        content: '修复十大模块 P0 级安全漏洞：TOCTOU 竞态条件、IDOR 横向越权、跨租户数据泄露',
+      },
+      {
+        type: 'feature',
+        content: '全站引入乐观锁 (Optimistic Locking) 并发控制，覆盖售后工单、用户设置、角色覆写等关键写操作',
+      },
+      {
+        type: 'optimize',
+        content: '数据库写操作全面迁移至 db.transaction 事务保障，确保原子性与一致性',
+      },
+      {
+        type: 'feature',
+        content: 'AI 渲染模块完成积分原子扣费与管理员模板 CRUD 审计日志接入',
+      },
+      {
+        type: 'optimize',
+        content: '渠道结算、产品折扣、分析报表等模块补全分页保护与日期范围限制，防止内存溢出',
+      },
+    ],
+  },
+  {
     id: 'v1.3.7',
     version: 'v1.3.7',
     date: '2026-03-10',

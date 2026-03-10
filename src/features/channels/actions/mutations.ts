@@ -254,15 +254,17 @@ export async function updateChannel(id: string, input: Partial<ChannelInput>) {
 
   // P1 Fix: Audit Log
   if (updated) {
-    await AuditService.log(db, {
-      tableName: 'channels',
-      recordId: id,
-      action: 'UPDATE',
-      userId: session.user.id,
-      tenantId,
-      newValues: updated,
-      details: { reason: 'Channel update', updatedFields: Object.keys(updateData) },
-    });
+      await db.transaction(async (tx) => {
+          await AuditService.log(tx, {
+            tableName: 'channels',
+            recordId: id,
+            action: 'UPDATE',
+            userId: session.user.id,
+            tenantId,
+            newValues: updated,
+            details: { reason: 'Channel update', updatedFields: Object.keys(updateData) },
+          });
+        });
   }
 
   revalidatePath('/channels');
@@ -300,27 +302,26 @@ export async function addChannelContact(input: ChannelContactInput) {
     where: and(eq(channels.id, validated.channelId), eq(channels.tenantId, tenantId)),
   });
   if (!channel) throw new Error('渠道不存在或无权操作');
-
-  const [newContact] = await db
-    .insert(channelContacts)
-    .values({
-      ...validated,
-      tenantId,
-      createdBy: session.user.id,
-    })
-    .returning();
-
+    let newContact;
+    await db.transaction(async (tx) => {
+        [newContact] = await tx.insert(channelContacts)
+        .values({
+          ...validated,
+          tenantId,
+          createdBy: session.user.id,
+        })
+        .returning();
+        await AuditService.log(tx, {
+            tableName: 'channel_contacts',
+            recordId: newContact.id,
+            action: 'CREATE',
+            userId: session.user.id,
+            tenantId,
+            newValues: newContact,
+            details: { reason: 'Add channel contact', channelId: validated.channelId },
+          });
+      });
   // P1 Fix: Audit Log
-  await AuditService.log(db, {
-    tableName: 'channel_contacts',
-    recordId: newContact.id,
-    action: 'CREATE',
-    userId: session.user.id,
-    tenantId,
-    newValues: newContact,
-    details: { reason: 'Add channel contact', channelId: validated.channelId },
-  });
-
   revalidatePath(`/channels/${validated.channelId}`);
   return newContact;
 }

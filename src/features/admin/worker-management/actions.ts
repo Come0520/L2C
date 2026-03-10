@@ -210,32 +210,31 @@ const updateWorkerActionInternal = createSafeAction(
 
     // 安全检查 2：确认目标存在且属于同一租户
     if (!oldWorker) throw new Error('未找到该师傅');
-
-    const [updated] = await db
-      .update(users)
-      .set({
-        ...updates,
-        updatedAt: new Date(),
-      })
-      .where(and(eq(users.id, id), eq(users.tenantId, session.user.tenantId)))
-      .returning();
-
-    // 审计日志（含旧值/新值对比）
-    await AuditService.log(db, {
-      action:
-        updates.isActive !== undefined
-          ? updates.isActive
-            ? 'ENABLE_WORKER'
-            : 'DISABLE_WORKER'
-          : 'UPDATE_WORKER',
-      tableName: 'users',
-      recordId: id,
-      userId: session.user.id,
-      tenantId: session.user.tenantId,
-      oldValues: oldWorker as Record<string, unknown>,
-      newValues: updates as Record<string, unknown>,
+    const updated = await db.transaction(async (tx) => {
+      const [result] = await tx.update(users)
+        .set({
+          ...updates,
+          updatedAt: new Date(),
+        })
+        .where(and(eq(users.id, id), eq(users.tenantId, session.user.tenantId)))
+        .returning();
+      await AuditService.log(tx, {
+        action:
+          updates.isActive !== undefined
+            ? updates.isActive
+              ? 'ENABLE_WORKER'
+              : 'DISABLE_WORKER'
+            : 'UPDATE_WORKER',
+        tableName: 'users',
+        recordId: id,
+        userId: session.user.id,
+        tenantId: session.user.tenantId,
+        oldValues: oldWorker as Record<string, unknown>,
+        newValues: updates as Record<string, unknown>,
+      });
+      return result;
     });
-
+    // 审计日志（含旧值/新值对比）
     logger.info(
       `[Admin] 用户 ${session.user.id} 更新了师傅 ${id} 的信息: ${Object.keys(updates).join(', ')}`
     );

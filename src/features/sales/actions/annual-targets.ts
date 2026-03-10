@@ -131,35 +131,34 @@ export async function updateAnnualTarget(
         )
       )
       .limit(1);
-
-    if (existing.length > 0) {
-      await db
-        .update(salesAnnualTargets)
-        .set({
+    await db.transaction(async (tx) => {
+      if (existing.length > 0) {
+        await db
+          .update(salesAnnualTargets)
+          .set({
+            targetAmount: String(amount),
+            updatedAt: new Date(),
+            updatedBy: session.user.id,
+          })
+          .where(eq(salesAnnualTargets.id, existing[0].id));
+      } else {
+        await tx.insert(salesAnnualTargets).values({
+          tenantId,
+          userId,
+          year,
           targetAmount: String(amount),
-          updatedAt: new Date(),
           updatedBy: session.user.id,
-        })
-        .where(eq(salesAnnualTargets.id, existing[0].id));
-    } else {
-      await db.insert(salesAnnualTargets).values({
+        });
+      }
+      await AuditService.log(tx, {
+        tableName: 'sales_annual_targets',
+        recordId: userId,
+        action: 'UPDATE_ANNUAL_TARGET',
+        details: { year, amount },
+        userId: session.user.id,
         tenantId,
-        userId,
-        year,
-        targetAmount: String(amount),
-        updatedBy: session.user.id,
       });
-    }
-
-    await AuditService.log(db, {
-      tableName: 'sales_annual_targets',
-      recordId: userId,
-      action: 'UPDATE_ANNUAL_TARGET',
-      details: { year, amount },
-      userId: session.user.id,
-      tenantId,
     });
-
     logger.info(
       `[sales][annual-targets] 设置年度目标: userId=${userId}, year=${year}, amount=${amount}`
     );
@@ -213,50 +212,50 @@ export async function splitAnnualToMonthly(
     const monthlyAmount = Math.round((annualAmount / 12) * 100) / 100;
 
     // 为12个月 Upsert 月目标
-    for (let month = 1; month <= 12; month++) {
-      const existing = await db
-        .select({ id: salesTargets.id })
-        .from(salesTargets)
-        .where(
-          and(
-            eq(salesTargets.tenantId, tenantId),
-            eq(salesTargets.userId, userId),
-            eq(salesTargets.year, year),
-            eq(salesTargets.month, month)
+    await db.transaction(async (tx) => {
+      for (let month = 1; month <= 12; month++) {
+        const existing = await tx
+          .select({ id: salesTargets.id })
+          .from(salesTargets)
+          .where(
+            and(
+              eq(salesTargets.tenantId, tenantId),
+              eq(salesTargets.userId, userId),
+              eq(salesTargets.year, year),
+              eq(salesTargets.month, month)
+            )
           )
-        )
-        .limit(1);
+          .limit(1);
 
-      if (existing.length > 0) {
-        await db
-          .update(salesTargets)
-          .set({
+        if (existing.length > 0) {
+          await tx
+            .update(salesTargets)
+            .set({
+              targetAmount: String(monthlyAmount),
+              updatedAt: new Date(),
+              updatedBy: session.user.id,
+            })
+            .where(eq(salesTargets.id, existing[0].id));
+        } else {
+          await tx.insert(salesTargets).values({
+            tenantId,
+            userId,
+            year,
+            month,
             targetAmount: String(monthlyAmount),
-            updatedAt: new Date(),
             updatedBy: session.user.id,
-          })
-          .where(eq(salesTargets.id, existing[0].id));
-      } else {
-        await db.insert(salesTargets).values({
-          tenantId,
-          userId,
-          year,
-          month,
-          targetAmount: String(monthlyAmount),
-          updatedBy: session.user.id,
-        });
+          });
+        }
       }
-    }
-
-    await AuditService.log(db, {
-      tableName: 'sales_annual_targets',
-      recordId: userId,
-      action: 'SPLIT_ANNUAL_TO_MONTHLY',
-      details: { year, annualAmount, monthlyAmount },
-      userId: session.user.id,
-      tenantId,
+      await AuditService.log(tx, {
+        tableName: 'sales_annual_targets',
+        recordId: userId,
+        action: 'SPLIT_ANNUAL_TO_MONTHLY',
+        details: { year, annualAmount, monthlyAmount },
+        userId: session.user.id,
+        tenantId,
+      });
     });
-
     logger.info(
       `[sales][annual-targets] 拆解年度→月度: userId=${userId}, year=${year}, monthly=${monthlyAmount}`
     );

@@ -109,47 +109,71 @@ export async function executePoolRecycleJob() {
 
       // 2. 批量回收超期未联系线索
       const noContactThreshold = new Date(Date.now() - noContactDays * 24 * 3600 * 1000);
-      const staleNoContactLeads = await db.query.leads.findMany({
-        where: and(
-          eq(leads.tenantId, tenantId),
-          eq(leads.status, 'PENDING_FOLLOWUP'),
-          lte(leads.assignedAt, noContactThreshold),
-          isNotNull(leads.assignedSalesId)
-        ),
-        columns: { id: true },
-      });
+      let hasMoreNoContact = true;
+      while (hasMoreNoContact) {
+        const staleNoContactLeads = await db.query.leads.findMany({
+          where: and(
+            eq(leads.tenantId, tenantId),
+            eq(leads.status, 'PENDING_FOLLOWUP'),
+            lte(leads.assignedAt, noContactThreshold),
+            isNotNull(leads.assignedSalesId)
+          ),
+          columns: { id: true },
+          limit: 500,
+        });
 
-      const noContactResult = await recycleLeadBatch(
-        staleNoContactLeads,
-        tenantId,
-        'PENDING_FOLLOWUP',
-        `系统自动回收：超过 ${noContactDays} 天未联系`
-      );
-      recycledNoContact += noContactResult.recycled;
-      totalProcessed += noContactResult.recycled;
-      errors.push(...noContactResult.errors);
+        if (staleNoContactLeads.length === 0) {
+          hasMoreNoContact = false;
+        } else {
+          const noContactResult = await recycleLeadBatch(
+            staleNoContactLeads,
+            tenantId,
+            'PENDING_FOLLOWUP',
+            `系统自动回收：超过 ${noContactDays} 天未联系`
+          );
+          recycledNoContact += noContactResult.recycled;
+          totalProcessed += noContactResult.recycled;
+          errors.push(...noContactResult.errors);
+
+          if (staleNoContactLeads.length < 500) {
+            hasMoreNoContact = false;
+          }
+        }
+      }
 
       // 3. 批量回收超期未成交线索
       const noDealThreshold = new Date(Date.now() - noDealDays * 24 * 3600 * 1000);
-      const staleNoDealLeads = await db.query.leads.findMany({
-        where: and(
-          eq(leads.tenantId, tenantId),
-          eq(leads.status, 'FOLLOWING_UP'),
-          lte(leads.assignedAt, noDealThreshold),
-          isNotNull(leads.assignedSalesId)
-        ),
-        columns: { id: true },
-      });
+      let hasMoreNoDeal = true;
+      while (hasMoreNoDeal) {
+        const staleNoDealLeads = await db.query.leads.findMany({
+          where: and(
+            eq(leads.tenantId, tenantId),
+            eq(leads.status, 'FOLLOWING_UP'),
+            lte(leads.assignedAt, noDealThreshold),
+            isNotNull(leads.assignedSalesId)
+          ),
+          columns: { id: true },
+          limit: 500,
+        });
 
-      const noDealResult = await recycleLeadBatch(
-        staleNoDealLeads,
-        tenantId,
-        'FOLLOWING_UP',
-        `系统自动回收：超过 ${noDealDays} 天未成交`
-      );
-      recycledNoDeal += noDealResult.recycled;
-      totalProcessed += noDealResult.recycled;
-      errors.push(...noDealResult.errors);
+        if (staleNoDealLeads.length === 0) {
+          hasMoreNoDeal = false;
+        } else {
+          const noDealResult = await recycleLeadBatch(
+            staleNoDealLeads,
+            tenantId,
+            'FOLLOWING_UP',
+            `系统自动回收：超过 ${noDealDays} 天未成交`
+          );
+          recycledNoDeal += noDealResult.recycled;
+          totalProcessed += noDealResult.recycled;
+          errors.push(...noDealResult.errors);
+
+          if (staleNoDealLeads.length < 500) {
+            hasMoreNoDeal = false;
+          }
+        }
+      }
     }
 
     logger.info('[leads][cron] 公海回收完成', {

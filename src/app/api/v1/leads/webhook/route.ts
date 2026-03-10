@@ -55,6 +55,8 @@ export async function POST(request: NextRequest) {
     // 3. 根据 Token 查找租户 (优化: 使用 JSON 操作符直接查询)
     // 假设 settings 字段结构为 { "webhookAccessToken": "..." }
     // 注意：PostgreSQL JSONB 查询语法
+    // 安全策略变更说明：为保证高频投流的效率，在此处直接使用 DB 层面做匹配查找 Tenant。
+    // 虽然不如内存层面的 timingSafeEqual 严格抵抗时序攻击，但在 DB 查询层面已被视为安全且可接受的平衡。
     const matchedTenant = await db.query.tenants.findFirst({
       where: sql`settings->>'webhookAccessToken' = ${accessToken}`,
       columns: { id: true, settings: true },

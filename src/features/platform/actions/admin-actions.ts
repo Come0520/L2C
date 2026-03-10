@@ -761,7 +761,7 @@ export async function generateMagicLink(tenantId: string): Promise<{
 
     // 1. 查找该租户的 BOSS 用户
     const bossUser = await db.query.users.findFirst({
-      where: eq(users.tenantId, tenantId),
+      where: and(eq(users.tenantId, tenantId), eq(users.role, 'BOSS')),
       columns: { id: true, name: true, isActive: true, role: true },
       // 优先找 BOSS 角色用户
       orderBy: (u, { desc }) => desc(u.createdAt),
@@ -799,30 +799,29 @@ export async function generateMagicLink(tenantId: string): Promise<{
     // 3. 生成新的 Magic Link token（有效期 24 小时）
     const magicToken = uuidv4();
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
-
-    await db.insert(verificationCodes).values({
-      userId: bossUser.id,
-      code: Math.floor(100000 + Math.random() * 900000).toString(), // 占位，必填字段
-      token: magicToken,
-      type: 'MAGIC_LOGIN',
-      expiresAt,
+    await db.transaction(async (tx) => {
+      await tx.insert(verificationCodes).values({
+        userId: bossUser.id,
+        code: Math.floor(100000 + Math.random() * 900000).toString(), // 占位，必填字段
+        token: magicToken,
+        type: 'MAGIC_LOGIN',
+        expiresAt,
+      });
+      await AuditService.log(tx, {
+        tenantId,
+        userId: adminId,
+        tableName: 'users',
+        recordId: bossUser.id,
+        action: 'MAGIC_LINK_GENERATED',
+        details: {
+          targetUserId: bossUser.id,
+          targetUserName: bossUser.name,
+          expiresAt: expiresAt.toISOString(),
+          generatedBy: adminId,
+        },
+      });
     });
-
     // 4. 记录审计日志
-    await AuditService.log(db, {
-      tenantId,
-      userId: adminId,
-      tableName: 'users',
-      recordId: bossUser.id,
-      action: 'MAGIC_LINK_GENERATED',
-      details: {
-        targetUserId: bossUser.id,
-        targetUserName: bossUser.name,
-        expiresAt: expiresAt.toISOString(),
-        generatedBy: adminId,
-      },
-    });
-
     // 5. 构造完整 Magic Link URL
     const baseUrl =
       process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';

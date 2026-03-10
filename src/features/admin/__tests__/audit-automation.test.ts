@@ -7,8 +7,8 @@ import { updateMfaConfig } from '../tenant-settings/actions';
 import { PERMISSIONS } from '@/shared/config/permissions';
 
 // Mock 核心依赖
-vi.mock('@/shared/api/db', () => ({
-  db: {
+vi.mock('@/shared/api/db', () => {
+  const dbMock = {
     query: {
       roles: { findFirst: vi.fn() },
       users: { findFirst: vi.fn() },
@@ -18,8 +18,14 @@ vi.mock('@/shared/api/db', () => ({
     set: vi.fn().mockReturnThis(),
     where: vi.fn().mockReturnThis(),
     returning: vi.fn().mockResolvedValue([{ id: 'mock-id' }]),
-  },
-}));
+  };
+  return {
+    db: {
+      ...dbMock,
+      transaction: vi.fn(async (callback) => callback(dbMock)),
+    },
+  };
+});
 
 vi.mock('@/shared/services/audit-service', () => ({
   AuditService: {

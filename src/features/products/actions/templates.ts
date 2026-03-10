@@ -80,41 +80,41 @@ const upsertAttributeTemplateActionInternal = createSafeAction(
     });
 
     if (existing) {
-      await db
-        .update(productAttributeTemplates)
-        .set({
-          templateSchema: data.templateSchema, // Stored as JSONB
-          updatedAt: new Date(),
-        })
-        .where(eq(productAttributeTemplates.id, existing.id));
-
-      await AuditService.log(db, {
-        tenantId: session.user.tenantId,
-        userId: session.user.id!,
-        tableName: 'product_attribute_templates',
-        recordId: existing.id,
-        action: 'UPDATE',
-        oldValues: { templateSchema: existing.templateSchema },
-        newValues: { templateSchema: data.templateSchema },
-      });
+        await db.transaction(async (tx) => {
+            await tx.update(productAttributeTemplates)
+                .set({
+                  templateSchema: data.templateSchema, // Stored as JSONB
+                  updatedAt: new Date(),
+                })
+                .where(eq(productAttributeTemplates.id, existing.id));
+            await AuditService.log(tx, {
+                        tenantId: session.user.tenantId,
+                        userId: session.user.id!,
+                        tableName: 'product_attribute_templates',
+                        recordId: existing.id,
+                        action: 'UPDATE',
+                        oldValues: { templateSchema: existing.templateSchema },
+                        newValues: { templateSchema: data.templateSchema },
+                      });
+          });
     } else {
-      const [inserted] = await db
-        .insert(productAttributeTemplates)
-        .values({
-          tenantId: session.user.tenantId,
-          category: data.category,
-          templateSchema: data.templateSchema,
-        })
-        .returning();
-
-      await AuditService.log(db, {
-        tenantId: session.user.tenantId,
-        userId: session.user.id!,
-        tableName: 'product_attribute_templates',
-        recordId: inserted.id,
-        action: 'CREATE',
-        newValues: inserted,
-      });
+        await db.transaction(async (tx) => {
+            const [inserted] = await tx.insert(productAttributeTemplates)
+                .values({
+                  tenantId: session.user.tenantId,
+                  category: data.category,
+                  templateSchema: data.templateSchema,
+                })
+                .returning();
+            await AuditService.log(tx, {
+                        tenantId: session.user.tenantId,
+                        userId: session.user.id!,
+                        tableName: 'product_attribute_templates',
+                        recordId: inserted.id,
+                        action: 'CREATE',
+                        newValues: inserted,
+                      });
+          });
     }
 
     revalidatePath('/settings/products/templates');

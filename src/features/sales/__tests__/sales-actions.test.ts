@@ -47,8 +47,8 @@ const mockDbFindManyQuotes = vi.fn();
 const mockDbInsertOnConflict = vi.fn().mockResolvedValue([]);
 const mockDbSelectFrom = vi.fn();
 
-vi.mock('@/shared/api/db', () => ({
-  db: {
+vi.mock('@/shared/api/db', () => {
+  const dbMock = {
     query: {
       users: { findFirst: (...args: any[]) => mockDbFindFirstUsers(...args) },
       salesTargets: { findFirst: (...args: any[]) => mockDbFindFirstTargets(...args) },
@@ -69,8 +69,13 @@ vi.mock('@/shared/api/db', () => ({
         })),
       })),
     })),
-  },
-}));
+    transaction: vi.fn(),
+  };
+
+  dbMock.transaction.mockImplementation(async (cb: any) => cb(dbMock));
+
+  return { db: dbMock };
+});
 
 // ===== 常量 =====
 

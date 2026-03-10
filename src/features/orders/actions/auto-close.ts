@@ -2,11 +2,10 @@
 
 import { db } from '@/shared/api/db';
 import { orders } from '@/shared/api/schema';
-import { eq, and, sql } from 'drizzle-orm';
-import { OrderService } from '@/services/order.service';
+import { eq, and, sql, inArray } from 'drizzle-orm';
 import { auth } from '@/shared/lib/auth';
 import { subDays } from 'date-fns';
-import {} from 'next/cache';
+import { } from 'next/cache';
 import { logger } from '@/shared/lib/logger';
 
 /**
@@ -46,36 +45,74 @@ export async function autoCloseOrdersAction() {
         id: true,
         orderNo: true,
         version: true,
+        customerId: true,
       },
+      limit: 100, // D4-002: 添加 limit，防止大结果集导致的深翻页或内存 OOM
     });
 
     if (ordersToClose.length === 0) {
       return { success: true, message: '没有需要自动结案的订单', count: 0 };
     }
 
-    const results = [];
-    for (const order of ordersToClose) {
-      try {
-        // 使用 OrderService 执行状态流转，确保审计和关联逻辑被触发
-        await OrderService.updateOrderStatus(
-          order.id,
-          'COMPLETED',
-          tenantId,
-          order.version || 0,
-          session.user.id // 记录为当前用户触发，或记录为系统
+    const results: Array<{ id: string; orderNo: string; success: boolean; error?: string }> = [];
+
+    // D4-001: 优化性能瓶颈。移除 Promise.allSettled 的 N+1 更新循环，使用批量 SQL 进行一次性状态流转
+    type OrderToClose = { id: string; orderNo: string; version: number | null; customerId: string | null };
+    const orderIds = ordersToClose.map((o: OrderToClose) => o.id);
+
+    await db.transaction(async (tx: any) => {
+      // 1. 批量更新订单状态为 COMPLETED 并增加版本号
+      await tx
+        .update(orders)
+        .set({
+          status: 'COMPLETED',
+          version: sql`${orders.version} + 1`,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(orders.tenantId, tenantId),
+            inArray(orders.id, orderIds)
+          )
         );
-        console.log('[orders] 订单自动结案成功:', {
-          orderId: order.id,
-          orderNo: order.orderNo,
-          tenantId,
-        });
-        results.push({ id: order.id, orderNo: order.orderNo, success: true });
-      } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : 'Unknown error';
-        logger.error(`自动结案失败 [${order.orderNo}]:`, { error: message });
-        console.log('[orders] 订单自动结案失败:', { orderNo: order.orderNo, error: message });
-        results.push({ id: order.id, orderNo: order.orderNo, success: false, error: message });
+
+      // 2. 批量记录审计日志 (为了兼容 AuditService.record 的单条签名，可以在此用 Promise.all，在 db 层其实在同一个 tx 中很快)
+      const { AuditService } = await import('@/shared/services/audit-service');
+      const { CustomerStatusService } = await import('@/services/customer-status.service');
+
+      await Promise.all(
+        ordersToClose.map((order: OrderToClose) =>
+          AuditService.record(
+            {
+              tenantId,
+              userId: session.user.id,
+              tableName: 'orders',
+              recordId: order.id,
+              action: 'UPDATE',
+              oldValues: { status: 'INSTALLATION_COMPLETED' },
+              newValues: { status: 'COMPLETED' },
+              changedFields: { status: 'COMPLETED' },
+            },
+            tx
+          )
+        )
+      );
+
+      // 3. 处理订单成功后的钩子同步
+      // 提取唯一的客户 ID，避免重复触发回调
+      const uniqueCustomerIds = [...new Set(ordersToClose.map((o: OrderToClose) => o.customerId).filter(Boolean))];
+      if (uniqueCustomerIds.length > 0) {
+        await Promise.all(
+          uniqueCustomerIds.map(customerId =>
+            CustomerStatusService.onOrderCompleted(customerId as string, tenantId)
+          )
+        );
       }
+    });
+
+    for (const order of ordersToClose) {
+      console.log('[orders] 订单自动结案成功:', { orderId: order.id, orderNo: order.orderNo, tenantId });
+      results.push({ id: order.id, orderNo: order.orderNo, success: true });
     }
 
     // 统一清除缓存

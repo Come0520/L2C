@@ -66,37 +66,36 @@ export async function createDebitNote(input: z.infer<typeof createDebitNoteSchem
     if (!(await checkPermission(session, PERMISSIONS.FINANCE.AP_CREATE))) {
       return { success: false, error: '权限不足：需要财务管理权限' };
     }
-
-    const [debitNote] = await db
-      .insert(debitNotes)
-      .values({
-        tenantId,
-        debitNoteNo: generateDebitNoteNo(),
-        supplierId: data.supplierId,
-        supplierName: data.supplierName,
-        purchaseOrderId: data.purchaseOrderId,
-        apStatementId: data.apStatementId,
-        type: data.type,
-        amount: String(data.amount),
-        reason: data.reason,
-        description: data.description,
-        status: 'PENDING', // 创建后待审批
-        createdBy: userId,
-        remark: data.remark,
-      })
-      .returning();
-
+    let debitNote;
+    await db.transaction(async (tx) => {
+        [debitNote] = await tx.insert(debitNotes)
+          .values({
+            tenantId,
+            debitNoteNo: generateDebitNoteNo(),
+            supplierId: data.supplierId,
+            supplierName: data.supplierName,
+            purchaseOrderId: data.purchaseOrderId,
+            apStatementId: data.apStatementId,
+            type: data.type,
+            amount: String(data.amount),
+            reason: data.reason,
+            description: data.description,
+            status: 'PENDING', // 创建后待审批
+            createdBy: userId,
+            remark: data.remark,
+          })
+          .returning();
+        await AuditService.log(tx, {
+              tenantId,
+              userId: userId!,
+              tableName: 'debit_notes',
+              recordId: debitNote.id,
+              action: 'CREATE',
+              newValues: debitNote as Record<string, unknown>,
+              details: { debitNoteNo: debitNote.debitNoteNo, amount: data.amount },
+            });
+      });
     // 记录审计日志 F-32
-    await AuditService.log(db, {
-      tenantId,
-      userId: userId!,
-      tableName: 'debit_notes',
-      recordId: debitNote.id,
-      action: 'CREATE',
-      newValues: debitNote as Record<string, unknown>,
-      details: { debitNoteNo: debitNote.debitNoteNo, amount: data.amount },
-    });
-
     updateTag(`finance-debit-notes-${tenantId}`);
 
     return {
@@ -216,31 +215,30 @@ export async function approveDebitNote(id: string, approved: boolean, rejectReas
       return { success: true, message: '借项通知单已审批通过并生效' };
     } else {
       // 审批拒绝
-      await db
-        .update(debitNotes)
-        .set({
-          status: 'REJECTED',
-          approvedBy: userId,
-          approvedAt: new Date(),
-          remark: debitNote.remark
-            ? `${debitNote.remark}｜拒绝原因: ${rejectReason || '无'}`
-            : `拒绝原因: ${rejectReason || '无'}`,
-          updatedAt: new Date(),
-        })
-        .where(eq(debitNotes.id, id));
-
+        await db.transaction(async (tx) => {
+            await tx.update(debitNotes)
+                .set({
+                  status: 'REJECTED',
+                  approvedBy: userId,
+                  approvedAt: new Date(),
+                  remark: debitNote.remark
+                    ? `${debitNote.remark}｜拒绝原因: ${rejectReason || '无'}`
+                    : `拒绝原因: ${rejectReason || '无'}`,
+                  updatedAt: new Date(),
+                })
+                .where(eq(debitNotes.id, id));
+            await AuditService.log(tx, {
+                        tenantId,
+                        userId: userId!,
+                        tableName: 'debit_notes',
+                        recordId: id,
+                        action: 'UPDATE',
+                        newValues: { status: 'REJECTED' },
+                        oldValues: { status: debitNote.status },
+                        details: { debitNoteNo: debitNote.debitNoteNo, approved: false, reason: rejectReason },
+                      });
+          });
       // 记录审计日志 F-32
-      await AuditService.log(db, {
-        tenantId,
-        userId: userId!,
-        tableName: 'debit_notes',
-        recordId: id,
-        action: 'UPDATE',
-        newValues: { status: 'REJECTED' },
-        oldValues: { status: debitNote.status },
-        details: { debitNoteNo: debitNote.debitNoteNo, approved: false, reason: rejectReason },
-      });
-
       updateTag(`finance-debit-notes-${tenantId}`);
 
       return { success: true, message: '借项通知单已拒绝' };

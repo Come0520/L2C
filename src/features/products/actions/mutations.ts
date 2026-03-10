@@ -3,7 +3,7 @@
 import { z } from 'zod';
 import { db } from '@/shared/api/db';
 import { products } from '@/shared/api/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, inArray } from 'drizzle-orm';
 import { checkPermission } from '@/shared/lib/auth';
 import { createSafeAction } from '@/shared/lib/server-action';
 import { PERMISSIONS } from '@/shared/config/permissions';
@@ -260,22 +260,39 @@ const batchCreateProductsActionInternal = createSafeAction(
       errors: [] as { row: number; sku: string; error: string }[],
     };
 
-    // 逐条处理以便精确定位错误，但可以使用事务优化或预检查 SKU
+    // 批量预检查 SKU
+    const itemSkus = items.map((i) => i.sku);
+    let existingSkus = new Set<string>();
+
+    if (itemSkus.length > 0) {
+      const existing = await db.query.products.findMany({
+        where: and(eq(products.tenantId, tenantId), inArray(products.sku, itemSkus)),
+        columns: { sku: true },
+      });
+      existingSkus = new Set(existing.map((e) => e.sku));
+    }
+
+    const toInsert: any[] = [];
+
+    // 逐条处理判断去重
     for (let i = 0; i < items.length; i++) {
       const data = items[i];
-      try {
-        // 检查 SKU 唯一性
-        const existing = await db.query.products.findFirst({
-          where: and(eq(products.tenantId, tenantId), eq(products.sku, data.sku)),
+      if (existingSkus.has(data.sku)) {
+        results.errorCount++;
+        results.errors.push({
+          row: i + 1,
+          sku: data.sku,
+          error: `SKU "${data.sku}" 已存在`,
         });
+      } else {
+        toInsert.push({ ...data, _rowIndex: i + 1 });
+      }
+    }
 
-        if (existing) {
-          throw new Error(`SKU "${data.sku}" 已存在`);
-        }
-
-        const batchProduct = await db
-          .insert(products)
-          .values({
+    if (toInsert.length > 0) {
+      try {
+        await db.transaction(async (tx: any) => {
+          const insertValues = toInsert.map((data) => ({
             tenantId,
             sku: data.sku,
             name: data.name,
@@ -293,28 +310,37 @@ const batchCreateProductsActionInternal = createSafeAction(
             defaultSupplierId: data.defaultSupplierId,
             isStockable: data.isStockable,
             description: data.description,
-            // 确保将按品类导入的各类扩充属性保存在 specs 字段 (对应 schema.ts 的 attributes JSONB)
+            // 确保将按品类导入的各类扩充属性保存在 specs 字段
             specs: data.attributes || {},
             createdBy: userId,
-          })
-          .returning();
+          }));
 
-        await AuditService.log(db, {
-          tenantId,
-          userId,
-          tableName: 'products',
-          recordId: batchProduct[0].id,
-          action: 'CREATE',
-          newValues: batchProduct[0],
+          const insertedBatch = await tx.insert(products).values(insertValues).returning();
+
+          const auditLogs = insertedBatch.map((product: any) => ({
+            tenantId,
+            userId,
+            tableName: 'products',
+            recordId: product.id,
+            action: 'CREATE' as const,
+            newValues: product,
+          }));
+
+          for (const log of auditLogs) {
+            await AuditService.log(tx, log);
+          }
+
+          results.successCount += insertedBatch.length;
         });
-
-        results.successCount++;
       } catch (error: unknown) {
-        results.errorCount++;
-        results.errors.push({
-          row: i + 1,
-          sku: data.sku,
-          error: error instanceof Error ? error.message : '未知错误',
+        // 如果批量插入作为事务整体崩溃（极少，但应对DB层错误兜底）
+        results.errorCount += toInsert.length;
+        toInsert.forEach((data) => {
+          results.errors.push({
+            row: data._rowIndex,
+            sku: data.sku,
+            error: error instanceof Error ? error.message : '批量插入底层崩溃',
+          });
         });
       }
     }

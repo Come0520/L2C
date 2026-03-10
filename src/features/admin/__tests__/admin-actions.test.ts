@@ -57,8 +57,8 @@ const mockDbUpdateReturning = vi.fn().mockResolvedValue([{ id: 'test-id' }]);
 const mockDbInsertReturning = vi.fn().mockResolvedValue([{ id: 'new-role-id', name: '测试角色' }]);
 const mockDbDeleteWhere = vi.fn().mockResolvedValue(undefined);
 
-vi.mock('@/shared/api/db', () => ({
-  db: {
+vi.mock('@/shared/api/db', () => {
+  const dbMock = {
     query: {
       users: {
         findMany: (...args: unknown[]) => mockDbFindManyUsers(...args),
@@ -89,8 +89,14 @@ vi.mock('@/shared/api/db', () => ({
     delete: vi.fn(() => ({
       where: mockDbDeleteWhere,
     })),
-  },
-}));
+  };
+  return {
+    db: {
+      ...dbMock,
+      transaction: vi.fn(async (callback) => callback(dbMock)),
+    },
+  };
+});
 
 vi.mock('@/shared/lib/logger', () => ({
   logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn() },

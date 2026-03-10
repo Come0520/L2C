@@ -58,6 +58,7 @@ export const afterSalesTickets = pgTable(
     internalLoss: decimal('internal_loss', { precision: 12, scale: 2 }).default('0.00'), // 公司内部净损失
 
     isWarranty: boolean('is_warranty').default(true), // 是否保修内
+    version: integer('version').default(1).notNull(), // 乐观锁版本号
     satisfaction: integer('satisfaction'), // 客户满意度 (1-5)
     channelSatisfaction: integer('channel_satisfaction'), // 渠道满意度 (1-5)
 

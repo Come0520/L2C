@@ -408,29 +408,33 @@ export async function createAnnouncement(input: z.infer<typeof createAnnouncemen
   }
   const data = validated.data;
 
-  const [announcement] = await db
-    .insert(systemAnnouncements)
-    .values({
-      tenantId: session.user.tenantId,
-      title: data.title,
-      content: data.content,
-      type: data.type || 'INFO',
-      targetRoles: data.targetRoles,
-      startAt: data.startAt,
-      endAt: data.endAt,
-      isPinned: data.isPinned || false,
-      createdBy: session.user.id,
-    })
-    .returning();
+  const announcement = await db.transaction(async (tx) => {
+    const [inserted] = await tx
+      .insert(systemAnnouncements)
+      .values({
+        tenantId: session.user.tenantId,
+        title: data.title,
+        content: data.content,
+        type: data.type || 'INFO',
+        targetRoles: data.targetRoles,
+        startAt: data.startAt,
+        endAt: data.endAt,
+        isPinned: data.isPinned || false,
+        createdBy: session.user.id,
+      })
+      .returning();
 
-  // P2: 添加审计日志
-  await AuditService.log(db, {
-    tableName: 'system_announcements',
-    recordId: announcement.id,
-    action: 'CREATE',
-    userId: session.user.id,
-    tenantId: session.user.tenantId,
-    newValues: announcement,
+    // P2: 添加审计日志
+    await AuditService.log(tx, {
+      tableName: 'system_announcements',
+      recordId: inserted.id,
+      action: 'CREATE',
+      userId: session.user.id,
+      tenantId: session.user.tenantId,
+      newValues: inserted,
+    });
+
+    return inserted;
   });
 
   // P4 优化：失效相关缓存
@@ -502,58 +506,62 @@ export async function upsertNotificationTemplate(input: z.infer<typeof upsertTem
     return { success: false, error: '权限不足' };
   }
 
-  let result;
-  if (data.id) {
-    // 更新
-    const [updated] = await db
-      .update(notificationTemplates)
-      .set({
-        code: data.code,
-        name: data.name,
-        notificationType: data.notificationType ?? 'SYSTEM',
-        titleTemplate: data.titleTemplate,
-        contentTemplate: data.contentTemplate,
-        smsTemplate: data.smsTemplate,
-        channels: data.channels,
-        paramMapping: data.paramMapping,
-        updatedAt: new Date(),
-      })
-      .where(
-        and(eq(notificationTemplates.id, data.id), eq(notificationTemplates.tenantId, tenantId))
-      )
-      .returning();
-    result = updated;
-  } else {
-    // 新建
-    const [created] = await db
-      .insert(notificationTemplates)
-      .values({
-        tenantId,
-        code: data.code,
-        name: data.name,
-        notificationType: data.notificationType ?? 'SYSTEM',
-        titleTemplate: data.titleTemplate,
-        contentTemplate: data.contentTemplate,
-        smsTemplate: data.smsTemplate,
-        channels: data.channels,
-        paramMapping: data.paramMapping,
-      })
-      .returning();
-    result = created;
-  }
+  const result = await db.transaction(async (tx) => {
+    let transactionResult;
+    if (data.id) {
+      // 更新
+      const [updated] = await tx
+        .update(notificationTemplates)
+        .set({
+          code: data.code,
+          name: data.name,
+          notificationType: data.notificationType ?? 'SYSTEM',
+          titleTemplate: data.titleTemplate,
+          contentTemplate: data.contentTemplate,
+          smsTemplate: data.smsTemplate,
+          channels: data.channels,
+          paramMapping: data.paramMapping,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(eq(notificationTemplates.id, data.id), eq(notificationTemplates.tenantId, tenantId))
+        )
+        .returning();
+      transactionResult = updated;
+    } else {
+      // 新建
+      const [created] = await tx
+        .insert(notificationTemplates)
+        .values({
+          tenantId,
+          code: data.code,
+          name: data.name,
+          notificationType: data.notificationType ?? 'SYSTEM',
+          titleTemplate: data.titleTemplate,
+          contentTemplate: data.contentTemplate,
+          smsTemplate: data.smsTemplate,
+          channels: data.channels,
+          paramMapping: data.paramMapping,
+        })
+        .returning();
+      transactionResult = created;
+    }
 
-  if (!result) {
-    return { success: false, error: '操作失败' };
-  }
+    if (!transactionResult) {
+      throw new Error('操作失败');
+    }
 
-  // P2: 添加审计日志
-  await AuditService.log(db, {
-    tableName: 'notification_templates',
-    recordId: result.id,
-    action: data.id ? 'UPDATE' : 'CREATE',
-    userId: session.user.id,
-    tenantId: session.user.tenantId,
-    newValues: result,
+    // P2: 添加审计日志
+    await AuditService.log(tx, {
+      tableName: 'notification_templates',
+      recordId: transactionResult.id,
+      action: data.id ? 'UPDATE' : 'CREATE',
+      userId: session.user.id,
+      tenantId: session.user.tenantId,
+      newValues: transactionResult,
+    });
+
+    return transactionResult;
   });
 
   // P4 优化：失效相关缓存

@@ -15,7 +15,7 @@ import {
 } from '@/shared/api/schema';
 import { AuditService } from '@/shared/services/audit-service';
 
-import { eq, and, desc, sql } from 'drizzle-orm';
+import { eq, and, desc, sql, inArray } from 'drizzle-orm';
 import { Decimal } from 'decimal.js';
 import { auth, checkPermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
@@ -553,15 +553,40 @@ export const verifyPaymentBill = createSafeAction(
       });
 
       // 3. 更新对应的对账单状态
+      // FN-P-02 Fix: Batch load statements to avoid N+1 queries
+      const supplierStatementIds = bill.items
+        ?.filter((item) => item.statementType === 'AP_SUPPLIER')
+        .map((item) => item.statementId) || [];
+      const laborStatementIds = bill.items
+        ?.filter((item) => item.statementType === 'AP_LABOR')
+        .map((item) => item.statementId) || [];
+
+      const [supplierStatements, laborStatements] = await Promise.all([
+        supplierStatementIds.length > 0
+          ? tx.query.apSupplierStatements.findMany({
+            where: and(
+              inArray(apSupplierStatements.id, supplierStatementIds),
+              eq(apSupplierStatements.tenantId, session.user.tenantId)
+            ),
+          })
+          : Promise.resolve([]),
+        laborStatementIds.length > 0
+          ? tx.query.apLaborStatements.findMany({
+            where: and(
+              inArray(apLaborStatements.id, laborStatementIds),
+              eq(apLaborStatements.tenantId, session.user.tenantId)
+            ),
+          })
+          : Promise.resolve([]),
+      ]);
+
+      const supplierStatementMap = new Map(supplierStatements.map((s) => [s.id, s]));
+      const laborStatementMap = new Map(laborStatements.map((s) => [s.id, s]));
+
       if (bill.items && bill.items.length > 0) {
         for (const item of bill.items) {
           if (item.statementType === 'AP_SUPPLIER') {
-            const statement = await tx.query.apSupplierStatements.findFirst({
-              where: and(
-                eq(apSupplierStatements.id, item.statementId),
-                eq(apSupplierStatements.tenantId, session.user.tenantId)
-              ),
-            });
+            const statement = supplierStatementMap.get(item.statementId);
             if (statement) {
               const paidAmount = new Decimal(statement.paidAmount || '0').plus(
                 new Decimal(item.amount)
@@ -607,12 +632,7 @@ export const verifyPaymentBill = createSafeAction(
               });
             }
           } else if (item.statementType === 'AP_LABOR') {
-            const statement = await tx.query.apLaborStatements.findFirst({
-              where: and(
-                eq(apLaborStatements.id, item.statementId),
-                eq(apLaborStatements.tenantId, session.user.tenantId)
-              ),
-            });
+            const statement = laborStatementMap.get(item.statementId);
             if (statement) {
               const paidAmount = new Decimal(statement.paidAmount || '0').plus(
                 new Decimal(item.amount)
@@ -717,9 +737,9 @@ export async function generateLaborSettlement() {
         eq(installTasks.status, 'COMPLETED'),
         excludeIds.length > 0
           ? sql`${installTasks.id} NOT IN (${sql.join(
-              excludeIds.map((id) => sql`${id}`),
-              sql`,`
-            )})`
+            excludeIds.map((id) => sql`${id}`),
+            sql`,`
+          )})`
           : undefined
       ),
       with: {
@@ -897,11 +917,11 @@ export async function createSupplierLiabilityStatement(liabilityNoticeId: string
     // 获取供应商信息
     const supplier = notice.liablePartyId
       ? await tx.query.suppliers.findFirst({
-          where: and(
-            eq(suppliers.id, notice.liablePartyId),
-            eq(suppliers.tenantId, session.user.tenantId)
-          ),
-        })
+        where: and(
+          eq(suppliers.id, notice.liablePartyId),
+          eq(suppliers.tenantId, session.user.tenantId)
+        ),
+      })
       : null;
 
     // 创建红字对账单 (负数金额)

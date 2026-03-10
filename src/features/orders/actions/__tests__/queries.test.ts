@@ -1,7 +1,7 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { getOrders, getOrderById } from '../queries';
 import { db } from '@/shared/api/db';
-import { checkPermission } from '@/shared/lib/auth';
+import { requirePermission } from '@/shared/lib/auth';
 
 // Mock server-action to bypass auth complex logic in tests
 vi.mock('@/shared/lib/server-action', () => ({
@@ -41,7 +41,7 @@ vi.mock('@/shared/api/db', () => ({
 
 vi.mock('@/shared/lib/auth', () => ({
   auth: vi.fn(),
-  checkPermission: vi.fn().mockResolvedValue(true),
+  requirePermission: vi.fn().mockResolvedValue(true),
 }));
 
 vi.mock('next/cache', () => ({
@@ -55,7 +55,7 @@ const VALID_UUID = '11111111-1111-4111-8111-111111111111';
 describe('Order Queries Actions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(checkPermission).mockResolvedValue(true);
+    vi.mocked(requirePermission).mockResolvedValue(true);
   });
 
   describe('getOrders', () => {

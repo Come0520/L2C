@@ -21,11 +21,16 @@ const { mockOrderService, mockDbQuery, mockSession } = vi.hoisted(() => {
 });
 
 // Mock Dependencies
-vi.mock('next/cache', () => ({ revalidateTag: vi.fn(), updateTag: vi.fn() }));
+vi.mock('next/cache', () => ({
+  revalidateTag: vi.fn(),
+  revalidatePath: vi.fn(),
+  updateTag: vi.fn(),
+  unstable_cache: vi.fn((fn) => fn),
+}));
 
 vi.mock('@/shared/lib/auth', () => ({
   auth: vi.fn().mockResolvedValue(mockSession),
-  checkPermission: vi.fn().mockResolvedValue(true),
+  requirePermission: vi.fn().mockResolvedValue(true),
 }));
 
 vi.mock('@/services/order.service', () => ({

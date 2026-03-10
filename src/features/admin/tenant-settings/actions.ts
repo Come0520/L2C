@@ -201,31 +201,30 @@ const updateTenantInfoInternal = createSafeAction(
     });
 
     if (!oldTenant) throw new Error('租户不存在');
-
-    const [updated] = await db
-      .update(tenants)
-      .set({
-        ...data,
-        updatedAt: new Date(),
-      })
-      .where(eq(tenants.id, session.user.tenantId))
-      .returning();
-
-    // 审计日志
-    await AuditService.log(db, {
-      action: 'UPDATE',
-      tableName: 'tenants',
-      recordId: session.user.tenantId,
-      userId: session.user.id,
-      tenantId: session.user.tenantId,
-      oldValues: {
-        name: oldTenant.name,
-        logoUrl: oldTenant.logoUrl,
-        applicantName: oldTenant.applicantName,
-      },
-      newValues: data as Record<string, unknown>,
+    const updated = await db.transaction(async (tx) => {
+      const [result] = await tx.update(tenants)
+        .set({
+          ...data,
+          updatedAt: new Date(),
+        })
+        .where(eq(tenants.id, session.user.tenantId))
+        .returning();
+      await AuditService.log(tx, {
+        action: 'UPDATE',
+        tableName: 'tenants',
+        recordId: session.user.tenantId,
+        userId: session.user.id,
+        tenantId: session.user.tenantId,
+        oldValues: {
+          name: oldTenant.name,
+          logoUrl: oldTenant.logoUrl,
+          applicantName: oldTenant.applicantName,
+        },
+        newValues: data as Record<string, unknown>,
+      });
+      return result;
     });
-
+    // 审计日志
     logger.info(
       `[Admin] 用户 ${session.user.id} 更新了租户 ${session.user.tenantId} 的基本信息: ${Object.keys(data).join(', ')}`
     );
@@ -279,27 +278,26 @@ const updateMfaConfigInternal = createSafeAction(
       ...currentSettings,
       mfa: mfaConfig,
     };
-
-    const [updated] = await db
-      .update(tenants)
-      .set({
-        settings: newSettings,
-        updatedAt: new Date(),
-      })
-      .where(eq(tenants.id, session.user.tenantId))
-      .returning();
-
-    // 审计日志
-    await AuditService.log(db, {
-      action: 'UPDATE_MFA_CONFIG',
-      tableName: 'tenants',
-      recordId: session.user.tenantId,
-      userId: session.user.id,
-      tenantId: session.user.tenantId,
-      oldValues: { mfa: oldMfa },
-      newValues: { mfa: mfaConfig },
+    const updated = await db.transaction(async (tx) => {
+      const [result] = await tx.update(tenants)
+        .set({
+          settings: newSettings,
+          updatedAt: new Date(),
+        })
+        .where(eq(tenants.id, session.user.tenantId))
+        .returning();
+      await AuditService.log(tx, {
+        action: 'UPDATE_MFA_CONFIG',
+        tableName: 'tenants',
+        recordId: session.user.tenantId,
+        userId: session.user.id,
+        tenantId: session.user.tenantId,
+        oldValues: { mfa: oldMfa },
+        newValues: { mfa: mfaConfig },
+      });
+      return result;
     });
-
+    // 审计日志
     logger.info(
       `[Admin] 用户 ${session.user.id} 修改了租户 ${session.user.tenantId} 的 MFA 配置, 状态: ${mfaConfig.enabled ? '启用' : '禁用'}, 方式: ${mfaConfig.method}`
     );

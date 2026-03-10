@@ -120,25 +120,24 @@ const addProductSupplierActionInternal = createSafeAction(
           )
         );
     }
-
-    await db.insert(productSuppliers).values({
-      tenantId: session.user.tenantId,
-      productId: data.productId,
-      supplierId: data.supplierId,
-      purchasePrice: data.purchasePrice.toString(),
-      leadTimeDays: data.leadTimeDays,
-      isDefault: data.isDefault,
-    });
-
-    await AuditService.log(db, {
-      tenantId: session.user.tenantId,
-      userId: session.user.id!,
-      tableName: 'product_suppliers',
-      recordId: `${data.productId}-${data.supplierId}`,
-      action: 'CREATE',
-      newValues: data,
-    });
-
+      await db.transaction(async (tx) => {
+          await tx.insert(productSuppliers).values({
+            tenantId: session.user.tenantId,
+            productId: data.productId,
+            supplierId: data.supplierId,
+            purchasePrice: data.purchasePrice.toString(),
+            leadTimeDays: data.leadTimeDays,
+            isDefault: data.isDefault,
+          });
+          await AuditService.log(tx, {
+            tenantId: session.user.tenantId,
+            userId: session.user.id!,
+            tableName: 'product_suppliers',
+            recordId: `${data.productId}-${data.supplierId}`,
+            action: 'CREATE',
+            newValues: data,
+          });
+        });
     revalidatePath(`/supply-chain/products`);
     return { success: true };
   }
@@ -188,33 +187,31 @@ const updateProductSupplierActionInternal = createSafeAction(
           )
         );
     }
-
-    await db
-      .update(productSuppliers)
-      .set({
-        ...(data.purchasePrice !== undefined
-          ? { purchasePrice: data.purchasePrice.toString() }
-          : {}),
-        ...(data.leadTimeDays !== undefined ? { leadTimeDays: data.leadTimeDays } : {}),
-        ...(data.isDefault !== undefined ? { isDefault: data.isDefault } : {}),
-      })
-      .where(
-        and(
-          eq(productSuppliers.id, data.id),
-          eq(productSuppliers.tenantId, session.user.tenantId) // P0 修复：租户隔离
-        )
-      );
-
-    await AuditService.log(db, {
-      tenantId: session.user.tenantId,
-      userId: session.user.id!,
-      tableName: 'product_suppliers',
-      recordId: data.id,
-      action: 'UPDATE',
-      oldValues: current,
-      newValues: data,
-    });
-
+      await db.transaction(async (tx) => {
+          await tx.update(productSuppliers)
+            .set({
+              ...(data.purchasePrice !== undefined
+                ? { purchasePrice: data.purchasePrice.toString() }
+                : {}),
+              ...(data.leadTimeDays !== undefined ? { leadTimeDays: data.leadTimeDays } : {}),
+              ...(data.isDefault !== undefined ? { isDefault: data.isDefault } : {}),
+            })
+            .where(
+              and(
+                eq(productSuppliers.id, data.id),
+                eq(productSuppliers.tenantId, session.user.tenantId) // P0 修复：租户隔离
+              )
+            );
+          await AuditService.log(tx, {
+                  tenantId: session.user.tenantId,
+                  userId: session.user.id!,
+                  tableName: 'product_suppliers',
+                  recordId: data.id,
+                  action: 'UPDATE',
+                  oldValues: current,
+                  newValues: data,
+                });
+        });
     revalidatePath(`/supply-chain/products`);
     return { success: true };
   }
@@ -238,22 +235,20 @@ const removeProductSupplierActionInternal = createSafeAction(
   removeProductSupplierSchema,
   async ({ id }, { session }) => {
     await checkPermission(session, PERMISSIONS.PRODUCTS.MANAGE);
-
-    await db
-      .delete(productSuppliers)
-      .where(
-        and(eq(productSuppliers.tenantId, session.user.tenantId), eq(productSuppliers.id, id))
-      );
-
-    await AuditService.log(db, {
-      tenantId: session.user.tenantId,
-      userId: session.user.id!,
-      tableName: 'product_suppliers',
-      recordId: id,
-      action: 'DELETE',
-      oldValues: { id },
-    });
-
+      await db.transaction(async (tx) => {
+          await tx.delete(productSuppliers)
+            .where(
+              and(eq(productSuppliers.tenantId, session.user.tenantId), eq(productSuppliers.id, id))
+            );
+          await AuditService.log(tx, {
+                  tenantId: session.user.tenantId,
+                  userId: session.user.id!,
+                  tableName: 'product_suppliers',
+                  recordId: id,
+                  action: 'DELETE',
+                  oldValues: { id },
+                });
+        });
     revalidatePath(`/supply-chain/products`);
     return { success: true };
   }
@@ -462,22 +457,21 @@ const autoSwitchDefaultSupplierActionInternal = createSafeAction(
       );
 
     // 设置新的默认供应商
-    await db
-      .update(productSuppliers)
-      .set({ isDefault: true })
-      .where(eq(productSuppliers.id, bestSupplier.id));
-
-    await AuditService.log(db, {
-      tenantId: session.user.tenantId,
-      userId: session.user.id!,
-      tableName: 'product_suppliers',
-      recordId: bestSupplier.id,
-      action: 'UPDATE',
-      oldValues: { isDefault: false },
-      newValues: { isDefault: true },
-      details: { action: 'AUTO_SWITCH_DEFAULT', strategy, productId },
-    });
-
+      await db.transaction(async (tx) => {
+          await tx.update(productSuppliers)
+            .set({ isDefault: true })
+            .where(eq(productSuppliers.id, bestSupplier.id));
+          await AuditService.log(tx, {
+                  tenantId: session.user.tenantId,
+                  userId: session.user.id!,
+                  tableName: 'product_suppliers',
+                  recordId: bestSupplier.id,
+                  action: 'UPDATE',
+                  oldValues: { isDefault: false },
+                  newValues: { isDefault: true },
+                  details: { action: 'AUTO_SWITCH_DEFAULT', strategy, productId },
+                });
+        });
     revalidatePath(`/supply-chain/products`);
 
     return {

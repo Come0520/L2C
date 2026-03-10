@@ -148,15 +148,17 @@ export async function createActivity(
 
     // 记录审计日志
     if (newActivity) {
-      await AuditService.log(db, {
-        tableName: 'customer_activities',
-        recordId: newActivity['id'] || `${data.customerId}-${Date.now()}`,
-        action: 'CREATE',
-        userId: session.user.id,
-        tenantId: session.user.tenantId,
-        newValues: data,
-        details: { customerId: data.customerId, type: data.type },
-      });
+        await db.transaction(async (tx) => {
+            await AuditService.log(tx, {
+                tableName: 'customer_activities',
+                recordId: newActivity['id'] || `${data.customerId}-${Date.now()}`,
+                action: 'CREATE',
+                userId: session.user.id,
+                tenantId: session.user.tenantId,
+                newValues: data,
+                details: { customerId: data.customerId, type: data.type },
+              });
+          });
     }
 
     // 精确清除客户详情缓存

@@ -66,37 +66,36 @@ export async function createCreditNote(input: z.infer<typeof createCreditNoteSch
     if (!(await checkPermission(session, PERMISSIONS.FINANCE.AR_CREATE))) {
       return { success: false, error: '权限不足：需要财务管理权限' };
     }
-
-    const [creditNote] = await db
-      .insert(creditNotes)
-      .values({
-        tenantId,
-        creditNoteNo: generateCreditNoteNo(),
-        customerId: data.customerId,
-        customerName: data.customerName,
-        orderId: data.orderId,
-        arStatementId: data.arStatementId,
-        type: data.type,
-        amount: String(data.amount),
-        reason: data.reason,
-        description: data.description,
-        status: 'PENDING', // 创建后待审批
-        createdBy: userId,
-        remark: data.remark,
-      })
-      .returning();
-
+    let creditNote;
+    await db.transaction(async (tx) => {
+        [creditNote] = await tx.insert(creditNotes)
+          .values({
+            tenantId,
+            creditNoteNo: generateCreditNoteNo(),
+            customerId: data.customerId,
+            customerName: data.customerName,
+            orderId: data.orderId,
+            arStatementId: data.arStatementId,
+            type: data.type,
+            amount: String(data.amount),
+            reason: data.reason,
+            description: data.description,
+            status: 'PENDING', // 创建后待审批
+            createdBy: userId,
+            remark: data.remark,
+          })
+          .returning();
+        await AuditService.log(tx, {
+              tenantId,
+              userId: userId!,
+              tableName: 'credit_notes',
+              recordId: creditNote.id,
+              action: 'CREATE',
+              newValues: creditNote as Record<string, unknown>,
+              details: { creditNoteNo: creditNote.creditNoteNo, amount: data.amount },
+            });
+      });
     // 记录审计日志 F-32
-    await AuditService.log(db, {
-      tenantId,
-      userId: userId!,
-      tableName: 'credit_notes',
-      recordId: creditNote.id,
-      action: 'CREATE',
-      newValues: creditNote as Record<string, unknown>,
-      details: { creditNoteNo: creditNote.creditNoteNo, amount: data.amount },
-    });
-
     updateTag(`finance-credit-notes-${tenantId}`);
 
     return {
@@ -219,31 +218,30 @@ export async function approveCreditNote(id: string, approved: boolean, rejectRea
       return { success: true, message: '贷项通知单已审批通过并生效' };
     } else {
       // 审批拒绝
-      await db
-        .update(creditNotes)
-        .set({
-          status: 'REJECTED',
-          approvedBy: userId,
-          approvedAt: new Date(),
-          remark: creditNote.remark
-            ? `${creditNote.remark}｜拒绝原因: ${rejectReason || '无'}`
-            : `拒绝原因: ${rejectReason || '无'}`,
-          updatedAt: new Date(),
-        })
-        .where(eq(creditNotes.id, id));
-
+        await db.transaction(async (tx) => {
+            await tx.update(creditNotes)
+                .set({
+                  status: 'REJECTED',
+                  approvedBy: userId,
+                  approvedAt: new Date(),
+                  remark: creditNote.remark
+                    ? `${creditNote.remark}｜拒绝原因: ${rejectReason || '无'}`
+                    : `拒绝原因: ${rejectReason || '无'}`,
+                  updatedAt: new Date(),
+                })
+                .where(eq(creditNotes.id, id));
+            await AuditService.log(tx, {
+                        tenantId,
+                        userId: userId!,
+                        tableName: 'credit_notes',
+                        recordId: id,
+                        action: 'UPDATE',
+                        newValues: { status: 'REJECTED' },
+                        oldValues: { status: creditNote.status },
+                        details: { creditNoteNo: creditNote.creditNoteNo, approved: false, reason: rejectReason },
+                      });
+          });
       // 记录审计日志 F-32
-      await AuditService.log(db, {
-        tenantId,
-        userId: userId!,
-        tableName: 'credit_notes',
-        recordId: id,
-        action: 'UPDATE',
-        newValues: { status: 'REJECTED' },
-        oldValues: { status: creditNote.status },
-        details: { creditNoteNo: creditNote.creditNoteNo, approved: false, reason: rejectReason },
-      });
-
       updateTag(`finance-credit-notes-${tenantId}`);
 
       return { success: true, message: '贷项通知单已拒绝' };

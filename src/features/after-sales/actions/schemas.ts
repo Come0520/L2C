@@ -18,6 +18,7 @@ export const updateStatusSchema = z.object({
   ticketId: z.string().uuid(),
   status: z.enum(afterSalesStatusEnum.enumValues),
   resolution: z.string().optional(),
+  expectedVersion: z.number().optional(), // 乐观锁版本
 });
 
 export const createLiabilitySchema = z.object({
@@ -48,10 +49,34 @@ export const arbitrateLiabilitySchema = z.object({
   arbitrationResult: z.string().min(1, '仲裁结果描述不能为空'),
 });
 
-export const getQualityAnalyticsSchema = z.object({
-  startDate: z.string().optional(),
-  endDate: z.string().optional(),
-});
+export const getQualityAnalyticsSchema = z
+  .object({
+    startDate: z.string().optional(),
+    endDate: z.string().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.startDate && data.endDate) {
+      const start = new Date(data.startDate);
+      const end = new Date(data.endDate);
+      const diffTime = end.getTime() - start.getTime();
+      const diffDays = diffTime / (1000 * 3600 * 24);
+
+      if (diffDays > 365) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: '时间跨度不能超过365天',
+          path: ['endDate'],
+        });
+      }
+      if (diffDays < 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: '结束日期不能早于开始日期',
+          path: ['endDate'],
+        });
+      }
+    }
+  });
 
 export const checkWarrantySchema = z.object({
   orderId: z.string().uuid(),

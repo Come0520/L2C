@@ -299,30 +299,35 @@ export async function updateBundleItems(
     // 验证所有项
     const validatedItems = items.map((item) => bundleItemSchema.parse(item));
 
-    // 删除现有明细
-    await db.delete(productBundleItems).where(eq(productBundleItems.bundleId, bundleId));
-
-    // 插入新明细
-    if (validatedItems.length > 0) {
-      await db.insert(productBundleItems).values(
-        validatedItems.map((item) => ({
-          tenantId,
-          bundleId,
-          productId: item.productId,
-          quantity: String(item.quantity),
-          unit: item.unit,
-        }))
+    // 开启事务保证旧明细删除和新明细写入同时成功
+    await db.transaction(async (tx) => {
+      // 删除现有明细，带租户过滤
+      await tx.delete(productBundleItems).where(
+        and(eq(productBundleItems.bundleId, bundleId), eq(productBundleItems.tenantId, tenantId))
       );
-    }
 
-    const session = await auth();
-    await AuditService.log(db, {
-      tenantId,
-      userId: session?.user?.id || 'system',
-      tableName: 'product_bundle_items',
-      recordId: bundleId,
-      action: 'UPDATE',
-      details: { action: 'UPDATE_ITEMS', itemCount: validatedItems.length },
+      // 插入新明细
+      if (validatedItems.length > 0) {
+        await tx.insert(productBundleItems).values(
+          validatedItems.map((item) => ({
+            tenantId,
+            bundleId,
+            productId: item.productId,
+            quantity: String(item.quantity),
+            unit: item.unit,
+          }))
+        );
+      }
+
+      const sessionObj = await auth();
+      await AuditService.log(tx, {
+        tenantId,
+        userId: sessionObj?.user?.id || 'system',
+        tableName: 'product_bundle_items',
+        recordId: bundleId,
+        action: 'UPDATE',
+        details: { action: 'UPDATE_ITEMS', itemCount: validatedItems.length },
+      });
     });
 
     revalidatePath('/products/bundles');

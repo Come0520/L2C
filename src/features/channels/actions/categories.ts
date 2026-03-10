@@ -121,26 +121,25 @@ export async function createChannelCategory(input: z.infer<typeof channelCategor
     if (existing.code === validated.code) throw new Error(`分类编码 ${validated.code} 已存在`);
     if (existing.name === validated.name) throw new Error(`分类名称 ${validated.name} 已存在`);
   }
-
-  const [newCategory] = await db
-    .insert(channelCategories)
-    .values({
-      ...validated,
-      tenantId,
-    })
-    .returning();
-
+    let newCategory;
+    await db.transaction(async (tx) => {
+        [newCategory] = await tx.insert(channelCategories)
+        .values({
+          ...validated,
+          tenantId,
+        })
+        .returning();
+        await AuditService.log(tx, {
+            tableName: 'channel_categories',
+            recordId: newCategory.id,
+            action: 'CREATE',
+            userId: session.user.id,
+            tenantId,
+            newValues: newCategory,
+            details: { reason: 'Channel category creation' },
+          });
+      });
   // P1 Fix: Audit log
-  await AuditService.log(db, {
-    tableName: 'channel_categories',
-    recordId: newCategory.id,
-    action: 'CREATE',
-    userId: session.user.id,
-    tenantId,
-    newValues: newCategory,
-    details: { reason: 'Channel category creation' },
-  });
-
   revalidatePath('/settings/channels');
   return newCategory;
 }
@@ -215,15 +214,17 @@ export async function updateChannelCategory(
 
   // P1 Fix: Audit log
   if (updated) {
-    await AuditService.log(db, {
-      tableName: 'channel_categories',
-      recordId: id,
-      action: 'UPDATE',
-      userId: session.user.id,
-      tenantId,
-      newValues: updated,
-      details: { reason: 'Channel category update', updatedFields: Object.keys(updateData) },
-    });
+      await db.transaction(async (tx) => {
+          await AuditService.log(tx, {
+            tableName: 'channel_categories',
+            recordId: id,
+            action: 'UPDATE',
+            userId: session.user.id,
+            tenantId,
+            newValues: updated,
+            details: { reason: 'Channel category update', updatedFields: Object.keys(updateData) },
+          });
+        });
   }
 
   revalidatePath('/settings/channels');
@@ -269,15 +270,17 @@ export async function deleteChannelCategory(id: string) {
     .where(and(eq(channelCategories.id, id), eq(channelCategories.tenantId, tenantId)));
 
   if (category) {
-    await AuditService.log(db, {
-      tableName: 'channel_categories',
-      recordId: id,
-      action: 'DELETE',
-      userId: session.user.id,
-      tenantId,
-      oldValues: category,
-      details: { reason: 'Channel category deletion' },
-    });
+      await db.transaction(async (tx) => {
+          await AuditService.log(tx, {
+            tableName: 'channel_categories',
+            recordId: id,
+            action: 'DELETE',
+            userId: session.user.id,
+            tenantId,
+            oldValues: category,
+            details: { reason: 'Channel category deletion' },
+          });
+        });
   }
 
   revalidatePath('/settings/channels');
@@ -339,16 +342,17 @@ export async function toggleChannelCategoryActive(id: string, _isActive: boolean
   }
 
   // P1 Fix: Audit log
-  await AuditService.log(db, {
-    tableName: 'channel_categories',
-    recordId: id,
-    action: 'UPDATE',
-    userId: session.user.id,
-    tenantId,
-    newValues: { isActive: newActiveState },
-    details: { reason: 'Toggle category active status' },
-  });
-
+    await db.transaction(async (tx) => {
+        await AuditService.log(tx, {
+        tableName: 'channel_categories',
+        recordId: id,
+        action: 'UPDATE',
+        userId: session.user.id,
+        tenantId,
+        newValues: { isActive: newActiveState },
+        details: { reason: 'Toggle category active status' },
+      });
+      });
   revalidatePath('/settings/channels');
   return updated;
 }

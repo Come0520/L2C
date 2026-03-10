@@ -381,6 +381,27 @@ export const checkPermission = async (
 };
 
 /**
+ * 强制权限检查函数 (抛出异常)
+ *
+ * 如果用户没有指定权限，则直接抛出 Error('无权限')。
+ * 用于 Server Actions 顶部拦截非法请求，确保授权失败时中断执行。
+ *
+ * @param session - 会话对象
+ * @param permissionName - 权限名称 (如: 'order.own.edit')
+ * @param options - 可选配置 (审计记录等)
+ */
+export const requirePermission = async (
+  session: Session | null,
+  permissionName: string,
+  options?: CheckPermissionOptions
+): Promise<void> => {
+  const hasPermission = await checkPermission(session, permissionName, options);
+  if (!hasPermission) {
+    throw new Error('无权限');
+  }
+};
+
+/**
  * 内部权限检查（带缓存）
  *
  * 支持三种匹配模式：

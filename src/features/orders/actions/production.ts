@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { db } from '@/shared/api/db';
 import { orders } from '@/shared/api/schema/orders';
 import { eq, and } from 'drizzle-orm';
-import { auth, checkPermission } from '@/shared/lib/auth';
+import { auth, requirePermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
 import { AuditService } from '@/shared/services/audit-service';
 import { confirmProductionSchema, splitOrderSchema } from '../action-schemas';
@@ -27,7 +27,7 @@ export async function confirmOrderProduction(input: ConfirmProductionInput) {
   if (!session) throw new Error('Unauthorized');
   const tenantId = session.user.tenantId;
 
-  await checkPermission(session, PERMISSIONS.ORDER.ALL_EDIT);
+  await requirePermission(session, PERMISSIONS.ORDER.ALL_EDIT);
 
   const validatedInput = confirmProductionSchema.parse(input);
   const { orderId, remark } = validatedInput;
@@ -108,7 +108,7 @@ export async function splitOrder(input: SplitOrderInput) {
   if (!session) throw new Error('Unauthorized');
   const tenantId = session.user.tenantId;
 
-  await checkPermission(session, PERMISSIONS.ORDER.ALL_EDIT);
+  await requirePermission(session, PERMISSIONS.ORDER.ALL_EDIT);
 
   const validatedInput = splitOrderSchema.parse(input);
   const { orderId, items } = validatedInput;

@@ -82,7 +82,7 @@ vi.mock('@/shared/services/audit-service', () => ({
 
 vi.mock('@/shared/lib/auth', () => ({
   auth: vi.fn(),
-  checkPermission: vi.fn().mockResolvedValue(undefined),
+  requirePermission: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('@/shared/config/permissions', () => ({
@@ -108,7 +108,7 @@ import {
   requestCustomerConfirmationAction,
   customerRejectAction,
 } from '../orders';
-import { auth, checkPermission } from '@/shared/lib/auth';
+import { auth, requirePermission } from '@/shared/lib/auth';
 
 // ---------------------------------------------------------
 // 测试常量
@@ -130,7 +130,7 @@ describe('Orders Lifecycle Actions', () => {
     vi.clearAllMocks();
     // @ts-expect-error - 测试环境下简化 Session 类型
     vi.mocked(auth).mockResolvedValue(mockSession);
-    vi.mocked(checkPermission).mockResolvedValue(undefined);
+    vi.mocked(requirePermission).mockResolvedValue(undefined);
   });
 
   // =========================================================

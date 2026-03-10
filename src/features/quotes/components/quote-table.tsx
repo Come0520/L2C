@@ -16,6 +16,7 @@ import Eye from 'lucide-react/dist/esm/icons/eye';
 import Link from 'next/link';
 import { StatusBadge } from '../../../shared/ui/status-badge';
 import { format } from 'date-fns';
+import { EmptyTableRow } from '@/shared/ui/empty-table-row';
 
 export interface Quote {
   id: string;
@@ -33,7 +34,7 @@ interface QuoteTableProps {
 
 export const QuoteTable = React.memo(function QuoteTable({ data }: QuoteTableProps) {
   return (
-    <div className="rounded-md border">
+    <div className="rounded-md border overflow-x-auto w-full">
       <Table>
         <TableHeader>
           <TableRow>
@@ -48,11 +49,7 @@ export const QuoteTable = React.memo(function QuoteTable({ data }: QuoteTablePro
         </TableHeader>
         <TableBody>
           {data.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={7} className="h-24 text-center" data-testid="quote-list-empty">
-                No quotes found.
-              </TableCell>
-            </TableRow>
+            <EmptyTableRow colSpan={7} message="暂无报价单。" />
           ) : (
             data.map((quote) => (
               <TableRow key={quote.id}>

@@ -7,7 +7,7 @@
 
 import { db } from '@/shared/api/db';
 import { salesTargets, quotes, users } from '@/shared/api/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, inArray } from 'drizzle-orm';
 import { auth, checkPermission } from '@/shared/lib/auth';
 import { logger } from '@/shared/lib/logger';
 import { unstable_cache } from 'next/cache';
@@ -228,7 +228,6 @@ export async function getSalesRanking(
 
     const getCachedRanking = unstable_cache(
       async () => {
-        // 获取所有活跃销售用户
         const salesUsers = await db.query.users.findMany({
           where: and(
             eq(users.tenantId, session.user.tenantId),
@@ -238,43 +237,64 @@ export async function getSalesRanking(
           columns: { id: true, name: true, avatarUrl: true },
         });
 
-        // 并行获取每个销售的目标和完成情况
-        const rankingItems: SalesRankingItem[] = await Promise.all(
-          salesUsers.map(async (user) => {
-            const targetRecord = await db.query.salesTargets.findFirst({
-              where: and(
-                eq(salesTargets.tenantId, session.user.tenantId),
-                eq(salesTargets.userId, user.id),
-                eq(salesTargets.year, targetYear),
-                eq(salesTargets.month, targetMonth)
-              ),
-              columns: { targetAmount: true },
-            });
+        if (salesUsers.length === 0) return [];
 
-            const targetAmount = parseFloat(targetRecord?.targetAmount as string) || 0;
-            const achievedAmount = await getMonthlyAchievedAmount(
-              session.user.tenantId,
-              targetYear,
-              targetMonth,
-              user.id
-            );
+        const userIds = salesUsers.map((u) => u.id);
 
-            const completionRate =
-              targetAmount > 0
-                ? Math.min(Math.round((achievedAmount / targetAmount) * 100), 100)
-                : 0;
+        // Fetch targets for all users at once
+        const allTargets = await db.query.salesTargets.findMany({
+          where: and(
+            eq(salesTargets.tenantId, session.user.tenantId),
+            inArray(salesTargets.userId, userIds),
+            eq(salesTargets.year, targetYear),
+            eq(salesTargets.month, targetMonth)
+          ),
+          columns: { userId: true, targetAmount: true },
+        });
 
-            return {
-              userId: user.id,
-              userName: user.name || '未命名',
-              userAvatar: user.avatarUrl,
-              targetAmount,
-              achievedAmount,
-              completionRate,
-              rank: 0, // 排名在排序后计算
-            };
-          })
-        );
+        const targetMap = new Map<string, number>();
+        allTargets.forEach((t) => {
+          targetMap.set(t.userId, parseFloat(t.targetAmount as string) || 0);
+        });
+
+        // Fast batch calculation of achieved amounts
+        const startDate = new Date(targetYear, targetMonth - 1, 1);
+        const endDate = new Date(targetYear, targetMonth, 0, 23, 59, 59);
+
+        const allQuotes = await db.query.quotes.findMany({
+          where: and(eq(quotes.tenantId, session.user.tenantId), eq(quotes.status, 'ACCEPTED')),
+          columns: { finalAmount: true, createdBy: true, createdAt: true },
+        });
+
+        const achievedMap = new Map<string, number>();
+        allQuotes.forEach((q) => {
+          if (!q.createdBy) return;
+          const d = new Date(q.createdAt as unknown as string);
+          if (d >= startDate && d <= endDate) {
+            const current = achievedMap.get(q.createdBy) || 0;
+            achievedMap.set(q.createdBy, current + (parseFloat(q.finalAmount as string) || 0));
+          }
+        });
+
+        const rankingItems: SalesRankingItem[] = salesUsers.map((user) => {
+          const targetAmount = targetMap.get(user.id) || 0;
+          const achievedAmount = achievedMap.get(user.id) || 0;
+
+          const completionRate =
+            targetAmount > 0
+              ? Math.min(Math.round((achievedAmount / targetAmount) * 100), 100)
+              : 0;
+
+          return {
+            userId: user.id,
+            userName: user.name || '未命名',
+            userAvatar: user.avatarUrl,
+            targetAmount,
+            achievedAmount,
+            completionRate,
+            rank: 0, // 排名在排序后计算
+          };
+        });
 
         // 按完成金额降序排序并分配排名（使用不可变 .toSorted()）
         const sorted = rankingItems.toSorted((a, b) => b.achievedAmount - a.achievedAmount);
@@ -337,7 +357,6 @@ export async function getSalesTargetWarnings(): Promise<{
         const daysInMonth = new Date(year, month, 0).getDate();
         const monthProgress = today / daysInMonth; // 0~1
 
-        // 获取所有活跃销售用户
         const salesUsers = await db.query.users.findMany({
           where: and(
             eq(users.tenantId, session.user.tenantId),
@@ -347,52 +366,71 @@ export async function getSalesTargetWarnings(): Promise<{
           columns: { id: true, name: true },
         });
 
-        const warnings: TargetWarning[] = await Promise.all(
-          salesUsers.map(async (user) => {
-            const targetRecord = await db.query.salesTargets.findFirst({
-              where: and(
-                eq(salesTargets.tenantId, session.user.tenantId),
-                eq(salesTargets.userId, user.id),
-                eq(salesTargets.year, year),
-                eq(salesTargets.month, month)
-              ),
-              columns: { targetAmount: true },
-            });
+        if (salesUsers.length === 0) return [];
+        const userIds = salesUsers.map((u) => u.id);
 
-            const targetAmount = parseFloat(targetRecord?.targetAmount as string) || 0;
-            const currentAmount = await getMonthlyAchievedAmount(
-              session.user.tenantId,
-              year,
-              month,
-              user.id
-            );
+        const allTargets = await db.query.salesTargets.findMany({
+          where: and(
+            eq(salesTargets.tenantId, session.user.tenantId),
+            inArray(salesTargets.userId, userIds),
+            eq(salesTargets.year, year),
+            eq(salesTargets.month, month)
+          ),
+          columns: { userId: true, targetAmount: true },
+        });
 
-            // 线性预测：如果月份还未开始，预测值为 0
-            const predictedAmount =
-              monthProgress > 0 ? Math.round(currentAmount / monthProgress) : 0;
+        const targetMap = new Map<string, number>();
+        allTargets.forEach((t) => {
+          targetMap.set(t.userId, parseFloat(t.targetAmount as string) || 0);
+        });
 
-            const predictedRate =
-              targetAmount > 0
-                ? Math.min(Math.round((predictedAmount / targetAmount) * 100), 100)
-                : 0;
+        const startDate = new Date(year, month - 1, 1);
+        const endDate = new Date(year, month, 0, 23, 59, 59);
 
-            // 风险判断：基于预测完成率
-            const atRisk = predictedRate < 80;
-            const riskLevel: 'high' | 'medium' | 'low' =
-              predictedRate < 50 ? 'high' : predictedRate < 80 ? 'medium' : 'low';
+        const allQuotes = await db.query.quotes.findMany({
+          where: and(eq(quotes.tenantId, session.user.tenantId), eq(quotes.status, 'ACCEPTED')),
+          columns: { finalAmount: true, createdBy: true, createdAt: true },
+        });
 
-            return {
-              userId: user.id,
-              userName: user.name || '未命名',
-              targetAmount,
-              currentAmount,
-              predictedAmount,
-              predictedRate,
-              atRisk,
-              riskLevel,
-            };
-          })
-        );
+        const achievedMap = new Map<string, number>();
+        allQuotes.forEach((q) => {
+          if (!q.createdBy) return;
+          const d = new Date(q.createdAt as unknown as string);
+          if (d >= startDate && d <= endDate) {
+            const current = achievedMap.get(q.createdBy) || 0;
+            achievedMap.set(q.createdBy, current + (parseFloat(q.finalAmount as string) || 0));
+          }
+        });
+
+        const warnings: TargetWarning[] = salesUsers.map((user) => {
+          const targetAmount = targetMap.get(user.id) || 0;
+          const currentAmount = achievedMap.get(user.id) || 0;
+
+          // 线性预测：如果月份还未开始，预测值为 0
+          const predictedAmount =
+            monthProgress > 0 ? Math.round(currentAmount / monthProgress) : 0;
+
+          const predictedRate =
+            targetAmount > 0
+              ? Math.min(Math.round((predictedAmount / targetAmount) * 100), 100)
+              : 0;
+
+          // 风险判断：基于预测完成率
+          const atRisk = predictedRate < 80;
+          const riskLevel: 'high' | 'medium' | 'low' =
+            predictedRate < 50 ? 'high' : predictedRate < 80 ? 'medium' : 'low';
+
+          return {
+            userId: user.id,
+            userName: user.name || '未命名',
+            targetAmount,
+            currentAmount,
+            predictedAmount,
+            predictedRate,
+            atRisk,
+            riskLevel,
+          };
+        });
 
         // 只返回有风险的（atRisk: true），且按风险从高到低排序（使用不可变 .toSorted()）
         return warnings

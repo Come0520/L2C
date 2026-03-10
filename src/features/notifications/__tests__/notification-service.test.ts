@@ -395,7 +395,14 @@ describe('NotificationService Full Test Suite', () => {
 
     it('upsertNotificationTemplate should handle creation success', async () => {
       hoisted.mocks.hasPermission.mockResolvedValue(true);
-      vi.mocked(db.insert).mockReturnValue(hoisted.createDrizzleMock([{ id: 'new-tmpl' }]));
+      vi.mocked(db.transaction).mockImplementationOnce(
+        async (cb: (tx: unknown) => Promise<unknown>) => {
+          const txMock: any = {
+            insert: vi.fn(() => hoisted.createDrizzleMock([{ id: 'new-tmpl' }])),
+          };
+          return await cb(txMock);
+        }
+      );
 
       const result = await upsertNotificationTemplate({
         code: 'NEW',
@@ -495,6 +502,34 @@ describe('NotificationService Full Test Suite', () => {
         expect(result.success).toBe(false);
       });
 
+      it('createAnnouncement should succeed and write audit log', async () => {
+        hoisted.mocks.hasPermission.mockResolvedValue(true);
+        // db.transaction is now called inside createAnnouncement
+        vi.mocked(db.transaction).mockImplementationOnce(
+          async (cb: (tx: unknown) => Promise<unknown>) => {
+            const txMock: any = {
+              insert: vi.fn(() => hoisted.createDrizzleMock([{ id: 'mock-announcement-id' }])),
+            };
+            return await cb(txMock);
+          }
+        );
+
+        const result = await createAnnouncement({
+          title: 'T',
+          content: 'C',
+          startAt: new Date(),
+        });
+
+        expect(result.success).toBe(true);
+        expect(hoisted.mocks.logAudit).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.objectContaining({
+            action: 'CREATE',
+            tableName: 'system_announcements',
+          })
+        );
+      });
+
       it('getNotificationTemplates should return empty if no session', async () => {
         hoisted.mocks.auth.mockResolvedValue(null);
         const result = await getNotificationTemplates();
@@ -503,9 +538,13 @@ describe('NotificationService Full Test Suite', () => {
 
       it('upsertNotificationTemplate should log audit on create', async () => {
         hoisted.mocks.hasPermission.mockResolvedValue(true);
-        // 不传 id 走 insert 路径，此处 db.insert mock 在 resetAllMocks 后需重新设置
-        vi.mocked(db.insert).mockReturnValue(
-          hoisted.createDrizzleMock([{ id: 'new-1', code: 'TNEW' }]) as any
+        vi.mocked(db.transaction).mockImplementationOnce(
+          async (cb: (tx: unknown) => Promise<unknown>) => {
+            const txMock: any = {
+              insert: vi.fn(() => hoisted.createDrizzleMock([{ id: 'new-1', code: 'TNEW' }])),
+            };
+            return await cb(txMock);
+          }
         );
 
         await upsertNotificationTemplate({

@@ -38,45 +38,6 @@ export interface WebhookResponse {
 }
 
 /**
- * 验证 Access-Token（使用时序安全比较防止时序攻击）
- * @param token 请求头中的 Access-Token
- * @param tenantId 租户ID
- */
-export async function verifyAccessToken(token: string | null, tenantId: string): Promise<boolean> {
-  if (!token) return false;
-
-  // 从租户配置中获取有效的 Access-Token
-  const tenant = await db.query.tenants.findFirst({
-    where: eq((await import('@/shared/api/schema')).tenants.id, tenantId),
-    columns: { settings: true },
-  });
-
-  const settings = tenant?.settings as { webhookAccessToken?: string } | null;
-  const expectedToken = settings?.webhookAccessToken;
-
-  if (!expectedToken) return false;
-
-  // 时序安全比较：防止通过响应时间推断 Token
-  try {
-    const { timingSafeEqual } = await import('crypto');
-    const tokenBuffer = Buffer.from(token, 'utf-8');
-    const expectedBuffer = Buffer.from(expectedToken, 'utf-8');
-
-    // 长度不同时也需要恒定时间比较
-    if (tokenBuffer.length !== expectedBuffer.length) {
-      // 使用虚拟比较保持恒定时间
-      timingSafeEqual(tokenBuffer, tokenBuffer);
-      return false;
-    }
-
-    return timingSafeEqual(tokenBuffer, expectedBuffer);
-  } catch {
-    // 降级到普通比较（仅用于不支持 crypto 的环境）
-    return expectedToken === token;
-  }
-}
-
-/**
  * 渠道模糊匹配
  * @param categoryName 渠道大类名称
  * @param subName 子渠道名称

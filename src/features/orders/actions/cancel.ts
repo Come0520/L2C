@@ -16,7 +16,7 @@ import { auth } from '@/shared/lib/auth';
 import { updateTag } from 'next/cache';
 import { z } from 'zod';
 import { submitApproval } from '@/features/approval/actions/submission';
-import { checkPermission } from '@/shared/lib/auth';
+import { requirePermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
 import { AuditService } from '@/shared/services/audit-service';
 import { logger } from '@/shared/lib/logger';
@@ -39,7 +39,7 @@ import { OrderService } from '@/services/order.service';
  */
 export async function requestCancelOrder(input: z.infer<typeof requestOrderCancellationSchema>) {
   const session = await auth();
-  await checkPermission(session, PERMISSIONS.ORDER.OWN_EDIT);
+  await requirePermission(session, PERMISSIONS.ORDER.OWN_EDIT);
 
   const tenantId = session?.user?.tenantId;
   const userId = session?.user?.id;

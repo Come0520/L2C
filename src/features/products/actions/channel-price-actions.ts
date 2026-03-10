@@ -167,27 +167,26 @@ export async function addChannelPrice(
     if (existing) {
       return { success: false, error: '该渠道已存在专属价' };
     }
-
-    const [created] = await db
-      .insert(channelSpecificPrices)
-      .values({
+    let created;
+    await db.transaction(async (tx) => {
+      [created] = await tx.insert(channelSpecificPrices)
+        .values({
+          tenantId,
+          productId,
+          channelId: validated.channelId,
+          specialPrice: String(validated.specialPrice),
+        })
+        .returning();
+      const session = await auth();
+      await AuditService.log(tx, {
         tenantId,
-        productId,
-        channelId: validated.channelId,
-        specialPrice: String(validated.specialPrice),
-      })
-      .returning();
-
-    const session = await auth();
-    await AuditService.log(db, {
-      tenantId,
-      userId: session?.user?.id || 'system',
-      tableName: 'channel_specific_prices',
-      recordId: created.id,
-      action: 'CREATE',
-      newValues: created,
+        userId: session?.user?.id || 'system',
+        tableName: 'channel_specific_prices',
+        recordId: created.id,
+        action: 'CREATE',
+        newValues: created,
+      });
     });
-
     revalidatePath(`/products/${productId}`);
     return { success: true, data: created };
   } catch (error) {
@@ -214,27 +213,26 @@ export async function updateChannelPrice(
     if (!tenantId) return { success: false, error: '未授权' };
 
     const validated = updateChannelPriceSchema.parse(input);
-
-    const [updated] = await db
-      .update(channelSpecificPrices)
-      .set({
-        specialPrice: String(validated.specialPrice),
-        isActive: validated.isActive,
-      })
-      .where(and(eq(channelSpecificPrices.id, id), eq(channelSpecificPrices.tenantId, tenantId)))
-      .returning();
-
-    const session = await auth();
-    await AuditService.log(db, {
-      tenantId,
-      userId: session?.user?.id || 'system',
-      tableName: 'channel_specific_prices',
-      recordId: updated.id,
-      action: 'UPDATE',
-      newValues: { specialPrice: validated.specialPrice, isActive: validated.isActive },
-      oldValues: { id },
+    let updated;
+    await db.transaction(async (tx) => {
+      [updated] = await tx.update(channelSpecificPrices)
+        .set({
+          specialPrice: String(validated.specialPrice),
+          isActive: validated.isActive,
+        })
+        .where(and(eq(channelSpecificPrices.id, id), eq(channelSpecificPrices.tenantId, tenantId)))
+        .returning();
+      const session = await auth();
+      await AuditService.log(tx, {
+        tenantId,
+        userId: session?.user?.id || 'system',
+        tableName: 'channel_specific_prices',
+        recordId: updated.id,
+        action: 'UPDATE',
+        newValues: { specialPrice: validated.specialPrice, isActive: validated.isActive },
+        oldValues: { id },
+      });
     });
-
     revalidatePath('/products');
     return { success: true, data: updated };
   } catch (error) {
@@ -255,21 +253,19 @@ export async function removeChannelPrice(id: string) {
   try {
     const tenantId = await getTenantIdFromSession();
     if (!tenantId) return { success: false, error: '未授权' };
-
-    await db
-      .delete(channelSpecificPrices)
-      .where(and(eq(channelSpecificPrices.id, id), eq(channelSpecificPrices.tenantId, tenantId)));
-
-    const session = await auth();
-    await AuditService.log(db, {
-      tenantId,
-      userId: session?.user?.id || 'system',
-      tableName: 'channel_specific_prices',
-      recordId: id,
-      action: 'DELETE',
-      oldValues: { id },
+    await db.transaction(async (tx) => {
+      await tx.delete(channelSpecificPrices)
+        .where(and(eq(channelSpecificPrices.id, id), eq(channelSpecificPrices.tenantId, tenantId)));
+      const session = await auth();
+      await AuditService.log(tx, {
+        tenantId,
+        userId: session?.user?.id || 'system',
+        tableName: 'channel_specific_prices',
+        recordId: id,
+        action: 'DELETE',
+        oldValues: { id },
+      });
     });
-
     revalidatePath('/products');
     return { success: true };
   } catch (error) {

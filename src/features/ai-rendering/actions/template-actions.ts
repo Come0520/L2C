@@ -51,6 +51,8 @@ export async function getAllTemplates() {
   });
 }
 
+import { AuditService } from '@/shared/services/audit-service';
+
 // ==================== 增删改 ====================
 
 /**
@@ -62,10 +64,27 @@ export async function createTemplate(input: z.infer<typeof templateSchema>) {
   const parsed = templateSchema.safeParse(input);
   if (!parsed.success) throw new Error(parsed.error.issues[0].message);
 
-  return db.insert(aiCurtainStyleTemplates).values({
-    ...parsed.data,
-    createdBy: session.user.id,
-    updatedBy: session.user.id,
+  return db.transaction(async (tx) => {
+    const [record] = await tx
+      .insert(aiCurtainStyleTemplates)
+      .values({
+        ...parsed.data,
+        createdBy: session.user.id,
+        updatedBy: session.user.id,
+      })
+      .returning();
+
+    await AuditService.log(
+      {
+        action: 'CREATE_STYLE_TEMPLATE',
+        tableName: 'ai_curtain_style_templates',
+        recordId: record.id,
+        newValues: record,
+      },
+      { session: session as any, tx }
+    );
+
+    return record;
   });
 }
 
@@ -77,13 +96,34 @@ export async function createTemplate(input: z.infer<typeof templateSchema>) {
 export async function updateTemplate(id: string, input: Partial<z.infer<typeof templateSchema>>) {
   const session = await requireSuperAdmin();
 
-  await db
-    .update(aiCurtainStyleTemplates)
-    .set({
-      ...input,
-      updatedBy: session.user.id,
-    })
-    .where(eq(aiCurtainStyleTemplates.id, id));
+  await db.transaction(async (tx) => {
+    const oldRecord = await tx.query.aiCurtainStyleTemplates.findFirst({
+      where: eq(aiCurtainStyleTemplates.id, id),
+    });
+    if (!oldRecord) throw new Error('Not Found');
+
+    const [newRecord] = await tx
+      .update(aiCurtainStyleTemplates)
+      .set({
+        ...input,
+        updatedBy: session.user.id,
+      })
+      .where(eq(aiCurtainStyleTemplates.id, id))
+      .returning();
+
+    if (newRecord) {
+      await AuditService.log(
+        {
+          action: 'UPDATE_STYLE_TEMPLATE',
+          tableName: 'ai_curtain_style_templates',
+          recordId: id,
+          oldValues: oldRecord,
+          newValues: newRecord,
+        },
+        { session: session as any, tx }
+      );
+    }
+  });
 
   revalidatePath('/platform/ai-templates');
 }
@@ -94,12 +134,33 @@ export async function updateTemplate(id: string, input: Partial<z.infer<typeof t
  * @param isActive 1=启用，0=禁用
  */
 export async function toggleTemplateStatus(id: string, isActive: 0 | 1) {
-  await requireSuperAdmin();
+  const session = await requireSuperAdmin();
 
-  await db
-    .update(aiCurtainStyleTemplates)
-    .set({ isActive })
-    .where(eq(aiCurtainStyleTemplates.id, id));
+  await db.transaction(async (tx) => {
+    const oldRecord = await tx.query.aiCurtainStyleTemplates.findFirst({
+      where: eq(aiCurtainStyleTemplates.id, id),
+    });
+    if (!oldRecord) throw new Error('Not Found');
+
+    const [newRecord] = await tx
+      .update(aiCurtainStyleTemplates)
+      .set({ isActive })
+      .where(eq(aiCurtainStyleTemplates.id, id))
+      .returning();
+
+    if (newRecord) {
+      await AuditService.log(
+        {
+          action: 'TOGGLE_STYLE_TEMPLATE_STATUS',
+          tableName: 'ai_curtain_style_templates',
+          recordId: id,
+          oldValues: oldRecord,
+          newValues: newRecord,
+        },
+        { session: session as any, tx }
+      );
+    }
+  });
 
   revalidatePath('/platform/ai-templates');
 }
@@ -109,8 +170,26 @@ export async function toggleTemplateStatus(id: string, isActive: 0 | 1) {
  * @param id 模板 ID
  */
 export async function deleteTemplate(id: string) {
-  await requireSuperAdmin();
+  const session = await requireSuperAdmin();
 
-  await db.delete(aiCurtainStyleTemplates).where(eq(aiCurtainStyleTemplates.id, id));
+  await db.transaction(async (tx) => {
+    const oldRecord = await tx.query.aiCurtainStyleTemplates.findFirst({
+      where: eq(aiCurtainStyleTemplates.id, id),
+    });
+    if (!oldRecord) throw new Error('Not Found');
+
+    await tx.delete(aiCurtainStyleTemplates).where(eq(aiCurtainStyleTemplates.id, id));
+
+    await AuditService.log(
+      {
+        action: 'DELETE_STYLE_TEMPLATE',
+        tableName: 'ai_curtain_style_templates',
+        recordId: id,
+        oldValues: oldRecord,
+      },
+      { session: session as any, tx }
+    );
+  });
+
   revalidatePath('/platform/ai-templates');
 }

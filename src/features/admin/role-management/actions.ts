@@ -190,30 +190,32 @@ const createRoleInternal = createSafeAction(createRoleSchema, async (data, { ses
     throw new Error(`角色 "${name}" 已存在`);
   }
 
-  const [newRole] = await db
-    .insert(roles)
-    .values({
+  // 事务内创建角色并记录审计日志
+  const newRole = await db.transaction(async (tx) => {
+    const [created] = await tx.insert(roles)
+      .values({
+        tenantId: session.user.tenantId,
+        name,
+        code: data.code || name.toLowerCase().replace(/\s+/g, '_'),
+        description: description || null,
+        permissions,
+        isSystem: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning();
+    await AuditService.log(tx, {
+      action: 'CREATE_ROLE',
+      tableName: 'roles',
+      recordId: created.id,
+      userId: session.user.id,
       tenantId: session.user.tenantId,
-      name,
-      code: data.code || name.toLowerCase().replace(/\s+/g, '_'),
-      description: description || null,
-      permissions,
-      isSystem: false,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    })
-    .returning();
-
-  // 审计日志
-  await AuditService.log(db, {
-    action: 'CREATE_ROLE',
-    tableName: 'roles',
-    recordId: newRole.id,
-    userId: session.user.id,
-    tenantId: session.user.tenantId,
-    newValues: { name, description, permissions },
+      newValues: { name, description, permissions },
+    });
+    return created;
   });
 
+  // 审计日志
   logger.info(
     `[Admin] 用户 ${session.user.id} 成功创建角色: ${name} (${newRole.id}), 权限数: ${permissions.length}`
   );
@@ -266,26 +268,28 @@ const updateRolePermissionsInternal = createSafeAction(
       throw new Error('系统内置角色不允许修改权限');
     }
 
-    const [updated] = await db
-      .update(roles)
-      .set({
-        permissions,
-        updatedAt: new Date(),
-      })
-      .where(and(eq(roles.id, roleId), eq(roles.tenantId, session.user.tenantId)))
-      .returning();
-
-    // 审计日志
-    await AuditService.log(db, {
-      action: 'UPDATE_ROLE_PERMISSIONS',
-      tableName: 'roles',
-      recordId: roleId,
-      userId: session.user.id,
-      tenantId: session.user.tenantId,
-      oldValues: { permissions: oldRole.permissions },
-      newValues: { permissions },
+    // 事务内更新权限并记录审计日志
+    const updated = await db.transaction(async (tx) => {
+      const [result] = await tx.update(roles)
+        .set({
+          permissions,
+          updatedAt: new Date(),
+        })
+        .where(and(eq(roles.id, roleId), eq(roles.tenantId, session.user.tenantId)))
+        .returning();
+      await AuditService.log(tx, {
+        action: 'UPDATE_ROLE_PERMISSIONS',
+        tableName: 'roles',
+        recordId: roleId,
+        userId: session.user.id,
+        tenantId: session.user.tenantId,
+        oldValues: { permissions: oldRole.permissions },
+        newValues: { permissions },
+      });
+      return result;
     });
 
+    // 审计日志
     logger.info(
       `[Admin] 用户 ${session.user.id} 更新了角色 ${roleId} 的权限, 旧权限数: ${(oldRole.permissions as string[])?.length || 0}, 新权限数: ${permissions.length}`
     );
@@ -348,24 +352,24 @@ const deleteRoleInternal = createSafeAction(deleteRoleSchema, async (data, { ses
     throw new Error(`该角色下仍有 ${activeUsers.length} 名活跃用户，请先迁移用户后再删除`);
   }
 
-  // 执行删除
-  await db
-    .delete(roles)
-    .where(and(eq(roles.id, roleId), eq(roles.tenantId, session.user.tenantId)));
-
-  // 审计日志
-  await AuditService.log(db, {
-    action: 'DELETE_ROLE',
-    tableName: 'roles',
-    recordId: roleId,
-    userId: session.user.id,
-    tenantId: session.user.tenantId,
-    oldValues: {
-      name: targetRole.name,
-      permissions: targetRole.permissions,
-    },
+  // 事务内删除角色并记录审计日志
+  await db.transaction(async (tx) => {
+    await tx.delete(roles)
+      .where(and(eq(roles.id, roleId), eq(roles.tenantId, session.user.tenantId)));
+    await AuditService.log(tx, {
+      action: 'DELETE_ROLE',
+      tableName: 'roles',
+      recordId: roleId,
+      userId: session.user.id,
+      tenantId: session.user.tenantId,
+      oldValues: {
+        name: targetRole.name,
+        permissions: targetRole.permissions,
+      },
+    });
   });
 
+  // 审计日志
   logger.info(`[Admin] 用户 ${session.user.id} 删除了角色: ${targetRole.name} (${roleId})`);
 
   // 使 RBAC 缓存失效

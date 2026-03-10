@@ -79,7 +79,7 @@ const OrderTableRow = React.memo(function OrderTableRow({ order }: OrderTableRow
 
 export const OrderTable = React.memo(function OrderTable({ data }: OrderTableProps) {
   return (
-    <div className="glass-table overflow-hidden">
+    <div className="glass-table overflow-x-auto w-full">
       <Table>
         <TableHeader>
           <TableRow className="glass-table-header">

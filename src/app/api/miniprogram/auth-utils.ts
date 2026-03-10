@@ -44,6 +44,8 @@ export function checkMiniprogramRole(user: AuthUser, allowedRoles: MiniprogramRo
   return allowedRoles.includes(user.role.toUpperCase() as MiniprogramRole);
 }
 
+import { headers } from 'next/headers';
+
 /**
  * 高阶包装器：统一认证 + 角色校验
  * @param handler 原始路由处理函数，第二个参数注入 AuthUser，第三个参数为 context
@@ -54,6 +56,10 @@ export function withMiniprogramAuth(
   allowedRoles?: MiniprogramRole[]
 ) {
   return async (request: NextRequest, context?: any) => {
+    // 强制调用 Next.js 动态 API，跳过构建时静态生成环境的预渲染 (重要！)
+    // 这解决了因预渲染带有数据库连接的 API 路由引发的 Native 依赖错误（如 rimraf）
+    await headers();
+
     const user = await getMiniprogramUser(request);
     if (!user) return apiUnauthorized('请先登录');
     if (!user.tenantId) return apiUnauthorized('无效租户');

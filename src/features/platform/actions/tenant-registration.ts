@@ -190,20 +190,22 @@ export async function submitTenantApplication(
 
     // 审计：记录新租户申请入驻
     try {
-      await AuditService.log(db, {
-        tableName: 'tenants',
-        recordId: result.id,
-        action: 'TENANT_APPLICATION_SUBMITTED',
-        userId: 'system', // 此时用户尚未激活
-        tenantId: result.id,
-        details: {
-          companyName: data.companyName,
-          applicantName: data.applicantName,
-          phone: data.phone,
-          region: data.region,
-          method: 'self_registration',
-        },
-      });
+      await db.transaction(async (tx) => {
+          await AuditService.log(tx, {
+              tableName: 'tenants',
+              recordId: result.id,
+              action: 'TENANT_APPLICATION_SUBMITTED',
+              userId: 'system', // 此时用户尚未激活
+              tenantId: result.id,
+              details: {
+                companyName: data.companyName,
+                applicantName: data.applicantName,
+                phone: data.phone,
+                region: data.region,
+                method: 'self_registration',
+              },
+            });
+        });
     } catch (auditErr) {
       logger.error('记录租户注册审计日志失败:', auditErr);
     }

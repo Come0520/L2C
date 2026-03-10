@@ -3,7 +3,7 @@
 import { db } from '@/shared/api/db';
 import { orders } from '@/shared/api/schema';
 import { eq, desc } from 'drizzle-orm';
-import { auth, checkPermission } from '@/shared/lib/auth';
+import { auth, requirePermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
 import { format } from 'date-fns';
 import { logger } from '@/shared/lib/logger';
@@ -22,7 +22,7 @@ export async function exportOrdersAction(_filters: Record<string, unknown>) {
     const session = await auth();
     if (!session?.user?.tenantId) return { success: false, error: 'Unauthorized' };
 
-    await checkPermission(session, PERMISSIONS.ORDER.VIEW);
+    await requirePermission(session, PERMISSIONS.ORDER.VIEW);
 
     // 模拟复杂筛选条件下的查询
     const data = await db.query.orders.findMany({

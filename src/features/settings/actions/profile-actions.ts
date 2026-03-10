@@ -61,41 +61,40 @@ export const updateProfile = createSafeAction(updateProfileSchema, async (data, 
     }
 
     // 3. 更新数据库
-    await db
-      .update(users)
-      .set({
-        name: data.name,
-        phone: data.phone || undefined, // undefined prevents Drizzle from updating if empty
-        avatarUrl: data.image || null,
-        preferences: {
-          ...(currentUser.preferences as Record<string, unknown> || {}),
-          avatarText: data.avatarText || '',
-          avatarBgColor: data.avatarBgColor || 'bg-primary-500',
-        },
-        updatedAt: new Date(),
-      })
-      .where(eq(users.id, userId));
-
+    await db.transaction(async (tx) => {
+        await tx.update(users)
+          .set({
+            name: data.name,
+            phone: data.phone || undefined, // undefined prevents Drizzle from updating if empty
+            avatarUrl: data.image || null,
+            preferences: {
+              ...(currentUser.preferences as Record<string, unknown> || {}),
+              avatarText: data.avatarText || '',
+              avatarBgColor: data.avatarBgColor || 'bg-primary-500',
+            },
+            updatedAt: new Date(),
+          })
+          .where(eq(users.id, userId));
+        await AuditService.log(tx, {
+              tableName: 'users',
+              recordId: userId,
+              action: 'UPDATE',
+              userId: userId,
+              tenantId: session.user.tenantId, // 假设 session 中有 tenantId
+              oldValues: {
+                name: currentUser.name,
+                phone: currentUser.phone,
+                avatarUrl: currentUser.avatarUrl,
+              },
+              newValues: {
+                name: data.name,
+                phone: data.phone || null,
+                avatarUrl: data.image || null,
+              },
+              changedFields: data,
+            });
+      });
     // 4. 记录审计日志
-    await AuditService.log(db, {
-      tableName: 'users',
-      recordId: userId,
-      action: 'UPDATE',
-      userId: userId,
-      tenantId: session.user.tenantId, // 假设 session 中有 tenantId
-      oldValues: {
-        name: currentUser.name,
-        phone: currentUser.phone,
-        avatarUrl: currentUser.avatarUrl,
-      },
-      newValues: {
-        name: data.name,
-        phone: data.phone || null,
-        avatarUrl: data.image || null,
-      },
-      changedFields: data,
-    });
-
     revalidatePath('/settings/preferences');
     revalidatePath('/profile'); // 假设有个人中心页
 
@@ -159,26 +158,25 @@ export const changePassword = createSafeAction(changePasswordSchema, async (data
     const newPasswordHash = await hash(data.newPassword, 10);
 
     // 4. 更新数据库
-    await db
-      .update(users)
-      .set({
-        passwordHash: newPasswordHash,
-        updatedAt: new Date(),
-      })
-      .where(eq(users.id, userId));
-
+    await db.transaction(async (tx) => {
+        await tx.update(users)
+          .set({
+            passwordHash: newPasswordHash,
+            updatedAt: new Date(),
+          })
+          .where(eq(users.id, userId));
+        await AuditService.log(tx, {
+              tableName: 'users',
+              recordId: userId,
+              action: 'UPDATE',
+              userId: userId,
+              tenantId: session.user.tenantId,
+              oldValues: { passwordHash: '***' },
+              newValues: { passwordHash: '***' },
+              changedFields: { passwordChanged: true },
+            });
+      });
     // 5. 记录审计日志
-    await AuditService.log(db, {
-      tableName: 'users',
-      recordId: userId,
-      action: 'UPDATE',
-      userId: userId,
-      tenantId: session.user.tenantId,
-      oldValues: { passwordHash: '***' },
-      newValues: { passwordHash: '***' },
-      changedFields: { passwordChanged: true },
-    });
-
     return { success: true, message: '密码已成功修改' };
   } catch (error) {
     logger.error('修改密码失败:', error);

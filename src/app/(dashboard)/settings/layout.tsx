@@ -13,7 +13,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
       </div>
       {/* 内容区域 */}
       <main className="flex-1 overflow-y-auto">
-        <div className="container max-w-5xl px-6 py-8">{children}</div>
+        <div className="container h-full max-w-5xl px-6 py-8">{children}</div>
       </main>
     </div>
   );

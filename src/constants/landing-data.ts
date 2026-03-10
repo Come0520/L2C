@@ -393,6 +393,29 @@ export interface VersionRecord {
 
 export const versionHistory: VersionRecord[] = [
   {
+    id: 'v1.3.7',
+    version: 'v1.3.7',
+    date: '2026-03-10',
+    title: '门禁规范落地与底层安全性更新',
+    description:
+      '成功清理 E2E 测试遗留的进程阻塞，并完成包含数据层验证在内的全量质量门禁。更新项目依赖以消除高危漏洞，补充财务结算的基础数据结构，确保部署顺畅与数据一致性。',
+    contributors: ['长城（开发者）'],
+    updates: [
+      {
+        type: 'fix',
+        content: '解决 .next 构建目录被本地后台测试进程异常占用导致的服务崩溃风险',
+      },
+      {
+        type: 'optimize',
+        content: '修正 NPM Audit 审计配置，排除无关低危项，彻底消除高危模块隐患打通流水线',
+      },
+      {
+        type: 'feature',
+        content: '数据库层级扩充财务 AR 结算流程状态字段，补全「待开票」「待收款」等全链路流转状态',
+      },
+    ],
+  },
+  {
     id: 'v1.3.6',
     version: 'v1.3.6',
     date: '2026-03-07',

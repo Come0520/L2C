@@ -54,9 +54,9 @@ test.describe('完整销售流程 E2E', () => {
         await expect(page.getByRole('dialog')).toBeVisible();
 
         // 填写表单
-        await page.getByTestId('lead-name-input').fill(testCustomerName);
-        await page.getByTestId('lead-phone-input').fill(testPhone);
-        await page.getByLabel('备注/需求').fill('E2E 完整流程测试 - 自动生成');
+        await page.getByPlaceholder('输入客户姓名').fill(testCustomerName);
+        await page.getByTestId('phone-input').fill(testPhone);
+        await page.getByLabel('备注/详情').fill('E2E 完整流程测试 - 自动生成');
 
         // 提交
         const submitBtn = page.getByTestId('submit-lead-btn');
@@ -67,7 +67,7 @@ test.describe('完整销售流程 E2E', () => {
         await expect(page.getByText(/成功|Success/).first()).toBeVisible({ timeout: 10000 });
 
         // 等待对话框关闭
-        await expect(page.getByTestId('create-lead-dialog')).toBeHidden({ timeout: 5000 });
+        await expect(page.getByRole('dialog')).toBeHidden({ timeout: 5000 });
 
         // 在列表中找到新创建的线索
         await page.reload();

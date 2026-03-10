@@ -107,7 +107,7 @@ function ProductSettingsContent() {
     <div className="space-y-6">
       {/* 页面标题 */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">产品策略配置</h1>
+        <h2 className="text-2xl font-bold tracking-tight">产品策略配置</h2>
         <p className="text-muted-foreground mt-1">管理商品套餐、渠道定价、组合商品和属性模板</p>
       </div>
 
@@ -177,5 +177,3 @@ export default function ProductSettingsPage() {
     </Suspense>
   );
 }
-
-

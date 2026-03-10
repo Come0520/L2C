@@ -1,0 +1,694 @@
+{
+  "actions": [
+    {
+      "action": "update",
+      "resolves": [
+        {
+          "id": 1112455,
+          "path": ".>@alicloud/dysmsapi20170525>@darabonba/typescript>lodash",
+          "dev": false,
+          "optional": false,
+          "bundled": false
+        }
+      ],
+      "module": "lodash",
+      "target": "4.17.23",
+      "depth": 4
+    },
+    {
+      "action": "update",
+      "resolves": [
+        {
+          "id": 1113715,
+          "path": ".>@modelcontextprotocol/sdk>ajv",
+          "dev": false,
+          "optional": false,
+          "bundled": false
+        }
+      ],
+      "module": "ajv",
+      "target": "8.18.0",
+      "depth": 3
+    },
+    {
+      "action": "update",
+      "resolves": [
+        {
+          "id": 1113719,
+          "path": ".>ali-oss>qs",
+          "dev": false,
+          "optional": false,
+          "bundled": false
+        }
+      ],
+      "module": "qs",
+      "target": "6.15.0",
+      "depth": 3
+    },
+    {
+      "action": "update",
+      "resolves": [
+        {
+          "id": 1114017,
+          "path": ".>isomorphic-dompurify>dompurify",
+          "dev": false,
+          "optional": false,
+          "bundled": false
+        }
+      ],
+      "module": "dompurify",
+      "target": "3.3.2",
+      "depth": 3
+    },
+    {
+      "action": "update",
+      "resolves": [
+        {
+          "id": 1114194,
+          "path": ".>@modelcontextprotocol/sdk>express-rate-limit",
+          "dev": false,
+          "optional": false,
+          "bundled": false
+        }
+      ],
+      "module": "express-rate-limit",
+      "target": "8.3.1",
+      "depth": 3
+    },
+    {
+      "action": "review",
+      "module": "esbuild",
+      "resolves": [
+        {
+          "id": 1102341,
+          "path": ".>drizzle-kit>@esbuild-kit/esm-loader>@esbuild-kit/core-utils>esbuild",
+          "dev": false,
+          "optional": false,
+          "bundled": false
+        }
+      ]
+    },
+    {
+      "action": "review",
+      "module": "xlsx",
+      "resolves": [
+        {
+          "id": 1108110,
+          "path": ".>xlsx",
+          "dev": false,
+          "bundled": false,
+          "optional": false
+        },
+        {
+          "id": 1108111,
+          "path": ".>xlsx",
+          "dev": false,
+          "bundled": false,
+          "optional": false
+        }
+      ]
+    },
+    {
+      "action": "review",
+      "module": "@modelcontextprotocol/sdk",
+      "resolves": [
+        {
+          "id": 1111906,
+          "path": ".>@midscene/web>@midscene/shared>@modelcontextprotocol/sdk",
+          "dev": false,
+          "optional": false,
+          "bundled": false
+        },
+        {
+          "id": 1113080,
+          "path": ".>@midscene/web>@midscene/shared>@modelcontextprotocol/sdk",
+          "dev": false,
+          "optional": false,
+          "bundled": false
+        },
+        {
+          "id": 1113213,
+          "path": ".>@midscene/web>@midscene/shared>@modelcontextprotocol/sdk",
+          "dev": false,
+          "optional": false,
+          "bundled": false
+        }
+      ]
+    },
+    {
+      "action": "review",
+      "module": "js-yaml",
+      "resolves": [
+        {
+          "id": 1112715,
+          "path": ".>@midscene/web>@midscene/core>js-yaml",
+          "dev": false,
+          "optional": false,
+          "bundled": false
+        }
+      ]
+    },
+    {
+      "action": "review",
+      "module": "ajv",
+      "resolves": [
+        {
+          "id": 1113714,
+          "path": ".>eslint>ajv",
+          "dev": false,
+          "optional": false,
+          "bundled": false
+        }
+      ]
+    }
+  ],
+  "advisories": {
+    "1102341": {
+      "findings": [
+        {
+          "version": "0.18.20",
+          "paths": [
+            ". > drizzle-kit@0.31.8 > @esbuild-kit/esm-loader@2.6.5 > @esbuild-kit/core-utils@3.3.2 > esbuild@0.18.20"
+          ]
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/evanw/esbuild/security/advisories/GHSA-67mh-4wv8-2f99\n- https://github.com/evanw/esbuild/commit/de85afd65edec9ebc44a11e245fd9e9a2e99760d\n- https://github.com/advisories/GHSA-67mh-4wv8-2f99",
+      "created": "2025-02-10T17:48:07.000Z",
+      "id": 1102341,
+      "npm_advisory_id": null,
+      "overview": "### Summary\n\nesbuild allows any websites to send any request to the development server and read the response due to default CORS settings.\n\n### Details\n\nesbuild sets `Access-Control-Allow-Origin: *` header to all requests, including the SSE connection, which allows any websites to send any request to the development server and read the response.\n\nhttps://github.com/evanw/esbuild/blob/df815ac27b84f8b34374c9182a93c94718f8a630/pkg/api/serve_other.go#L121\nhttps://github.com/evanw/esbuild/blob/df815ac27b84f8b34374c9182a93c94718f8a630/pkg/api/serve_other.go#L363\n\n**Attack scenario**:\n\n1. The attacker serves a malicious web page (`http://malicious.example.com`).\n1. The user accesses the malicious web page.\n1. The attacker sends a `fetch('http://127.0.0.1:8000/main.js')` request by JS in that malicious web page. This request is normally blocked by same-origin policy, but that's not the case for the reasons above.\n1. The attacker gets the content of `http://127.0.0.1:8000/main.js`.\n\nIn this scenario, I assumed that the attacker knows the URL of the bundle output file name. But the attacker can also get that information by\n\n- Fetching `/index.html`: normally you have a script tag here\n- Fetching `/assets`: it's common to have a `assets` directory when you have JS files and CSS files in a different directory and the directory listing feature tells the attacker the list of files\n- Connecting `/esbuild` SSE endpoint: the SSE endpoint sends the URL path of the changed files when the file is changed (`new EventSource('/esbuild').addEventListener('change', e => console.log(e.type, e.data))`)\n- Fetching URLs in the known file: once the attacker knows one file, the attacker can know the URLs imported from that file\n\nThe scenario above fetches the compiled content, but if the victim has the source map option enabled, the attacker can also get the non-compiled content by fetching the source map file.\n\n### PoC\n\n1. Download [reproduction.zip](https://github.com/user-attachments/files/18561484/reproduction.zip)\n2. Extract it and move to that directory\n1. Run `npm i`\n1. Run `npm run watch`\n1. Run `fetch('http://127.0.0.1:8000/app.js').then(r => r.text()).then(content => console.log(content))` in a different website's dev tools.\n\n![image](https://github.com/user-attachments/assets/08fc2e4d-e1ec-44ca-b0ea-78a73c3c40e9)\n\n### Impact\n\nUsers using the serve feature may get the source code stolen by malicious websites.",
+      "reported_by": null,
+      "title": "esbuild enables any website to send any requests to the development server and read the response",
+      "metadata": null,
+      "cves": [],
+      "access": "public",
+      "severity": "moderate",
+      "module_name": "esbuild",
+      "vulnerable_versions": "<=0.24.2",
+      "github_advisory_id": "GHSA-67mh-4wv8-2f99",
+      "recommendation": "Upgrade to version 0.25.0 or later",
+      "patched_versions": ">=0.25.0",
+      "updated": "2025-02-10T17:48:08.000Z",
+      "cvss": {
+        "score": 5.3,
+        "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:U/C:H/I:N/A:N"
+      },
+      "cwe": ["CWE-346"],
+      "url": "https://github.com/advisories/GHSA-67mh-4wv8-2f99"
+    },
+    "1108110": {
+      "findings": [
+        {
+          "version": "0.18.5",
+          "paths": [". > xlsx@0.18.5"]
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://nvd.nist.gov/vuln/detail/CVE-2023-30533\n- https://cdn.sheetjs.com/advisories/CVE-2023-30533\n- https://git.sheetjs.com/sheetjs/sheetjs/src/branch/master/CHANGELOG.md\n- https://git.sheetjs.com/sheetjs/sheetjs/issues/2667\n- https://git.sheetjs.com/sheetjs/sheetjs/issues/2986\n- https://cdn.sheetjs.com\n- https://github.com/advisories/GHSA-4r6h-8v6p-xvw6",
+      "created": "2023-04-24T09:30:19.000Z",
+      "id": 1108110,
+      "npm_advisory_id": null,
+      "overview": "All versions of SheetJS CE through 0.19.2 are vulnerable to \"Prototype Pollution\" when reading specially crafted files. Workflows that do not read arbitrary files (for example, exporting data to spreadsheet files) are unaffected.\n\nA non-vulnerable version cannot be found via npm, as the repository hosted on GitHub and the npm package `xlsx` are no longer maintained. Version 0.19.3 can be downloaded via https://cdn.sheetjs.com/.",
+      "reported_by": null,
+      "title": "Prototype Pollution in sheetJS",
+      "metadata": null,
+      "cves": ["CVE-2023-30533"],
+      "access": "public",
+      "severity": "high",
+      "module_name": "xlsx",
+      "vulnerable_versions": "<0.19.3",
+      "github_advisory_id": "GHSA-4r6h-8v6p-xvw6",
+      "recommendation": "None",
+      "patched_versions": "<0.0.0",
+      "updated": "2025-09-19T15:23:41.000Z",
+      "cvss": {
+        "score": 7.8,
+        "vectorString": "CVSS:3.1/AV:L/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H"
+      },
+      "cwe": ["CWE-1321"],
+      "url": "https://github.com/advisories/GHSA-4r6h-8v6p-xvw6"
+    },
+    "1108111": {
+      "findings": [
+        {
+          "version": "0.18.5",
+          "paths": [". > xlsx@0.18.5"]
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://nvd.nist.gov/vuln/detail/CVE-2024-22363\n- https://cdn.sheetjs.com/advisories/CVE-2024-22363\n- https://cwe.mitre.org/data/definitions/1333.html\n- https://git.sheetjs.com/sheetjs/sheetjs/src/tag/v0.20.2\n- https://cdn.sheetjs.com\n- https://github.com/advisories/GHSA-5pgg-2g8v-p4x9",
+      "created": "2024-04-05T06:30:46.000Z",
+      "id": 1108111,
+      "npm_advisory_id": null,
+      "overview": "SheetJS Community Edition before 0.20.2 is vulnerable.to Regular Expression Denial of Service (ReDoS).\n\nA non-vulnerable version cannot be found via npm, as the repository hosted on GitHub and the npm package `xlsx` are no longer maintained. Version 0.20.2 can be downloaded via https://cdn.sheetjs.com/.",
+      "reported_by": null,
+      "title": "SheetJS Regular Expression Denial of Service (ReDoS)",
+      "metadata": null,
+      "cves": ["CVE-2024-22363"],
+      "access": "public",
+      "severity": "high",
+      "module_name": "xlsx",
+      "vulnerable_versions": "<0.20.2",
+      "github_advisory_id": "GHSA-5pgg-2g8v-p4x9",
+      "recommendation": "None",
+      "patched_versions": "<0.0.0",
+      "updated": "2025-09-19T15:23:26.000Z",
+      "cvss": {
+        "score": 7.5,
+        "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"
+      },
+      "cwe": ["CWE-1333"],
+      "url": "https://github.com/advisories/GHSA-5pgg-2g8v-p4x9"
+    },
+    "1111906": {
+      "findings": [
+        {
+          "version": "1.10.2",
+          "paths": [
+            ". > @midscene/web@1.5.2 > @midscene/core@1.5.2 > @midscene/shared@1.5.2 > @modelcontextprotocol/sdk@1.10.2",
+            ". > @midscene/web@1.5.2 > @midscene/playground@1.5.2 > @midscene/core@1.5.2 > @midscene/shared@1.5.2 > @modelcontextprotocol/sdk@1.10.2",
+            ". > @midscene/web@1.5.2 > @midscene/playground@1.5.2 > @midscene/shared@1.5.2 > @modelcontextprotocol/sdk@1.10.2",
+            ". > @midscene/web@1.5.2 > @midscene/shared@1.5.2 > @modelcontextprotocol/sdk@1.10.2"
+          ]
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://nvd.nist.gov/vuln/detail/CVE-2026-0621\n- https://github.com/modelcontextprotocol/typescript-sdk/issues/965\n- https://www.vulncheck.com/advisories/mcp-typescript-sdk-uritemplate-exploded-array-pattern-redos\n- https://github.com/modelcontextprotocol/typescript-sdk/security/advisories/GHSA-cqwc-fm46-7fff\n- https://github.com/modelcontextprotocol/typescript-sdk/commit/b392f02ffcf37c088dbd114fedf25026ec3913d3\n- https://github.com/modelcontextprotocol/typescript-sdk/releases/tag/v1.25.2\n- https://github.com/advisories/GHSA-8r9q-7v3j-jr4g",
+      "created": "2026-01-05T21:30:33.000Z",
+      "id": 1111906,
+      "npm_advisory_id": null,
+      "overview": "### Impact\n\nA ReDoS vulnerability in the `UriTemplate` class allows attackers to cause denial of service. The `partToRegExp()` function generates a regex pattern with nested quantifiers (`([^/]+(?:,[^/]+)*)`) for exploded template variables (e.g., `{/id*}`, `{?tags*}`), causing catastrophic backtracking on malicious input.\n\n**Who is affected:** MCP servers that register resource templates with exploded array patterns and accept requests from untrusted clients.\n\n**Attack result:** An attacker sends a crafted URI via `resources/read` request, causing 100% CPU utilization, server hang/crash, and denial of service for all clients.\n\n### Affected Versions\n\nAll versions of `@modelcontextprotocol/sdk` prior to the patched release.\n\n### Patches\n\nv1.25.2 contains b392f02ffcf37c088dbd114fedf25026ec3913d3 the fix modifies the regex pattern to prevent backtracking.\n\n### Workarounds\n\n- Avoid using exploded patterns (`{/id*}`, `{?tags*}`) in resource templates\n- Implement request timeouts and rate limiting\n- Validate URIs before processing to reject suspicious patterns",
+      "reported_by": null,
+      "title": "Anthropic's MCP TypeScript SDK has a ReDoS vulnerability",
+      "metadata": null,
+      "cves": ["CVE-2026-0621"],
+      "access": "public",
+      "severity": "high",
+      "module_name": "@modelcontextprotocol/sdk",
+      "vulnerable_versions": "<1.25.2",
+      "github_advisory_id": "GHSA-8r9q-7v3j-jr4g",
+      "recommendation": "Upgrade to version 1.25.2 or later",
+      "patched_versions": ">=1.25.2",
+      "updated": "2026-01-07T16:16:29.000Z",
+      "cvss": {
+        "score": 0,
+        "vectorString": null
+      },
+      "cwe": ["CWE-1333"],
+      "url": "https://github.com/advisories/GHSA-8r9q-7v3j-jr4g"
+    },
+    "1112455": {
+      "findings": [
+        {
+          "version": "4.17.21",
+          "paths": [
+            ". > @alicloud/dysmsapi20170525@4.4.0 > @alicloud/openapi-core@1.0.7 > @alicloud/gateway-pop@0.0.6 > @alicloud/openapi-util@0.3.3 > @alicloud/tea-util@1.4.11 > @darabonba/typescript@1.0.3 > lodash@4.17.21",
+            ". > @alicloud/dysmsapi20170525@4.4.0 > @alicloud/openapi-core@1.0.7 > @alicloud/gateway-pop@0.0.6 > @alicloud/tea-util@1.4.11 > @darabonba/typescript@1.0.3 > lodash@4.17.21",
+            ". > @alicloud/dysmsapi20170525@4.4.0 > @alicloud/openapi-core@1.0.7 > @darabonba/typescript@1.0.3 > lodash@4.17.21",
+            ". > @alicloud/dysmsapi20170525@4.4.0 > @darabonba/typescript@1.0.3 > lodash@4.17.21",
+            ". > @alicloud/openapi-client@0.4.15 > @alicloud/openapi-util@0.3.3 > @alicloud/tea-util@1.4.11 > @darabonba/typescript@1.0.3 > lodash@4.17.21",
+            ". > @alicloud/tea-util@1.4.11 > @darabonba/typescript@1.0.3 > lodash@4.17.21",
+            ". > ali-oss@6.23.0 > lodash@4.17.21"
+          ]
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/lodash/lodash/security/advisories/GHSA-xxjr-mmjv-4gpg\n- https://nvd.nist.gov/vuln/detail/CVE-2025-13465\n- https://github.com/lodash/lodash/commit/edadd452146f7e4bad4ea684e955708931d84d81\n- https://github.com/advisories/GHSA-xxjr-mmjv-4gpg",
+      "created": "2026-01-21T23:01:22.000Z",
+      "id": 1112455,
+      "npm_advisory_id": null,
+      "overview": "### Impact\n\nLodash versions 4.0.0 through 4.17.22 are vulnerable to prototype pollution in the `_.unset` and `_.omit` functions. An attacker can pass crafted paths which cause Lodash to delete methods from global prototypes. \n\nThe issue permits deletion of properties but does not allow overwriting their original behavior.  \n\n### Patches\n\nThis issue is patched on 4.17.23.",
+      "reported_by": null,
+      "title": "Lodash has Prototype Pollution Vulnerability in `_.unset` and `_.omit` functions",
+      "metadata": null,
+      "cves": ["CVE-2025-13465"],
+      "access": "public",
+      "severity": "moderate",
+      "module_name": "lodash",
+      "vulnerable_versions": ">=4.0.0 <=4.17.22",
+      "github_advisory_id": "GHSA-xxjr-mmjv-4gpg",
+      "recommendation": "Upgrade to version 4.17.23 or later",
+      "patched_versions": ">=4.17.23",
+      "updated": "2026-01-21T23:01:23.000Z",
+      "cvss": {
+        "score": 6.5,
+        "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:L"
+      },
+      "cwe": ["CWE-1321"],
+      "url": "https://github.com/advisories/GHSA-xxjr-mmjv-4gpg"
+    },
+    "1112715": {
+      "findings": [
+        {
+          "version": "4.1.0",
+          "paths": [
+            ". > @midscene/web@1.5.2 > @midscene/core@1.5.2 > js-yaml@4.1.0",
+            ". > @midscene/web@1.5.2 > @midscene/playground@1.5.2 > @midscene/core@1.5.2 > js-yaml@4.1.0"
+          ]
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/nodeca/js-yaml/security/advisories/GHSA-mh29-5h37-fv8m\n- https://nvd.nist.gov/vuln/detail/CVE-2025-64718\n- https://github.com/nodeca/js-yaml/commit/383665ff4248ec2192d1274e934462bb30426879\n- https://github.com/nodeca/js-yaml/commit/5278870a17454fe8621dbd8c445c412529525266\n- https://github.com/nodeca/js-yaml/issues/730#issuecomment-3549635876\n- https://github.com/advisories/GHSA-mh29-5h37-fv8m",
+      "created": "2025-11-14T14:29:48.000Z",
+      "id": 1112715,
+      "npm_advisory_id": null,
+      "overview": "### Impact\n\nIn js-yaml 4.1.0, 4.0.0, and 3.14.1 and below, it's possible for an attacker to modify the prototype of the result of a parsed yaml document via prototype pollution (`__proto__`). All users who parse untrusted yaml documents may be impacted.\n\n### Patches\n\nProblem is patched in js-yaml 4.1.1 and 3.14.2.\n\n### Workarounds\n\nYou can protect against this kind of attack on the server by using `node --disable-proto=delete` or `deno` (in Deno, pollution protection is on by default).\n\n### References\n\nhttps://cheatsheetseries.owasp.org/cheatsheets/Prototype_Pollution_Prevention_Cheat_Sheet.html",
+      "reported_by": null,
+      "title": "js-yaml has prototype pollution in merge (<<)",
+      "metadata": null,
+      "cves": ["CVE-2025-64718"],
+      "access": "public",
+      "severity": "moderate",
+      "module_name": "js-yaml",
+      "vulnerable_versions": ">=4.0.0 <4.1.1",
+      "github_advisory_id": "GHSA-mh29-5h37-fv8m",
+      "recommendation": "Upgrade to version 4.1.1 or later",
+      "patched_versions": ">=4.1.1",
+      "updated": "2026-01-31T03:32:45.000Z",
+      "cvss": {
+        "score": 5.3,
+        "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N"
+      },
+      "cwe": ["CWE-1321"],
+      "url": "https://github.com/advisories/GHSA-mh29-5h37-fv8m"
+    },
+    "1113080": {
+      "findings": [
+        {
+          "version": "1.10.2",
+          "paths": [
+            ". > @midscene/web@1.5.2 > @midscene/core@1.5.2 > @midscene/shared@1.5.2 > @modelcontextprotocol/sdk@1.10.2",
+            ". > @midscene/web@1.5.2 > @midscene/playground@1.5.2 > @midscene/core@1.5.2 > @midscene/shared@1.5.2 > @modelcontextprotocol/sdk@1.10.2",
+            ". > @midscene/web@1.5.2 > @midscene/playground@1.5.2 > @midscene/shared@1.5.2 > @modelcontextprotocol/sdk@1.10.2",
+            ". > @midscene/web@1.5.2 > @midscene/shared@1.5.2 > @modelcontextprotocol/sdk@1.10.2"
+          ]
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/modelcontextprotocol/typescript-sdk/security/advisories/GHSA-345p-7cg4-v4c7\n- https://github.com/modelcontextprotocol/typescript-sdk/issues/204\n- https://github.com/modelcontextprotocol/typescript-sdk/issues/243\n- https://nvd.nist.gov/vuln/detail/CVE-2026-25536\n- https://github.com/advisories/GHSA-345p-7cg4-v4c7",
+      "created": "2026-02-04T20:04:16.000Z",
+      "id": 1113080,
+      "npm_advisory_id": null,
+      "overview": "### Summary\n\nCross-client data leak via two distinct issues: (1) reusing a single `StreamableHTTPServerTransport` across multiple client requests, and (2) reusing a single `McpServer`/`Server` instance across multiple transports. Both are most common in stateless deployments.\n\n### Impact\n\nThis advisory covers two related but distinct vulnerabilities. A deployment may be affected by one or both.\n\n#### Issue 1: Transport re-use\n\n**What happens:** When a single `StreamableHTTPServerTransport` instance handles multiple client requests, JSON-RPC message ID collisions cause responses to be routed to the wrong client's HTTP connection. The transport maintains an internal `requestId 鈫?stream` mapping, and since MCP client SDKs generate message IDs using an incrementing counter starting at 0, two clients produce identical IDs. The second client's request overwrites the first client's mapping entry, routing the response to the wrong HTTP stream.\n\n**What is affected:** All request types 鈥?`tools/call`, `resources/read`, `prompts/get`, etc. No server-initiated features are required to trigger this.\n\n**Conditions:**\n- A single `StreamableHTTPServerTransport` instance is reused across multiple client requests (most common in stateless mode without `sessionIdGenerator`)\n- Two or more clients send requests concurrently\n- Clients generate overlapping JSON-RPC message IDs (the SDK's default client uses an incrementing counter starting at 0)\n\n#### Issue 2: Server/Protocol re-use\n\n**What happens:** When a single `McpServer` (or `Server`) instance is `connect()`ed to multiple transports (one per client), the Protocol's internal `this._transport` reference is silently overwritten. The final response to a request is routed correctly (the Protocol captures the transport reference at request time), but any **server-to-client messages sent during request handling** use the shared `this._transport` reference, which may point to a different client's transport.\n\n**What is affected:** This depends on what features your server uses:\n\n  - **Final responses** (the return value from a tool/resource/prompt handler): Affected in most cases. The Protocol captures this._transport at [request-handling time](https://github.com/modelcontextprotocol/typescript-sdk/blob/main/packages/core/src/shared/protocol.ts#L760), not the transport that delivered the request. This means:\n    - If a request is already in-flight when a second connect() occurs (i.e., the request\n   arrived before the transport was overwritten), the captured reference is correct and\n  the response routes properly.\n    - If a request arrives on the old transport after a second connect() has overwritten\n  this._transport, the captured reference points to the new transport, and the response\n  is mis-routed. The requesting client will time out.\n- **Progress notifications** sent during tool execution via `sendNotification`: **Affected.** These are dispatched through `this._transport`. When the transport has been overwritten and message IDs collide on the new transport, notifications are routed to the wrong client's HTTP stream.\n- **Sampling** (`createMessage`) and **elicitation** requests sent during tool execution via `sendRequest`: **Affected.** Same mechanism 鈥?the request is sent to the wrong client.\n- **Spontaneous server-initiated notifications** (outside any request handler): **Affected.** These are sent to whichever client's transport was most recently connected.\n\n**Conditions:**\n- A single `McpServer`/`Server` instance is `connect()`ed to multiple transports across requests or sessions\n- Two or more clients connect concurrently\n- For in-request notifications/requests: message ID collision on the other transport is required for silent data leaking (the SDK's default client uses an incrementing counter starting at 0). Without collision, the transport will throw an error rather than misroute.\n- For spontaneous notifications: no collision needed, messages are always sent to the last-connected client's transport\n\n#### How to tell if you're affected\n\n- **You use `sessionIdGenerator` (stateful mode) with a new `McpServer` per session** 鈫?not affected by either issue. Each session has its own transport and server instance.\n- **You use `sessionIdGenerator` but share a single `McpServer` across sessions** 鈫?not affected by Issue 1 (transport re-use), but affected by Issue 2 (server re-use) if your tools send progress notifications, sampling, or elicitation during execution.\n- **You are in stateless mode and reuse both a transport and a server across requests** 鈫?affected by both issues; all request types can leak.\n- **You are in stateless mode and create a new transport per request, but reuse the server** 鈫?affected by Issue 2 only; safe if your tools only return results without sending progress notifications, sampling, or elicitation during execution.\n- **You create a new server + transport per request** 鈫?not affected.\n- **Single-client environments** (e.g., local development with one IDE) 鈫?not affected.\n\n### Patches\n\nThe fix (v1.26.0) adds runtime guards that turn silent data misrouting into immediate, actionable errors:\n\n1. `Protocol.connect()` now throws if the protocol is already connected to a transport, preventing silent transport overwriting (addresses Issue 2)\n2. Stateless `StreamableHTTPServerTransport.handleRequest()` now throws if called more than once, enforcing one-request-per-transport in stateless mode (addresses Issue 1)\n3. In-flight request handler abort controllers are cleaned up on `close()`, and `sendNotification`/`sendRequest` in handler extras check the abort signal before sending, preventing messages from leaking after a transport is replaced\n\nServers that were incorrectly reusing instances will now receive a clear error message directing them to create separate instances per connection.\n\n### Workarounds\n\nIf you cannot upgrade immediately, ensure your server creates fresh `McpServer` and transport instances for each request (stateless) or session (stateful):\n\n```typescript\n// Stateless mode: create new server + transport per request\napp.post('/mcp', async (req, res) => {\n  const server = new McpServer({ name: 'my-server', version: '1.0.0' });\n  // ... register tools, resources, etc.\n  const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });\n  await server.connect(transport);\n  await transport.handleRequest(req, res);\n});\n\n// Stateful mode: create new server + transport per session\nconst sessions = new Map();\napp.post('/mcp', async (req, res) => {\n  const sessionId = req.headers['mcp-session-id'];\n  if (sessions.has(sessionId)) {\n    await sessions.get(sessionId).transport.handleRequest(req, res);\n  } else {\n    const server = new McpServer({ name: 'my-server', version: '1.0.0' });\n    // ... register tools, resources, etc.\n    const transport = new StreamableHTTPServerTransport({\n      sessionIdGenerator: () => randomUUID()\n    });\n    await server.connect(transport);\n    sessions.set(transport.sessionId, { server, transport });\n    await transport.handleRequest(req, res);\n  }\n});\n```",
+      "reported_by": null,
+      "title": "@modelcontextprotocol/sdk has cross-client data leak via shared server/transport instance reuse",
+      "metadata": null,
+      "cves": ["CVE-2026-25536"],
+      "access": "public",
+      "severity": "high",
+      "module_name": "@modelcontextprotocol/sdk",
+      "vulnerable_versions": ">=1.10.0 <=1.25.3",
+      "github_advisory_id": "GHSA-345p-7cg4-v4c7",
+      "recommendation": "Upgrade to version 1.26.0 or later",
+      "patched_versions": ">=1.26.0",
+      "updated": "2026-02-09T14:52:41.000Z",
+      "cvss": {
+        "score": 7.1,
+        "vectorString": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:L/A:N"
+      },
+      "cwe": ["CWE-362"],
+      "url": "https://github.com/advisories/GHSA-345p-7cg4-v4c7"
+    },
+    "1113213": {
+      "findings": [
+        {
+          "version": "1.10.2",
+          "paths": [
+            ". > @midscene/web@1.5.2 > @midscene/core@1.5.2 > @midscene/shared@1.5.2 > @modelcontextprotocol/sdk@1.10.2",
+            ". > @midscene/web@1.5.2 > @midscene/playground@1.5.2 > @midscene/core@1.5.2 > @midscene/shared@1.5.2 > @modelcontextprotocol/sdk@1.10.2",
+            ". > @midscene/web@1.5.2 > @midscene/playground@1.5.2 > @midscene/shared@1.5.2 > @modelcontextprotocol/sdk@1.10.2",
+            ". > @midscene/web@1.5.2 > @midscene/shared@1.5.2 > @modelcontextprotocol/sdk@1.10.2"
+          ]
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/modelcontextprotocol/typescript-sdk/security/advisories/GHSA-w48q-cv73-mx4w\n- https://github.com/modelcontextprotocol/typescript-sdk/pull/1205\n- https://github.com/modelcontextprotocol/typescript-sdk/commit/608360047dc6899f1cf4f0226eb62fe7b11b3898\n- https://nvd.nist.gov/vuln/detail/CVE-2025-66414\n- https://github.com/modelcontextprotocol/typescript-sdk/commit/09623e2aa5044f9e9da62c73d820a8250b9d97ed\n- https://github.com/advisories/GHSA-w48q-cv73-mx4w",
+      "created": "2025-12-02T16:51:57.000Z",
+      "id": 1113213,
+      "npm_advisory_id": null,
+      "overview": "The Model Context Protocol (MCP) TypeScript SDK does not enable DNS rebinding protection by default for HTTP-based servers. When an HTTP-based MCP server is run on localhost without authentication with `StreamableHTTPServerTransport` or `SSEServerTransport` and has not enabled `enableDnsRebindingProtection`, a malicious website could exploit DNS rebinding to bypass same-origin policy restrictions and send requests to the local MCP server. This could allow an attacker to invoke tools or access resources exposed by the MCP server on behalf of the user in those limited circumstances.\n\nNote that running HTTP-based MCP servers locally without authentication is not recommended per MCP security best practices. This issue does not affect servers using stdio transport.\n\nServers created via `createMcpExpressApp()` now have this protection enabled by default when binding to localhost. Users with custom Express configurations are advised to update to version `1.24.0` and apply the exported `hostHeaderValidation()` middleware when running an unauthenticated server on localhost.",
+      "reported_by": null,
+      "title": "Model Context Protocol (MCP) TypeScript SDK does not enable DNS rebinding protection by default",
+      "metadata": null,
+      "cves": ["CVE-2025-66414"],
+      "access": "public",
+      "severity": "high",
+      "module_name": "@modelcontextprotocol/sdk",
+      "vulnerable_versions": "<1.24.0",
+      "github_advisory_id": "GHSA-w48q-cv73-mx4w",
+      "recommendation": "Upgrade to version 1.24.0 or later",
+      "patched_versions": ">=1.24.0",
+      "updated": "2026-02-17T17:50:08.000Z",
+      "cvss": {
+        "score": 0,
+        "vectorString": null
+      },
+      "cwe": ["CWE-350", "CWE-1188"],
+      "url": "https://github.com/advisories/GHSA-w48q-cv73-mx4w"
+    },
+    "1113714": {
+      "findings": [
+        {
+          "version": "6.12.6",
+          "paths": [
+            ". > eslint@9.39.2 > @eslint/eslintrc@3.3.3 > ajv@6.12.6",
+            ". > eslint@9.39.2 > ajv@6.12.6",
+            ". > eslint-config-next@16.1.5 > eslint@9.39.2 > @eslint/eslintrc@3.3.3 > ajv@6.12.6",
+            ". > eslint-config-next@16.1.5 > eslint@9.39.2 > ajv@6.12.6",
+            ". > eslint-config-next@16.1.5 > eslint-import-resolver-typescript@3.10.1 > eslint@9.39.2 > @eslint/eslintrc@3.3.3 > ajv@6.12.6",
+            ". > eslint-config-next@16.1.5 > eslint-import-resolver-typescript@3.10.1 > eslint@9.39.2 > ajv@6.12.6",
+            ". > eslint-config-next@16.1.5 > eslint-import-resolver-typescript@3.10.1 > eslint-plugin-import@2.32.0 > eslint@9.39.2 > @eslint/eslintrc@3.3.3 > ajv@6.12.6",
+            ". > eslint-config-next@16.1.5 > eslint-import-resolver-typescript@3.10.1 > eslint-plugin-import@2.32.0 > eslint@9.39.2 > ajv@6.12.6",
+            ". > eslint-config-next@16.1.5 > eslint-import-resolver-typescript@3.10.1 > eslint-plugin-import@2.32.0 > eslint-module-utils@2.12.1 > @typescript-eslint/parser@8.51.0 > eslint@9.39.2 > @eslint/eslintrc@3.3.3 > ajv@6.12.6",
+            ". > eslint-config-next@16.1.5 > eslint-import-resolver-typescript@3.10.1 > eslint-plugin-import@2.32.0 > eslint-module-utils@2.12.1 > @typescript-eslint/parser@8.51.0 > eslint@9.39.2 > ajv@6.12.6",
+            ". > eslint-config-next@16.1.5 > eslint-import-resolver-typescript@3.10.1 > eslint-plugin-import@2.32.0 > eslint-module-utils@2.12.1 > eslint@9.39.2 > @eslint/eslintrc@3.3.3 > ajv@6.12.6",
+            ". > eslint-config-next@16.1.5 > eslint-import-resolver-typescript@3.10.1 > eslint-plugin-import@2.32.0 > eslint-module-utils@2.12.1 > eslint@9.39.2 > ajv@6.12.6",
+            ". > eslint-config-next@16.1.5 > eslint-import-resolver-typescript@3.10.1 > eslint-plugin-import@2.32.0 > @typescript-eslint/parser@8.51.0 > eslint@9.39.2 > @eslint/eslintrc@3.3.3 > ajv@6.12.6",
+            ". > eslint-config-next@16.1.5 > eslint-import-resolver-typescript@3.10.1 > eslint-plugin-import@2.32.0 > @typescript-eslint/parser@8.51.0 > eslint@9.39.2 > ajv@6.12.6",
+            ". > eslint-config-next@16.1.5 > eslint-plugin-import@2.32.0 > eslint@9.39.2 > @eslint/eslintrc@3.3.3 > ajv@6.12.6",
+            ". > eslint-config-next@16.1.5 > eslint-plugin-import@2.32.0 > eslint@9.39.2 > ajv@6.12.6",
+            ". > eslint-config-next@16.1.5 > eslint-plugin-import@2.32.0 > eslint-module-utils@2.12.1 > @typescript-eslint/parser@8.51.0 > eslint@9.39.2 > @eslint/eslintrc@3.3.3 > ajv@6.12.6",
+            ". > eslint-config-next@16.1.5 > eslint-plugin-import@2.32.0 > eslint-module-utils@2.12.1 > @typescript-eslint/parser@8.51.0 > eslint@9.39.2 > ajv@6.12.6",
+            ". > eslint-config-next@16.1.5 > eslint-plugin-import@2.32.0 > eslint-module-utils@2.12.1 > eslint@9.39.2 > @eslint/eslintrc@3.3.3 > ajv@6.12.6",
+            ". > eslint-config-next@16.1.5 > eslint-plugin-import@2.32.0 > eslint-module-utils@2.12.1 > eslint@9.39.2 > ajv@6.12.6",
+            ". > eslint-config-next@16.1.5 > eslint-plugin-import@2.32.0 > @typescript-eslint/parser@8.51.0 > eslint@9.39.2 > @eslint/eslintrc@3.3.3 > ajv@6.12.6",
+            ". > eslint-config-next@16.1.5 > eslint-plugin-import@2.32.0 > @typescript-eslint/parser@8.51.0 > eslint@9.39.2 > ajv@6.12.6",
+            ". > eslint-config-next@16.1.5 > eslint-plugin-jsx-a11y@6.10.2 > eslint@9.39.2 > @eslint/eslintrc@3.3.3 > ajv@6.12.6",
+            ". > eslint-config-next@16.1.5 > eslint-plugin-jsx-a11y@6.10.2 > eslint@9.39.2 > ajv@6.12.6",
+            ". > eslint-config-next@16.1.5 > eslint-plugin-react@7.37.5 > eslint@9.39.2 > @eslint/eslintrc@3.3.3 > ajv@6.12.6",
+            ". > eslint-config-next@16.1.5 > eslint-plugin-react@7.37.5 > eslint@9.39.2 > ajv@6.12.6",
+            ". > eslint-config-next@16.1.5 > eslint-plugin-react-hooks@7.0.1 > eslint@9.39.2 > @eslint/eslintrc@3.3.3 > ajv@6.12.6",
+            ". > eslint-config-next@16.1.5 > eslint-plugin-react-hooks@7.0.1 > eslint@9.39.2 > ajv@6.12.6",
+            ". > eslint-config-next@16.1.5 > typescript-eslint@8.51.0 > @typescript-eslint/eslint-plugin@8.51.0 > @typescript-eslint/parser@8.51.0 > eslint@9.39.2 > @eslint/eslintrc@3.3.3 > ajv@6.12.6",
+            ". > eslint-config-next@16.1.5 > typescript-eslint@8.51.0 > @typescript-eslint/eslint-plugin@8.51.0 > @typescript-eslint/parser@8.51.0 > eslint@9.39.2 > ajv@6.12.6",
+            ". > eslint-config-next@16.1.5 > typescript-eslint@8.51.0 > @typescript-eslint/eslint-plugin@8.51.0 > @typescript-eslint/type-utils@8.51.0 > @typescript-eslint/utils@8.51.0 > eslint@9.39.2 > @eslint/eslintrc@3.3.3 > ajv@6.12.6",
+            ". > eslint-config-next@16.1.5 > typescript-eslint@8.51.0 > @typescript-eslint/eslint-plugin@8.51.0 > @typescript-eslint/type-utils@8.51.0 > @typescript-eslint/utils@8.51.0 > eslint@9.39.2 > ajv@6.12.6",
+            ". > eslint-config-next@16.1.5 > typescript-eslint@8.51.0 > @typescript-eslint/eslint-plugin@8.51.0 > @typescript-eslint/type-utils@8.51.0 > eslint@9.39.2 > @eslint/eslintrc@3.3.3 > ajv@6.12.6",
+            ". > eslint-config-next@16.1.5 > typescript-eslint@8.51.0 > @typescript-eslint/eslint-plugin@8.51.0 > @typescript-eslint/type-utils@8.51.0 > eslint@9.39.2 > ajv@6.12.6",
+            ". > eslint-config-next@16.1.5 > typescript-eslint@8.51.0 > @typescript-eslint/eslint-plugin@8.51.0 > @typescript-eslint/utils@8.51.0 > eslint@9.39.2 > @eslint/eslintrc@3.3.3 > ajv@6.12.6",
+            ". > eslint-config-next@16.1.5 > typescript-eslint@8.51.0 > @typescript-eslint/eslint-plugin@8.51.0 > @typescript-eslint/utils@8.51.0 > eslint@9.39.2 > ajv@6.12.6",
+            ". > eslint-config-next@16.1.5 > typescript-eslint@8.51.0 > @typescript-eslint/eslint-plugin@8.51.0 > eslint@9.39.2 > @eslint/eslintrc@3.3.3 > ajv@6.12.6",
+            ". > eslint-config-next@16.1.5 > typescript-eslint@8.51.0 > @typescript-eslint/eslint-plugin@8.51.0 > eslint@9.39.2 > ajv@6.12.6",
+            ". > eslint-config-next@16.1.5 > typescript-eslint@8.51.0 > @typescript-eslint/parser@8.51.0 > eslint@9.39.2 > @eslint/eslintrc@3.3.3 > ajv@6.12.6",
+            ". > eslint-config-next@16.1.5 > typescript-eslint@8.51.0 > @typescript-eslint/parser@8.51.0 > eslint@9.39.2 > ajv@6.12.6",
+            ". > eslint-config-next@16.1.5 > typescript-eslint@8.51.0 > @typescript-eslint/utils@8.51.0 > eslint@9.39.2 > @eslint/eslintrc@3.3.3 > ajv@6.12.6",
+            ". > eslint-config-next@16.1.5 > typescript-eslint@8.51.0 > @typescript-eslint/utils@8.51.0 > eslint@9.39.2 > ajv@6.12.6",
+            ". > eslint-config-next@16.1.5 > typescript-eslint@8.51.0 > eslint@9.39.2 > @eslint/eslintrc@3.3.3 > ajv@6.12.6",
+            ". > eslint-config-next@16.1.5 > typescript-eslint@8.51.0 > eslint@9.39.2 > ajv@6.12.6"
+          ]
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://nvd.nist.gov/vuln/detail/CVE-2025-69873\n- https://github.com/EthanKim88/ethan-cve-disclosures/blob/main/CVE-2025-69873-ajv-ReDoS.md\n- https://github.com/ajv-validator/ajv/pull/2586\n- https://github.com/ajv-validator/ajv/commit/720a23fa453ffae8340e92c9b0fe886c54cfe0d5\n- https://github.com/ajv-validator/ajv/releases/tag/v8.18.0\n- https://github.com/ajv-validator/ajv/pull/2588\n- https://github.com/ajv-validator/ajv/releases/tag/v6.14.0\n- https://github.com/advisories/GHSA-2g4f-4pwh-qvx6\n- https://github.com/ajv-validator/ajv/pull/2590\n- https://github.com/github/advisory-database/pull/6991",
+      "created": "2026-02-11T21:30:39.000Z",
+      "id": 1113714,
+      "npm_advisory_id": null,
+      "overview": "ajv (Another JSON Schema Validator) through version 8.17.1 is vulnerable to Regular Expression Denial of Service (ReDoS) when the `$data` option is enabled. The pattern keyword accepts runtime data via JSON Pointer syntax (`$data` reference), which is passed directly to the JavaScript `RegExp()` constructor without validation. An attacker can inject a malicious regex pattern (e.g., `\\\"^(a|a)*$\\\"`) combined with crafted input to cause catastrophic backtracking. A 31-character payload causes approximately 44 seconds of CPU blocking, with each additional character doubling execution time. This enables complete denial of service with a single HTTP request against any API using ajv with `$data`: true for dynamic schema validation.",
+      "reported_by": null,
+      "title": "ajv has ReDoS when using `$data` option",
+      "metadata": null,
+      "cves": ["CVE-2025-69873"],
+      "access": "public",
+      "severity": "moderate",
+      "module_name": "ajv",
+      "vulnerable_versions": "<6.14.0",
+      "github_advisory_id": "GHSA-2g4f-4pwh-qvx6",
+      "recommendation": "Upgrade to version 6.14.0 or later",
+      "patched_versions": ">=6.14.0",
+      "updated": "2026-03-02T21:58:41.000Z",
+      "cvss": {
+        "score": 0,
+        "vectorString": null
+      },
+      "cwe": ["CWE-400", "CWE-1333"],
+      "url": "https://github.com/advisories/GHSA-2g4f-4pwh-qvx6"
+    },
+    "1113715": {
+      "findings": [
+        {
+          "version": "8.17.1",
+          "paths": [
+            ". > @google/genai@1.44.0 > @modelcontextprotocol/sdk@1.26.0 > ajv@8.17.1",
+            ". > @google/genai@1.44.0 > @modelcontextprotocol/sdk@1.26.0 > ajv-formats@3.0.1 > ajv@8.17.1",
+            ". > @modelcontextprotocol/sdk@1.26.0 > ajv@8.17.1",
+            ". > @modelcontextprotocol/sdk@1.26.0 > ajv-formats@3.0.1 > ajv@8.17.1"
+          ]
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://nvd.nist.gov/vuln/detail/CVE-2025-69873\n- https://github.com/EthanKim88/ethan-cve-disclosures/blob/main/CVE-2025-69873-ajv-ReDoS.md\n- https://github.com/ajv-validator/ajv/pull/2586\n- https://github.com/ajv-validator/ajv/commit/720a23fa453ffae8340e92c9b0fe886c54cfe0d5\n- https://github.com/ajv-validator/ajv/releases/tag/v8.18.0\n- https://github.com/ajv-validator/ajv/pull/2588\n- https://github.com/ajv-validator/ajv/releases/tag/v6.14.0\n- https://github.com/advisories/GHSA-2g4f-4pwh-qvx6\n- https://github.com/ajv-validator/ajv/pull/2590\n- https://github.com/github/advisory-database/pull/6991",
+      "created": "2026-02-11T21:30:39.000Z",
+      "id": 1113715,
+      "npm_advisory_id": null,
+      "overview": "ajv (Another JSON Schema Validator) through version 8.17.1 is vulnerable to Regular Expression Denial of Service (ReDoS) when the `$data` option is enabled. The pattern keyword accepts runtime data via JSON Pointer syntax (`$data` reference), which is passed directly to the JavaScript `RegExp()` constructor without validation. An attacker can inject a malicious regex pattern (e.g., `\\\"^(a|a)*$\\\"`) combined with crafted input to cause catastrophic backtracking. A 31-character payload causes approximately 44 seconds of CPU blocking, with each additional character doubling execution time. This enables complete denial of service with a single HTTP request against any API using ajv with `$data`: true for dynamic schema validation.",
+      "reported_by": null,
+      "title": "ajv has ReDoS when using `$data` option",
+      "metadata": null,
+      "cves": ["CVE-2025-69873"],
+      "access": "public",
+      "severity": "moderate",
+      "module_name": "ajv",
+      "vulnerable_versions": ">=7.0.0-alpha.0 <8.18.0",
+      "github_advisory_id": "GHSA-2g4f-4pwh-qvx6",
+      "recommendation": "Upgrade to version 8.18.0 or later",
+      "patched_versions": ">=8.18.0",
+      "updated": "2026-03-02T21:58:41.000Z",
+      "cvss": {
+        "score": 0,
+        "vectorString": null
+      },
+      "cwe": ["CWE-400", "CWE-1333"],
+      "url": "https://github.com/advisories/GHSA-2g4f-4pwh-qvx6"
+    },
+    "1113719": {
+      "findings": [
+        {
+          "version": "6.5.3",
+          "paths": [
+            ". > ali-oss@6.23.0 > qs@6.5.3",
+            ". > ali-oss@6.23.0 > urllib@2.44.0 > qs@6.5.3"
+          ]
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/ljharb/qs/security/advisories/GHSA-6rw7-vpxm-498p\n- https://nvd.nist.gov/vuln/detail/CVE-2025-15284\n- https://github.com/ljharb/qs/commit/3086902ecf7f088d0d1803887643ac6c03d415b9\n- https://github.com/advisories/GHSA-6rw7-vpxm-498p",
+      "created": "2025-12-30T21:02:54.000Z",
+      "id": 1113719,
+      "npm_advisory_id": null,
+      "overview": "### Summary\n\nThe `arrayLimit` option in qs did not enforce limits for bracket notation (`a[]=1&a[]=2`), only for indexed notation (`a[0]=1`). This is a consistency bug; `arrayLimit` should apply uniformly across all array notations.\n\n**Note:** The default `parameterLimit` of 1000 effectively mitigates the DoS scenario originally described. With default options, bracket notation cannot produce arrays larger than `parameterLimit` regardless of `arrayLimit`, because each `a[]=value` consumes one parameter slot. The severity has been reduced accordingly.\n\n### Details\n\nThe `arrayLimit` option only checked limits for indexed notation (`a[0]=1&a[1]=2`) but did not enforce it for bracket notation (`a[]=1&a[]=2`).\n\n**Vulnerable code** (`lib/parse.js:159-162`):\n```javascript\nif (root === '[]' && options.parseArrays) {\n    obj = utils.combine([], leaf);  // No arrayLimit check\n}\n```\n\n**Working code** (`lib/parse.js:175`):\n```javascript\nelse if (index <= options.arrayLimit) {  // Limit checked here\n    obj = [];\n    obj[index] = leaf;\n}\n```\n\nThe bracket notation handler at line 159 uses `utils.combine([], leaf)` without validating against `options.arrayLimit`, while indexed notation at line 175 checks `index <= options.arrayLimit` before creating arrays.\n\n### PoC\n\n```javascript\nconst qs = require('qs');\nconst result = qs.parse('a[]=1&a[]=2&a[]=3&a[]=4&a[]=5&a[]=6', { arrayLimit: 5 });\nconsole.log(result.a.length);  // Output: 6 (should be max 5)\n```\n\n**Note on parameterLimit interaction:** The original advisory's \"DoS demonstration\" claimed a length of 10,000, but `parameterLimit` (default: 1000) caps parsing to 1,000 parameters. With default options, the actual output is 1,000, not 10,000.\n\n### Impact\n\nConsistency bug in `arrayLimit` enforcement. With default `parameterLimit`, the practical DoS risk is negligible since `parameterLimit` already caps the total number of parsed parameters (and thus array elements from bracket notation). The risk increases only when `parameterLimit` is explicitly set to a very high value.",
+      "reported_by": null,
+      "title": "qs's arrayLimit bypass in its bracket notation allows DoS via memory exhaustion",
+      "metadata": null,
+      "cves": ["CVE-2025-15284"],
+      "access": "public",
+      "severity": "moderate",
+      "module_name": "qs",
+      "vulnerable_versions": "<6.14.1",
+      "github_advisory_id": "GHSA-6rw7-vpxm-498p",
+      "recommendation": "Upgrade to version 6.14.1 or later",
+      "patched_versions": ">=6.14.1",
+      "updated": "2026-03-02T22:05:33.000Z",
+      "cvss": {
+        "score": 3.7,
+        "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:L"
+      },
+      "cwe": ["CWE-20"],
+      "url": "https://github.com/advisories/GHSA-6rw7-vpxm-498p"
+    },
+    "1114017": {
+      "findings": [
+        {
+          "version": "3.3.1",
+          "paths": [". > isomorphic-dompurify@3.0.0-rc.2 > dompurify@3.3.1"]
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://nvd.nist.gov/vuln/detail/CVE-2026-0540\n- https://github.com/cure53/DOMPurify/commit/fca0a938b4261ddc9c0293a289935a9029c049f5\n- https://github.com/cure53/DOMPurify\n- https://www.vulncheck.com/advisories/dompurify-xss-via-missing-rawtext-elements-in-safeforxml\n- https://www.vulncheck.com/advisories/dompurify-xss-via-missing-rawtext-elements-in-safe-for-xml\n- https://github.com/advisories/GHSA-v2wj-7wpq-c8vv",
+      "created": "2026-03-03T18:31:33.000Z",
+      "id": 1114017,
+      "npm_advisory_id": null,
+      "overview": "DOMPurify 3.1.3 through 3.3.1 and 2.5.3 through 2.5.8, fixed in 2.5.9 and 3.3.2, contain a cross-site scripting vulnerability that allows attackers to bypass attribute sanitization by exploiting five missing rawtext elements (noscript, xmp, noembed, noframes, iframe) in the `SAFE_FOR_XML` regex. Attackers can include payloads like `</noscript><img src=x onerror=alert(1)>` in attribute values to execute JavaScript when sanitized output is placed inside these unprotected rawtext contexts.",
+      "reported_by": null,
+      "title": "DOMPurify contains a Cross-site Scripting vulnerability",
+      "metadata": null,
+      "cves": ["CVE-2026-0540"],
+      "access": "public",
+      "severity": "moderate",
+      "module_name": "dompurify",
+      "vulnerable_versions": ">=3.1.3 <=3.3.1",
+      "github_advisory_id": "GHSA-v2wj-7wpq-c8vv",
+      "recommendation": "Upgrade to version 3.3.2 or later",
+      "patched_versions": ">=3.3.2",
+      "updated": "2026-03-05T20:25:13.000Z",
+      "cvss": {
+        "score": 6.1,
+        "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N"
+      },
+      "cwe": ["CWE-79"],
+      "url": "https://github.com/advisories/GHSA-v2wj-7wpq-c8vv"
+    },
+    "1114194": {
+      "findings": [
+        {
+          "version": "8.2.1",
+          "paths": [
+            ". > @google/genai@1.44.0 > @modelcontextprotocol/sdk@1.26.0 > express-rate-limit@8.2.1",
+            ". > @modelcontextprotocol/sdk@1.26.0 > express-rate-limit@8.2.1"
+          ]
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/express-rate-limit/express-rate-limit/security/advisories/GHSA-46wh-pxpv-q5gq\n- https://github.com/express-rate-limit/express-rate-limit/commit/14e53888cdfd1b9798faf5b634c4206409e27fc4\n- https://nvd.nist.gov/vuln/detail/CVE-2026-30827\n- https://github.com/advisories/GHSA-46wh-pxpv-q5gq",
+      "created": "2026-03-06T18:36:56.000Z",
+      "id": 1114194,
+      "npm_advisory_id": null,
+      "overview": "## Summary\n\nThe default `keyGenerator` in express-rate-limit applies IPv6 subnet masking (`/56` by default) to all addresses that `net.isIPv6()` returns true for. This includes IPv4-mapped IPv6 addresses (`::ffff:x.x.x.x`), which Node.js returns as `request.ip` on dual-stack servers.\n\nBecause the first 80 bits of all IPv4-mapped addresses are zero, a `/56` (or any `/32` to `/80`) subnet mask produces the same network key (`::/56`) for **every** IPv4 client. This collapses all IPv4 traffic into a single rate-limit bucket: one client exhausting the limit causes HTTP 429 for all other IPv4 clients.\n\n## Details\n\n### Root Cause\n\nIn `source/ip-key-generator.ts`:\n\n```typescript\nexport function ipKeyGenerator(ip: string, ipv6Subnet: number | false = 56) {\n  if (ipv6Subnet && isIPv6(ip)) {\n    return `${new Address6(`${ip}/${ipv6Subnet}`).startAddress().correctForm()}/${ipv6Subnet}`\n  }\n  return ip\n}\n```\n\n`net.isIPv6('::ffff:192.168.1.1')` returns `true`, so IPv4-mapped addresses enter the subnet masking path. With a `/56` prefix, the start address for any `::ffff:x.x.x.x` is `::`, producing the key `::/56`.\n\n### Proof of Concept\n\n```javascript\nconst { isIPv6 } = require('net');\nconst { Address6 } = require('ip-address');\n\nfunction ipKeyGenerator(ip, ipv6Subnet = 56) {\n  if (ipv6Subnet && isIPv6(ip)) {\n    return `${new Address6(`${ip}/${ipv6Subnet}`).startAddress().correctForm()}/${ipv6Subnet}`;\n  }\n  return ip;\n}\n\nconsole.log(ipKeyGenerator('::ffff:192.168.1.1', 56)); // ::/56\nconsole.log(ipKeyGenerator('::ffff:10.0.0.1', 56));    // ::/56\nconsole.log(ipKeyGenerator('::ffff:8.8.8.8', 56));     // ::/56\n// ALL produce '::/56' 鈥?same bucket\n```\n\n### End-to-End Validation\n\nOn a dual-stack Express server (`app.listen(port, '::')`), tested with Express 5.2.1:\n- `request.ip` for IPv4 clients is `::ffff:127.0.0.1`\n- Rate limit key resolves to `::/56`\n- After `limit` requests from any IPv4 client, all other IPv4 clients receive 429\n\n### When This Occurs\n\n- Node.js dual-stack servers (default on Linux when listening on `::`)\n- Any environment where `request.ip` contains IPv4-mapped IPv6 addresses\n- Only affects the default `keyGenerator` (custom key generators are not affected)\n\n## Impact\n\n- **Denial of Service**: A single client can block all IPv4 traffic by exhausting the shared rate limit\n- **Affects default configuration**: No special options needed to trigger this\n\n## Affected Versions\n\nAll versions of express-rate-limit between v8.0.0 and v8.2.1.\n\n## Fix\n\nThis issue was fixed in commit 14e53888cdfd1b9798faf5b634c4206409e27fc4. This fix has been included in release v8.3.0, and backported to all affected minor versions in the form of releases v8.2.2, v8.1.1, and v8.0.2.",
+      "reported_by": null,
+      "title": "express-rate-limit: IPv4-mapped IPv6 addresses bypass per-client rate limiting on servers with dual-stack network",
+      "metadata": null,
+      "cves": ["CVE-2026-30827"],
+      "access": "public",
+      "severity": "high",
+      "module_name": "express-rate-limit",
+      "vulnerable_versions": ">=8.2.0 <8.2.2",
+      "github_advisory_id": "GHSA-46wh-pxpv-q5gq",
+      "recommendation": "Upgrade to version 8.2.2 or later",
+      "patched_versions": ">=8.2.2",
+      "updated": "2026-03-09T13:15:36.000Z",
+      "cvss": {
+        "score": 7.5,
+        "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"
+      },
+      "cwe": ["CWE-770"],
+      "url": "https://github.com/advisories/GHSA-46wh-pxpv-q5gq"
+    }
+  },
+  "muted": [],
+  "metadata": {
+    "vulnerabilities": {
+      "info": 0,
+      "low": 0,
+      "moderate": 7,
+      "high": 6,
+      "critical": 0
+    },
+    "dependencies": 1489,
+    "devDependencies": 0,
+    "optionalDependencies": 0,
+    "totalDependencies": 1489
+  }
+}

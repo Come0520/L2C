@@ -17,7 +17,7 @@ test.describe('安装调度防撞 (Schedule Conflict Detection)', () => {
     test('P0-1: 指派师傅时应检测时段冲突', async ({ page }) => {
         // 进入待分配的安装单
         const pendingRow = page.locator('table tbody tr').filter({ hasText: /待分配|PENDING_DISPATCH/ }).first();
-        if (!(await pendingRow.isVisible())) {
+        if (!(await pendingRow.isVisible({ timeout: 5000 }))) {
             console.log('⚠️ 无待分配的安装单');
             return;
         }
@@ -26,7 +26,7 @@ test.describe('安装调度防撞 (Schedule Conflict Detection)', () => {
 
         // 点击指派按钮
         const assignBtn = page.getByRole('button', { name: /指派|分配/ });
-        if (await assignBtn.isVisible()) {
+        if (await assignBtn.isVisible({ timeout: 5000 })) {
             await assignBtn.click();
 
             const dialog = page.getByRole('dialog');
@@ -38,20 +38,20 @@ test.describe('安装调度防撞 (Schedule Conflict Detection)', () => {
 
             // 选择师傅（假设第一个师傅有冲突）
             const workerSelect = dialog.getByLabel(/师傅/);
-            if (await workerSelect.isVisible()) {
+            if (await workerSelect.isVisible({ timeout: 5000 })) {
                 await workerSelect.click();
                 await page.getByRole('option').first().click();
             }
 
             // 选择日期和时段
             const dateInput = dialog.getByLabel(/日期/);
-            if (await dateInput.isVisible()) {
+            if (await dateInput.isVisible({ timeout: 5000 })) {
                 await dateInput.click();
                 await page.locator('.rdp-day_today').click(); // 选今天
             }
 
             const timeSlotSelect = dialog.getByLabel(/时段/);
-            if (await timeSlotSelect.isVisible()) {
+            if (await timeSlotSelect.isVisible({ timeout: 5000 })) {
                 await timeSlotSelect.click();
                 await page.getByRole('option', { name: /上午/ }).click();
             }
@@ -71,47 +71,69 @@ test.describe('安装调度防撞 (Schedule Conflict Detection)', () => {
 
     test('P0-2: 强冲突应禁止指派', async ({ page }) => {
         // 此测试验证强冲突时无法完成指派
-        await page.goto('/service/installation', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        // 注意：设置较短超时防止在 Mobile Chrome 下长时间阻塞
+        test.setTimeout(30000);
+
+        await page.goto('/service/installation', { waitUntil: 'domcontentloaded', timeout: 20000 });
 
         const pendingRow = page.locator('table tbody tr').filter({ hasText: /待分配/ }).first();
-        if (await pendingRow.isVisible()) {
-            await pendingRow.locator('a').first().click();
+        if (!(await pendingRow.isVisible({ timeout: 5000 }))) {
+            console.log('ℹ️ 无待分配的安装单，跳过强冲突测试');
+            return;
+        }
 
-            const assignBtn = page.getByRole('button', { name: /指派/ });
-            if (await assignBtn.isVisible()) {
-                await assignBtn.click();
+        // Mobile Chrome 下使用 force:true 避免遮挡导致点击超时
+        const detailLink = pendingRow.locator('a').last(); // 点"详情"链接
+        await detailLink.click({ force: true, timeout: 10000 });
+        await page.waitForLoadState('domcontentloaded', { timeout: 10000 });
 
-                // 如果有强冲突，确认按钮应被禁用或点击后报错
-                const confirmBtn = page.getByRole('button', { name: /确认/ });
-                // 强冲突场景需要特定数据环境
-                console.log('ℹ️ 强冲突场景需特定数据验证');
-            }
+        const assignBtn = page.getByRole('button', { name: /指派/ });
+        if (await assignBtn.isVisible({ timeout: 5000 })) {
+            await assignBtn.click();
+            // 如果有强冲突，确认按钮应被禁用或点击后报错
+            // 强冲突场景需要特定数据环境，当前仅做 graceful check
+            console.log('ℹ️ 强冲突场景需特定数据验证');
+        } else {
+            console.log('ℹ️ 未找到指派按钮，跳过强冲突测试');
         }
     });
 
     test('P0-3: 软冲突应显示赶场风险警告', async ({ page }) => {
-        await page.goto('/service/installation', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        // 注意：设置较短超时防止在 Mobile Chrome 下长时间阻塞
+        test.setTimeout(30000);
+
+        await page.goto('/service/installation', { waitUntil: 'domcontentloaded', timeout: 20000 });
 
         const pendingRow = page.locator('table tbody tr').filter({ hasText: /待分配/ }).first();
-        if (await pendingRow.isVisible()) {
-            await pendingRow.locator('a').first().click();
+        if (!(await pendingRow.isVisible({ timeout: 5000 }))) {
+            console.log('ℹ️ 无待分配的安装单，跳过软冲突测试');
+            return;
+        }
 
-            const assignBtn = page.getByRole('button', { name: /指派/ });
-            if (await assignBtn.isVisible()) {
-                await assignBtn.click();
+        // Mobile Chrome 下使用 force:true 避免遮挡导致点击超时
+        const detailLink = pendingRow.locator('a').last(); // 点"详情"链接
+        await detailLink.click({ force: true, timeout: 10000 });
+        await page.waitForLoadState('domcontentloaded', { timeout: 10000 });
 
-                // 查找软冲突/赶场风险警告
-                const softWarning = page.getByText(/赶场风险|距离较远|间隔较短/);
-                if (await softWarning.isVisible({ timeout: 3000 })) {
-                    console.log('✅ 系统显示了软冲突警告');
+        const assignBtn = page.getByRole('button', { name: /指派/ });
+        if (await assignBtn.isVisible({ timeout: 5000 })) {
+            await assignBtn.click();
 
-                    // 验证仍可强制指派
-                    const forceBtn = page.getByRole('button', { name: /继续指派|强制/ });
-                    if (await forceBtn.isVisible()) {
-                        console.log('✅ 软冲突时可强制指派');
-                    }
+            // 查找软冲突/赶场风险警告
+            const softWarning = page.getByText(/赶场风险|距离较远|间隔较短/);
+            if (await softWarning.isVisible({ timeout: 3000 })) {
+                console.log('✅ 系统显示了软冲突警告');
+
+                // 验证仍可强制指派
+                const forceBtn = page.getByRole('button', { name: /继续指派|强制/ });
+                if (await forceBtn.isVisible({ timeout: 5000 })) {
+                    console.log('✅ 软冲突时可强制指派');
                 }
+            } else {
+                console.log('ℹ️ 未出现软冲突警告（需要特定赶场测试数据）');
             }
+        } else {
+            console.log('ℹ️ 未找到指派按钮，跳过软冲突测试');
         }
     });
 
@@ -119,12 +141,12 @@ test.describe('安装调度防撞 (Schedule Conflict Detection)', () => {
         await page.goto('/service/installation', { waitUntil: 'domcontentloaded', timeout: 60000 });
 
         const pendingRow = page.locator('table tbody tr').filter({ hasText: /待分配/ }).first();
-        if (await pendingRow.isVisible()) {
+        if (await pendingRow.isVisible({ timeout: 5000 })) {
             await pendingRow.locator('a').first().click();
 
             // 查找强制派单选项
             const forceOption = page.getByLabel(/强制派单/).or(page.locator('text=跳过校验'));
-            if (await forceOption.isVisible()) {
+            if (await forceOption.isVisible({ timeout: 5000 })) {
                 console.log('✅ 强制派单选项可用');
             } else {
                 console.log('⚠️ 未找到强制派单选项');

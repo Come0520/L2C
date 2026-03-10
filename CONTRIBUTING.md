@@ -83,8 +83,8 @@ git push origin v1.0.0
 
 ## 代码规范
 
-- 运行 `npm run lint` 检查代码
-- 运行 `npm run typecheck` 检查类型
+- 运行 `pnpm lint` 检查代码
+- 运行 `pnpm typecheck` 检查类型
 - 提交前确保无报错
 
 ---

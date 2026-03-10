@@ -2,7 +2,7 @@
 import { cn } from '@/shared/lib/utils';
 import React, { useState, createContext, useContext } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { IconMenu2, IconX } from '@tabler/icons-react';
+import { IconX } from '@tabler/icons-react';
 
 interface Links {
   label: string;
@@ -121,46 +121,36 @@ export const DesktopSidebar = ({
   );
 };
 
-export const MobileSidebar = ({ className, children, ...props }: React.ComponentProps<'div'>) => {
+export const MobileSidebar = ({ className, children }: React.ComponentProps<'div'>) => {
   const { open, setOpen } = useSidebar();
   return (
     <>
-      <div
-        className={cn('flex h-10 w-full flex-row items-center justify-between px-4 py-4 md:hidden')}
-        {...props}
-      >
-        <div className="z-20 flex w-full justify-end">
-          <IconMenu2
-            className="text-neutral-800 dark:text-neutral-200"
-            onClick={() => setOpen(!open)}
-          />
-        </div>
-        <AnimatePresence>
-          {open && (
-            <motion.div
-              initial={{ x: '-100%', opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: '-100%', opacity: 0 }}
-              transition={{
-                duration: 0.3,
-                ease: 'easeInOut',
-              }}
-              className={cn(
-                'fixed inset-0 z-[100] flex h-full w-full flex-col justify-between bg-white/60 p-10 backdrop-blur-md dark:bg-black/60',
-                className
-              )}
+      {/* 移动端滑出面板（fixed 遮罩），触发按钮已移至 Header 中，避免 w-full 遮挡内容区 */}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ x: '-100%', opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: '-100%', opacity: 0 }}
+            transition={{
+              duration: 0.3,
+              ease: 'easeInOut',
+            }}
+            className={cn(
+              'fixed inset-0 z-[100] flex h-full w-full flex-col justify-between bg-white/60 p-10 backdrop-blur-md dark:bg-black/60',
+              className
+            )}
+          >
+            <div
+              className="absolute top-10 right-10 z-50 text-neutral-800 dark:text-neutral-200"
+              onClick={() => setOpen(false)}
             >
-              <div
-                className="absolute top-10 right-10 z-50 text-neutral-800 dark:text-neutral-200"
-                onClick={() => setOpen(!open)}
-              >
-                <IconX />
-              </div>
-              {children}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+              <IconX />
+            </div>
+            {children}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 };

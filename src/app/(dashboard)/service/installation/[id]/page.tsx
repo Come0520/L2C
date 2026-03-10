@@ -208,6 +208,41 @@ async function InstallTaskDetailDataWrapper({ params }: { params: Promise<{ id: 
         </Card>
       )}
 
+      {/* 客户验收签名展示区块 */}
+      {(task.customerSignatureUrl ||
+        task.status === 'COMPLETED' ||
+        task.status === 'PENDING_CONFIRM') && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              客户验收签名
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {task.customerSignatureUrl ? (
+              <div className="space-y-3">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={task.customerSignatureUrl}
+                  alt="客户电子签名"
+                  className="border-border max-h-40 rounded-md border object-contain"
+                />
+                {task.signedAt && (
+                  <p className="text-muted-foreground text-sm">
+                    签署时间：{new Date(task.signedAt).toLocaleString('zh-CN')}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p className="text-muted-foreground text-sm">
+                暂无客户电子签名，可通过「发送客户确认链接」请客户在线签署。
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* 操作按钮 */}
       <Card>
         <CardHeader>

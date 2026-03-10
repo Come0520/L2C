@@ -144,15 +144,18 @@ test.describe('客户评价反馈 (Customer Feedback)', () => {
         await firstRow.locator('a').first().click();
         await page.waitForLoadState('domcontentloaded');
 
-        // 查找评价展示区域
-        const feedbackSection = page.locator('text=/评价|评分|客户反馈|满意度/').first();
-        const starDisplay = page.locator('[class*="star"], text=/★|☆/').first();
+        // 修复：不能在 CSS 中写 text=/pattern/，改为 getByText 或 filter
+        const feedbackSection = page.getByText(/评价|评分|客户反馈|满意度/).first();
+        // 星星评分显示：按 [class*="star"] 定位（不混用 CSS+正则）
+        const starDisplay = page.locator('[class*="star"]').first();
 
-        if (await feedbackSection.isVisible({ timeout: 5000 }) || await starDisplay.isVisible({ timeout: 5000 })) {
+        const feedbackVisible = await feedbackSection.isVisible({ timeout: 8000 }).catch(() => false);
+        const starVisible = await starDisplay.isVisible({ timeout: 5000 }).catch(() => false);
+        if (feedbackVisible || starVisible) {
             console.log('✅ 订单详情中展示了客户评价');
 
-            // 验证评分数值显示
-            const scoreText = await page.locator('text=/\\d\\.\\d|\\d分|\\d\\/5/').first().textContent().catch(() => null);
+            // 修复：getByText 支持正则
+            const scoreText = await page.getByText(/\d\.\d|\d分|\d\/5/).first().textContent().catch(() => null);
             if (scoreText) {
                 console.log(`  评分: ${scoreText}`);
             }

@@ -461,7 +461,9 @@ export const channelStatusEnum = pgEnum('channel_status', [
 export const arStatementStatusEnum = pgEnum('ar_statement_status', [
   'PENDING_RECON', // 待对账
   'RECONCILED', // 已对账
+  'PENDING_INVOICE', // 待开票（代码中使用，补充缺失值）
   'INVOICED', // 已开票
+  'PENDING_PAYMENT', // 待收款（代码中使用，补充缺失值）
   'PARTIAL', // 部分收款
   'PAID', // 已收款
   'PENDING_DELIVER', // 待发货

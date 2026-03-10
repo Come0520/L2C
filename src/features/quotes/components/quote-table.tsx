@@ -49,7 +49,7 @@ export const QuoteTable = React.memo(function QuoteTable({ data }: QuoteTablePro
         <TableBody>
           {data.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={7} className="h-24 text-center">
+              <TableCell colSpan={7} className="h-24 text-center" data-testid="quote-list-empty">
                 No quotes found.
               </TableCell>
             </TableRow>

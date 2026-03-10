@@ -4,6 +4,7 @@ import { AppSidebar } from '../../widgets/layout/sidebar';
 import { Header } from '../../widgets/layout/header';
 import { GlobalSearchCommand } from '@/features/search/components/global-search-command';
 import { TenantProvider } from '@/shared/providers/tenant-provider';
+import { SidebarProviderWrapper } from '../../widgets/layout/sidebar-provider-wrapper';
 
 /**
  * Dashboard 布局组件
@@ -43,7 +44,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
   } | null = null;
 
   // ── 并行执行 onboarding 守卫 + 初始化配置 + 预取租户展示信息 ──
-  if (session.user?.tenantId) {
+  // 注意：__PLATFORM__ 是平台管理员的虚拟租户标识，非合法 UUID，须提前短路
+  if (session.user?.tenantId && session.user.tenantId !== '__PLATFORM__') {
     const [{ db }, { tenants }, { eq }, { initTenantSettings }] = await Promise.all([
       import('@/shared/api/db'),
       import('@/shared/api/schema'),
@@ -55,9 +57,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
     const [tenant, , tenantProfile] = await Promise.all([
       session.user.role === 'ADMIN'
         ? db.query.tenants.findFirst({
-          where: eq(tenants.id, session.user.tenantId),
-          columns: { onboardingStatus: true, status: true },
-        })
+            where: eq(tenants.id, session.user.tenantId),
+            columns: { onboardingStatus: true, status: true },
+          })
         : Promise.resolve(null),
       // 初始化租户配置（静默尝试，确保旧租户配置补齐）
       initTenantSettings(session.user.tenantId).catch((err: unknown) => {
@@ -83,30 +85,33 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
     initialTenant = tenantProfile
       ? {
-        ...tenantProfile,
-        // Drizzle 将 jsonb 列返回为 unknown，此处安全断言为目标类型
-        settings: (tenantProfile.settings as Record<string, unknown>) ?? undefined,
-      }
+          ...tenantProfile,
+          // Drizzle 将 jsonb 列返回为 unknown，此处安全断言为目标类型
+          settings: (tenantProfile.settings as Record<string, unknown>) ?? undefined,
+        }
       : null;
   }
 
   return (
     <TenantProvider initialTenant={initialTenant}>
-      <div className="flex h-screen w-full overflow-hidden bg-transparent">
-        {/* 侧边栏导航 */}
-        <AppSidebar />
+      {/* SidebarProviderWrapper 提升侧边栏状态，使 AppSidebar 与 Header 共享 open/setOpen */}
+      <SidebarProviderWrapper>
+        <div className="flex h-screen w-full overflow-hidden bg-transparent">
+          {/* 侧边栏导航 */}
+          <AppSidebar />
 
-        {/* 主内容区域 */}
-        <div className="bg-background relative flex flex-1 flex-col overflow-hidden">
-          <Header session={session} />
-          <main className="flex-1 overflow-x-hidden overflow-y-auto px-4 py-6 md:p-8">
-            <div className="mx-auto w-full max-w-[1600px]">{children}</div>
-          </main>
+          {/* 主内容区域 */}
+          <div className="bg-background relative flex flex-1 flex-col overflow-hidden">
+            <Header session={session} />
+            <main className="flex-1 overflow-x-hidden overflow-y-auto px-4 py-6 md:p-8">
+              <div className="mx-auto w-full max-w-[1600px]">{children}</div>
+            </main>
+          </div>
+
+          {/* 全局搜索组件 */}
+          <GlobalSearchCommand />
         </div>
-
-        {/* 全局搜索组件 */}
-        <GlobalSearchCommand />
-      </div>
+      </SidebarProviderWrapper>
     </TenantProvider>
   );
 }

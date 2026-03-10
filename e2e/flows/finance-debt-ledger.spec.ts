@@ -19,16 +19,17 @@ test.describe('财务欠款账本 (Finance Debt Ledger)', () => {
         if (await skipOnDataLoadError(page)) return;
 
         // 验证页面加载（软性检验：挂载正常即通过）
+        // 修复：提升 timeout 至 20s，应对 TenantProvider 缓存预热和首次冷启动慢芯
         const heading = page.getByRole('heading', { level: 1 });
-        if (await heading.isVisible({ timeout: 10000 }).catch(() => false)) {
-            console.log(`✅ 页面标题: ${await heading.textContent().catch(() => '未知')}`);
+        if (await heading.isVisible({ timeout: 20000 }).catch(() => false)) {
+            console.log(`\u2705 页面标题: ${await heading.textContent().catch(() => '未知')}`);
         } else {
             console.log('⚠️ 未找到 h1 标题，可能页面结构已调整');
         }
 
         // 验证表格存在
         const table = page.locator('table');
-        if (await table.isVisible({ timeout: 10000 }).catch(() => false)) {
+        if (await table.isVisible({ timeout: 20000 }).catch(() => false)) {
             console.log('✅ 对账单列表页面正常');
         } else {
             console.log('⚠️ 表格未显示');

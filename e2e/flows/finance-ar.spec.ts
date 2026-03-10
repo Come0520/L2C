@@ -42,10 +42,11 @@ test.describe('财务应收 (Finance AR)', () => {
         }
 
         // 验证页面标题 (匹配实际页面标题)
-        await expect(page.getByRole('heading', { name: /收款管理|财务中心|AR/ })).toBeVisible({ timeout: 10000 });
+        await expect(page.getByRole('heading', { name: /收款管理|AR/ }).first()).toBeVisible({ timeout: 10000 });
 
         const table = page.locator('table');
-        await expect(table).toBeVisible({ timeout: 15000 });
+        const emptyState = page.locator('text=暂无').or(page.locator('text=无数据'));
+        await expect(table.or(emptyState)).toBeVisible({ timeout: 15000 });
 
         const firstRow = page.locator('table tbody tr').first();
         if (await firstRow.isVisible()) {

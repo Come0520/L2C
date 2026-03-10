@@ -30,7 +30,7 @@ export default defineConfig({
     /* Shared settings for all the projects below. See https://playwright.dev/docs/test-use-options. */
     use: {
         /* Base URL to use in actions like `await page.goto('/')`. */
-        baseURL: process.env.BASE_URL || 'http://localhost:3004',
+        baseURL: process.env.BASE_URL || `http://localhost:${process.env.PORT || '3004'}`,
 
         /* Collect trace on retry failed test. See https://playwright.dev/docs/trace-viewer */
         trace: 'on-first-retry',
@@ -52,7 +52,7 @@ export default defineConfig({
             name: 'api',
             testMatch: /mobile-api-.*\.spec\.ts/,
             use: {
-                baseURL: process.env.BASE_URL || 'http://localhost:3004',
+                baseURL: process.env.BASE_URL || `http://localhost:${process.env.PORT || '3004'}`,
                 storageState: '.auth/user.json', // 修复：注入已登录 session，避免 page fixture 跳回登录页
             },
             dependencies: ['setup'], // 修复：确保 auth setup 先执行
@@ -103,7 +103,7 @@ export default defineConfig({
     /* 在测试前自动启动 standalone server */
     webServer: {
         command: 'node scripts/start-e2e-server.mjs',
-        port: 3004,
+        port: parseInt(process.env.PORT || '3004'),
         // reuseExistingServer 规则：
         // - REUSE_SERVER=1（并行子批次模式）：强制复用已有服务器，不再尝试启动新的
         // - CI=1（真实 CI 环境）：不复用，确保每次 CI run 都启动全新服务器

@@ -53,8 +53,9 @@ test.describe('电子验收签字与验证 (Acceptance E-Signature)', () => {
             await route.fulfill({ json: newData });
         });
 
-        await page.goto('/installation/tasks', { waitUntil: 'domcontentloaded', timeout: 60000 });
-        const completedTab = page.getByRole('tab', { name: /已完成|历史/ });
+        await page.goto('/service/installation', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        // 页面 Tab 实际值为「已完成」（参见 installation/page.tsx UrlSyncedTabs 配置）
+        const completedTab = page.getByRole('tab', { name: /已完成/ });
         if (await completedTab.isVisible({ timeout: 5000 })) {
             await completedTab.click();
         }
@@ -79,7 +80,7 @@ test.describe('电子验收签字与验证 (Acceptance E-Signature)', () => {
     });
 
     test('P0-3: 竣工确认/关单前应检查是否存在客户确认', async ({ page }) => {
-        await page.goto('/installation/tasks', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.goto('/service/installation', { waitUntil: 'domcontentloaded', timeout: 60000 });
 
         // 尝试找一个待客户验收或待审核验收单
         const pendingTab = page.getByRole('tab', { name: /待审核|待验收|Pending Acceptance/ });

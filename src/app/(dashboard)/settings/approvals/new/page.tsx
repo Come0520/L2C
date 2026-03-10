@@ -50,7 +50,7 @@ export default function NewApprovalFlowPage() {
           <ChevronLeft className="mr-1 h-4 w-4" />
           返回
         </Button>
-        <h1 className="text-2xl font-bold tracking-tight">新建审批流程</h1>
+        <h2 className="text-2xl font-bold tracking-tight">新建审批流程</h2>
       </div>
 
       <Card className="max-w-2xl">
@@ -107,5 +107,3 @@ export default function NewApprovalFlowPage() {
     </div>
   );
 }
-
-

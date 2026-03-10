@@ -403,7 +403,8 @@ export async function createQuickQuote(
     // 点击快速报价 - 使用 first() 避免严格模式计算出多个元素的冲突
     const quoteBtn = page.locator('a:has-text("快速报价"), button:has-text("快速报价")').first();
     await quoteBtn.click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(1500); // Give time for React hydration since networkidle hangs
 
     // 选择方案
     const planMap = {

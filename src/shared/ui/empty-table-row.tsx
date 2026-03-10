@@ -30,7 +30,7 @@ export const EmptyTableRow = React.memo(function EmptyTableRow({
         colSpan={colSpan}
         className={cn('text-muted-foreground h-32 text-center', className)}
       >
-        <div className="flex flex-col items-center justify-center py-8">
+        <div className="flex flex-col items-center justify-center py-8" data-testid="empty-state">
           {EMPTY_ICON}
           <p>{message}</p>
         </div>

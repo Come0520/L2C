@@ -33,18 +33,11 @@ setup('authenticate', async ({ page, context }) => {
     }
     // ===== P0 修复结束 =====
 
-    // 如果 user.json 已存在，尝试复用现有 session（避免并行批次时互相覆盖）
+    // 强制每次执行测试前都重新登录，禁用 session 复用
+    // 根因：服务端重启或 Cookie 过期后，原缓存的 user.json 的 Session 会失效
+    // 这会导致所有依赖此 auth 状态的测试，不仅在验证 API 时失败，而且在页面加载时会静默重定向到 Landing Page
     if (fs.existsSync(authFile)) {
-        try {
-            const sessionResponse = await page.request.get('http://localhost:3004/api/auth/session');
-            const sessionData = await sessionResponse.json();
-            if (sessionData?.user) {
-                console.log(`✅ 复用现有 session，跳过登录（用户: ${sessionData.user.name || sessionData.user.email}）`);
-                return;
-            }
-        } catch {
-            console.log('⚠️ session 验证失败，重新登录...');
-        }
+        console.log('🗑️ 发现旧的 auth 缓存文件，为保证测试真实有效，忽略旧缓存，执行全新登录流程');
     }
 
     console.log('Navigating to login page...');

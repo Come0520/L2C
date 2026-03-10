@@ -168,8 +168,17 @@ export async function checkTableHasData(page: Page): Promise<boolean> {
     const rowCount = await rows.count();
 
     if (rowCount === 0) {
-        console.log('⚠️ 表格无数据');
+        console.log('⚠️ 表格无数据行');
         return false;
+    }
+
+    // 检查是否仅有一行且为空状态行
+    if (rowCount === 1) {
+        const isEmptyState = await rows.first().locator('[data-testid="empty-state"], [data-testid="quote-list-empty"]').count() > 0;
+        if (isEmptyState) {
+            console.log('⚠️ 表格展现为空状态');
+            return false;
+        }
     }
 
     return true;

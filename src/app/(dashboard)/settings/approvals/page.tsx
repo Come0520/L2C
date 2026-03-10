@@ -22,7 +22,7 @@ export default async function ApprovalsSettingsPage() {
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b px-6 py-4">
-        <h1 className="text-2xl font-bold tracking-tight">审批设置</h1>
+        <h2 className="text-2xl font-bold tracking-tight">审批设置</h2>
       </div>
       <div className="flex-1 p-6">
         <Tabs defaultValue="rules" className="w-full">
@@ -46,4 +46,3 @@ export default async function ApprovalsSettingsPage() {
     </div>
   );
 }
-

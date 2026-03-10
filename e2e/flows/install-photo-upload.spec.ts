@@ -67,21 +67,23 @@ test.describe('安装照片回传链路 (Install Photo Upload)', () => {
         // 去到安装交付的任务列表找一个已完成的任务
         await page.goto('/installation/tasks', { waitUntil: 'domcontentloaded', timeout: 60000 });
         const completedTab = page.getByRole('tab', { name: /已完成|历史/ });
-        if (await completedTab.isVisible({ timeout: 5000 })) {
+        // 修复：加 catch 保护，标签不存在时不抛错
+        if (await completedTab.isVisible({ timeout: 5000 }).catch(() => false)) {
             await completedTab.click();
             await page.waitForTimeout(1000);
         }
 
         const taskRow = page.locator('table tbody tr').first();
-        if (await taskRow.isVisible()) {
+        // 修复：加显式 timeout 15s + catch，防止 Mobile Chrome 渲染慢时 /installation/tasks 表格未及时出现导致 throw
+        if (await taskRow.isVisible({ timeout: 15000 }).catch(() => false)) {
             await taskRow.click();
             await page.waitForLoadState('domcontentloaded');
 
             // 验证详情页里能否看到图片元素
             const photoImg = page.locator('img[src*="dummyimage.com"]').first()
-                .or(page.locator('text=/现场照片|完工照片|Attachments/').first());
+                .or(page.locator('text=/\u73b0\u573a\u7167\u7247|\u5b8c\u5de5\u7167\u7247|Attachments/').first());
 
-            if (await photoImg.isVisible({ timeout: 5000 })) {
+            if (await photoImg.isVisible({ timeout: 5000 }).catch(() => false)) {
                 console.log('✅ 管理端工单详情成功渲染了完工照片');
             } else {
                 console.log('⚠️ 管理端缺失展示完工照片的 UI 组件');

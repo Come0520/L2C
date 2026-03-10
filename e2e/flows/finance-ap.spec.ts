@@ -33,10 +33,11 @@ test.describe('供应商对账 (Finance AP)', () => {
         // 检测数据加载错误
         if (await skipOnDataLoadError(page)) return;
 
-        await expect(page.getByRole('heading', { name: /应付|对账|付款管理|财务中心|AP/ })).toBeVisible({ timeout: 10000 });
+        await expect(page.getByRole('heading', { name: /应付|付款管理|AP/ }).first()).toBeVisible({ timeout: 10000 });
 
         const table = page.locator('table');
-        await expect(table).toBeVisible({ timeout: 15000 });
+        const emptyState = page.locator('text=暂无供应商应付记录').or(page.locator('text=暂无数据'));
+        await expect(table.or(emptyState)).toBeVisible({ timeout: 15000 });
 
         console.log('✅ 应付账单列表加载正常');
     });

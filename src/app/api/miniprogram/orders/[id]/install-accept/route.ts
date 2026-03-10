@@ -3,16 +3,16 @@
  *
  * POST /api/miniprogram/orders/[id]/install-accept
  *
- * 业务场景：客户在小程序中查看到“待验收”的订单（或者具体安装任务），
- *           客户可以上传多张现场照片、一张电子签名，确认订单安装合格。
+ * 业务场景：客户在小程序中查看到"待验收"的安装任务，
+ *           客户可以上传电子签名确认安装合格。
  *
- * @param id 订单ID（或者安装任务id，此处设计为对 order 进行整单验收）
- * @body signatureUrl: 电子签名 OSS 路径
- * @body photoUrls: 验收照片的 OSS 路径数组
+ * @param id 订单 ID（通过 orderId 关联到 install_tasks 表）
+ * @body signatureUrl: 电子签名 OSS 路径（必填）
+ * @body photoUrls: 验收照片 OSS 路径数组（选填）
  */
 import { NextRequest } from 'next/server';
 import { db } from '@/shared/api/db';
-import { workOrders } from '@/shared/api/schema';
+import { installTasks, installPhotos } from '@/shared/api/schema';
 import { eq, and } from 'drizzle-orm';
 import {
   apiSuccess,
@@ -31,6 +31,7 @@ export const POST = withMiniprogramAuth(
       if (!user || (!user.tenantId && user.role !== 'SUPER_ADMIN')) {
         return apiUnauthorized('未授权');
       }
+
       const { id: orderId } = params;
       const { signatureUrl, photoUrls } = await request.json();
 
@@ -38,40 +39,81 @@ export const POST = withMiniprogramAuth(
         return apiBadRequest('请必须提供本人签名');
       }
 
-      const order = await db.query.workOrders.findFirst({
-        where: and(eq(workOrders.id, orderId), eq(workOrders.tenantId, user.tenantId as string)),
+      // 通过 orderId 查找对应的安装任务（取最新的待确认任务）
+      const task = await db.query.installTasks.findFirst({
+        where: and(
+          eq(installTasks.orderId, orderId),
+          eq(installTasks.tenantId, user.tenantId as string)
+        ),
+        columns: {
+          id: true,
+          status: true,
+          customerSignatureUrl: true,
+        },
       });
 
-      if (!order) {
-        return apiNotFound('找不到相关的订单信息');
+      if (!task) {
+        return apiNotFound('找不到对应的安装任务');
       }
 
-      // 假设 order 状态流转到 'INSTALL_COMPLETED' 或 'WAITING_ACCEPTANCE' 后才能验收
-      // 此处仅示例，更新工单状态及存证。真实业务中通常需要新建一张 Acceptance 记录表
+      // 状态检查：只有 PENDING_CONFIRM（待验收）状态允许客户签名
+      if (task.status !== 'PENDING_CONFIRM') {
+        return apiBadRequest(
+          `当前安装任务状态（${task.status}）不允许签名验收，请联系安装师确认完工后再操作`
+        );
+      }
+
+      // 已有签名则不允许重复签署（防止覆盖）
+      if (task.customerSignatureUrl) {
+        return apiBadRequest('客户签名已存在，请勿重复签署');
+      }
+
+      // 写入签名 URL 及签署时间到 install_tasks 表
       await db
-        .update(workOrders)
+        .update(installTasks)
         .set({
-          status: 'COMPLETED',
-          // 由于没有设计专用的 acceptance 表，暂时写入扩展信息或是复用某些字段，
-          // 我们假设使用 metadata 或专门处理，这只是个 Mock up 结构
-          // 如果数据库没有字段，这里不报错即可。
+          customerSignatureUrl: signatureUrl,
+          signedAt: new Date(),
         })
-        .where(eq(workOrders.id, orderId));
+        .where(
+          and(eq(installTasks.id, task.id), eq(installTasks.tenantId, user.tenantId as string))
+        );
 
-      // （如果有专用的照片挂载表或安装任务表，则更新他们。由于此处仅体现 API，逻辑略）
+      // 若有验收照片，批量插入 install_photos 表
+      if (Array.isArray(photoUrls) && photoUrls.length > 0) {
+        const photoRecords = photoUrls.map((url: string) => ({
+          tenantId: user.tenantId as string,
+          installTaskId: task.id,
+          photoType: 'AFTER' as const, // 验收阶段的照片归类为 AFTER
+          photoUrl: url,
+          remark: '客户验收照片',
+          createdBy: user.id,
+        }));
+        await db.insert(installPhotos).values(photoRecords);
+      }
 
-      // 补充：审计日志留痕
+      // 审计日志留痕
       await AuditService.log(db, {
-        tableName: 'work_orders',
-        recordId: orderId,
+        tableName: 'install_tasks',
+        recordId: task.id,
         action: 'UPDATE',
         userId: user.id,
         tenantId: user.tenantId as string,
-        details: { action: 'INSTALL_ACCEPTANCE_BY_CUSTOMER', signatureUrl, photoUrls },
+        details: {
+          action: 'CUSTOMER_ACCEPTANCE_SIGNATURE',
+          signatureUrl,
+          photoCount: Array.isArray(photoUrls) ? photoUrls.length : 0,
+          orderId,
+        },
       });
 
-      logger.info('[InstallAccept] 客户验收提交成功', { orderId, userId: user.id });
-      return apiSuccess({ success: true, orderId });
+      logger.info('[InstallAccept] 客户验收签名提交成功', {
+        orderId,
+        taskId: task.id,
+        userId: user.id,
+      });
+
+      return apiSuccess({ success: true, taskId: task.id, orderId });
     } catch (error) {
       logger.error('[InstallAccept] 客户验收异常', {
         route: `orders/${params.id}/install-accept`,

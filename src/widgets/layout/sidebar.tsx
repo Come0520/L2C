@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/shared/lib/utils';
-import { Sidebar, SidebarBody, useSidebar } from '@/shared/ui/sidebar';
+import { SidebarBody, useSidebar } from '@/shared/ui/sidebar';
 import {
   Home,
   Users,
@@ -145,7 +145,8 @@ function hasModuleAccess(roles: string[], modulePrefix: string): boolean {
  */
 export function AppSidebar() {
   const pathname = usePathname();
-  const [open, setOpen] = React.useState(false);
+  // open/setOpen 由父层 SidebarProviderWrapper 提供，通过 useSidebar() 获取
+  const { open } = useSidebar();
   const { data: session } = useSession();
 
   // 动态生成分组导航菜单：按角色过滤 + 平台管理员添加租户管理
@@ -167,64 +168,65 @@ export function AppSidebar() {
   }, [session?.user?.roles, session?.user?.role]);
 
   return (
-    <Sidebar open={open} setOpen={setOpen}>
-      <SidebarBody className="glass-liquid border-border/50 justify-between gap-6 border-r shadow-sm dark:border-white/10">
-        <div className="flex flex-1 flex-col overflow-hidden">
-          {/* Logo 带主题切换 */}
-          <div className="border-border/50 border-b px-2 pb-4 dark:border-white/5">
-            <LogoWrapper />
-          </div>
-
-          {/* 分组导航链接 */}
-          <div className="mt-2 flex-1 overflow-x-hidden overflow-y-auto px-2 py-2">
-            {displayGroups.map((group, groupIndex) => (
-              <div key={group.title} className={cn("flex flex-col gap-1", groupIndex > 0 ? 'mt-6' : '')}>
-                {/* 分组标题 - 仅侧边栏展开时显示 */}
-                <motion.div
-                  animate={{
-                    display: open ? 'block' : 'none',
-                    opacity: open ? 1 : 0,
-                  }}
-                  className="mb-1.5 px-3"
-                >
-                  <span className="text-muted-foreground/60 text-[10px] font-semibold tracking-widest uppercase">
-                    {group.title}
-                  </span>
-                </motion.div>
-                {/* 收起时的分组分隔线 */}
-                {!open && groupIndex > 0 && (
-                  <div className="border-border/30 mx-2 mb-2 border-t dark:border-white/5" />
-                )}
-                {/* 导航项 */}
-                {group.items.map((link) => {
-                  const isActive =
-                    pathname === link.href || (link.href !== '/' && pathname.startsWith(link.href));
-                  return (
-                    <NavLink
-                      key={link.href}
-                      href={link.href}
-                      label={link.label}
-                      icon={link.icon}
-                      isActive={isActive}
-                    />
-                  );
-                })}
-              </div>
-            ))}
-          </div>
+    <SidebarBody className="glass-liquid border-border/50 justify-between gap-6 border-r shadow-sm dark:border-white/10">
+      <div className="flex flex-1 flex-col overflow-hidden">
+        {/* Logo 带主题切换 */}
+        <div className="border-border/50 border-b px-2 pb-4 dark:border-white/5">
+          <LogoWrapper />
         </div>
 
-        {/* 底部用户信息 - 指向独立的用户设置页面 */}
-        <div className="border-border/50 mt-auto border-t pt-4 pb-2 px-2 dark:border-white/5">
-          <NavLink
-            href="/profile/settings"
-            label="个人设置"
-            icon={User}
-            isActive={pathname === '/profile/settings' || pathname.startsWith('/profile/')}
-          />
+        {/* 分组导航链接 */}
+        <div className="mt-2 flex-1 overflow-x-hidden overflow-y-auto px-2 py-2">
+          {displayGroups.map((group, groupIndex) => (
+            <div
+              key={group.title}
+              className={cn('flex flex-col gap-1', groupIndex > 0 ? 'mt-6' : '')}
+            >
+              {/* 分组标题 - 仅侧边栏展开时显示 */}
+              <motion.div
+                animate={{
+                  display: open ? 'block' : 'none',
+                  opacity: open ? 1 : 0,
+                }}
+                className="mb-1.5 px-3"
+              >
+                <span className="text-muted-foreground/60 text-[10px] font-semibold tracking-widest uppercase">
+                  {group.title}
+                </span>
+              </motion.div>
+              {/* 收起时的分组分隔线 */}
+              {!open && groupIndex > 0 && (
+                <div className="border-border/30 mx-2 mb-2 border-t dark:border-white/5" />
+              )}
+              {/* 导航项 */}
+              {group.items.map((link) => {
+                const isActive =
+                  pathname === link.href || (link.href !== '/' && pathname.startsWith(link.href));
+                return (
+                  <NavLink
+                    key={link.href}
+                    href={link.href}
+                    label={link.label}
+                    icon={link.icon}
+                    isActive={isActive}
+                  />
+                );
+              })}
+            </div>
+          ))}
         </div>
-      </SidebarBody>
-    </Sidebar>
+      </div>
+
+      {/* 底部用户信息 - 指向独立的用户设置页面 */}
+      <div className="border-border/50 mt-auto border-t px-2 pt-4 pb-2 dark:border-white/5">
+        <NavLink
+          href="/profile/settings"
+          label="个人设置"
+          icon={User}
+          isActive={pathname === '/profile/settings' || pathname.startsWith('/profile/')}
+        />
+      </div>
+    </SidebarBody>
   );
 }
 
@@ -291,7 +293,7 @@ function NavLink({
         'group/sidebar flex items-center rounded-xl px-3 py-2.5 transition-all duration-300 active:scale-95',
         animate && !open ? 'justify-center' : 'justify-start gap-3',
         isActive
-          ? 'bg-primary-500 text-white shadow-md shadow-primary-500/20 font-semibold ring-1 ring-primary-500/50 dark:bg-primary-500 dark:ring-primary-500/40'
+          ? 'bg-primary-500 shadow-primary-500/20 ring-primary-500/50 dark:bg-primary-500 dark:ring-primary-500/40 font-semibold text-white shadow-md ring-1'
           : 'text-neutral-500 hover:bg-neutral-100/80 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-white/10 dark:hover:text-neutral-100'
       )}
     >

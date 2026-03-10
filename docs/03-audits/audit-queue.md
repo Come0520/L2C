@@ -30,8 +30,8 @@
 | P2 🟡 | analytics | `src/features/analytics` | ✅ 已完成 | ✅ 已完成 | 0 缺陷 (全部修复通过) |
 | P2 🟡 | channels | `src/features/channels` | ✅ 已完成 | ✅ 已修复 | 3 P2 缺陷皆已修复 (分页、审计日志、乐观锁并发防护) |
 | P3 ⚪ | admin | `src/features/admin` | ✅ 已完成 | ✅ 已修复 | 1 P1, 2 P2 缺陷 (第二轮复核) |
-| P3 ⚪ | platform | `src/features/platform` | 📋 待修复 | ✅ 已修复 | 1 P2 缺陷 (第二轮复核) |
-| P3 ⚪ | monitoring | `src/features/monitoring` | 📋 待修复 | ✅ 已修复 | 1 P2 缺陷 (第二轮复核) |
+| P3 ⚪ | platform | `src/features/platform` | ✅ 已完成 | ✅ 已修复 | 2 P1, 2 P2 缺陷 (批量和权限机制重构完成) |
+| P3 ⚪ | monitoring | `src/features/monitoring` | ✅ 已完成 | ✅ 已修复 | 1 P0, 1 P1, 2 P2 缺陷已悉数修复 |
 | P3 ⚪ | search | `src/features/search` | ✅ 已完成 | ✅ 已完成 | 0 缺陷 (全部修复通过) |
 | P3 ⚪ | upload | `src/features/upload` | ✅ 已完成 | ✅ 已完成 | 0 缺陷 (全部修复通过) |
 | P3 ⚪ | approval | `src/features/approval` | ✅ 已完成 | ✅ 已修复 | 1 P2 缺陷 已修复 |

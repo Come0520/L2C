@@ -12,13 +12,13 @@ import {
   createAlertRule,
   resetRateLimiterForTest,
 } from '../actions/alert-rules';
-import { auth, checkPermission } from '@/shared/lib/auth';
+import { auth, requirePermission } from '@/shared/lib/auth';
 
 // ===== Mock 依赖 =====
 
 vi.mock('@/shared/lib/auth', () => ({
   auth: vi.fn(),
-  checkPermission: vi.fn(),
+  requirePermission: vi.fn(),
 }));
 
 // 控制 update 返回结果（模拟跨租户操作时匹配不中）
@@ -119,7 +119,7 @@ const makeSession = (tenantId: string, userId: string) => ({
 });
 
 const mockAuth = vi.mocked(auth);
-const mockCheckPermission = vi.mocked(checkPermission);
+const mockRequirePermission = vi.mocked(requirePermission);
 
 // ===== 测试套件 =====
 
@@ -127,7 +127,7 @@ describe('Monitoring 租户隔离', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     (globalThis as any).__failUpdateIsolation = false;
-    mockCheckPermission.mockImplementation(() => undefined as never);
+    mockRequirePermission.mockResolvedValue(undefined as never);
     resetRateLimiterForTest();
   });
 
@@ -144,10 +144,7 @@ describe('Monitoring 租户隔离', () => {
   });
 
   it('租户 A 无法修改租户 B 的告警规则（权限隔离）', async () => {
-    // 模拟权限检查失败（非当前租户的操作应被权限层拦截）
-    mockCheckPermission.mockImplementation(() => {
-      throw new Error('权限不足：无法操作其他租户的规则');
-    });
+    mockRequirePermission.mockRejectedValue(new Error('权限不足：无法操作其他租户的规则'));
 
     mockAuth.mockResolvedValue(makeSession(TENANT_A, USER_A) as never);
 

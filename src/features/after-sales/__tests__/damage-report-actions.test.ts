@@ -95,6 +95,7 @@ vi.mock('../utils', () => ({
 // Mock deduction safety check
 vi.mock('../logic/deduction-safety', () => ({
   checkDeductionAllowed: vi.fn(),
+  checkMultipleDeductionsAllowed: vi.fn().mockResolvedValue([{ allowed: true }]),
   recordDebtLedger: vi.fn(),
 }));
 
@@ -103,7 +104,7 @@ vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
 }));
 
-import { checkDeductionAllowed } from '../logic/deduction-safety';
+import { checkDeductionAllowed, checkMultipleDeductionsAllowed } from '../logic/deduction-safety';
 
 describe('Damage Report & Liability Assignment', () => {
   const VALID_USER_ID = '550e8400-e29b-41d4-a716-446655440000';
@@ -142,10 +143,16 @@ describe('Damage Report & Liability Assignment', () => {
 
     it('TDD-RED-2: should block creation if deduction safety limit is exceeded', async () => {
       // Mock safety check to return BLOCKED
-      (checkDeductionAllowed as any).mockResolvedValue({
+      (checkMultipleDeductionsAllowed as any).mockResolvedValue([{
         allowed: false,
         status: 'BLOCKED',
         message: '扣款金额 ¥8000 超过最大限额 ¥5000',
+      }]);
+
+      (db.query.afterSalesTickets.findFirst as any).mockResolvedValue({
+        id: VALID_TICKET_ID,
+        type: 'RETURN',
+        status: 'PROCESSING',
       });
 
       const input = {
@@ -164,7 +171,11 @@ describe('Damage Report & Liability Assignment', () => {
 
       const result = await createDamageReport(input);
 
-      expect(checkDeductionAllowed).toHaveBeenCalledWith('INSTALLER', VALID_INSTALLER_ID, 8000);
+      expect(checkMultipleDeductionsAllowed).toHaveBeenCalledWith([{
+        partyType: 'INSTALLER',
+        partyId: VALID_INSTALLER_ID,
+        amount: '8000'
+      }]);
       expect(result.success).toBe(true);
       expect(result.data?.success).toBe(false);
       expect(result.data?.message).toContain('超过最大限额');

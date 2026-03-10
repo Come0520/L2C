@@ -48,7 +48,7 @@ vi.mock('@/features/notifications/actions', () => ({
 
 vi.mock('@/shared/lib/auth', () => ({
   auth: vi.fn(),
-  checkPermission: vi.fn(),
+  requirePermission: vi.fn(),
 }));
 
 // ===== 常量 =====

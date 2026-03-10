@@ -95,6 +95,14 @@ node -e "
 
 ### 4. 打包构建产物
 
+> 🔴 **打包前必须验证产物版本**（铁律，不可跳过）：
+
+```bash
+node -e "const p=require('.next/standalone/package.json');const e=require('./package.json');console.log('构建产物版本:',p.version,'预期版本:',e.version);if(p.version!==e.version){console.error('❌ VERSION MISMATCH! 产物过期，必须重新 build！');process.exit(1)}else{console.log('✅ 版本一致')}"
+```
+
+> 如果不匹配，说明 `.next` 产物是版本递增之前的旧构建。必须 `Remove-Item -Recurse -Force .next && pnpm run build` 重新构建。
+
 // turbo
 
 ```bash
@@ -112,7 +120,11 @@ scp next-build.tar.gz ecs:/root/L2C/
 ```bash
 ssh ecs "cd /root/L2C && \
   git fetch origin main && \
-  git checkout FETCH_HEAD -- .dockerignore docker-compose.prod.yml Dockerfile.prebuilt nginx/ package.json pnpm-lock.yaml drizzle/ drizzle.config.ts src/shared/api/schema.ts src/shared/api/schema/ tsconfig.json && \
+  REMOTE_SHA=\$(git rev-parse FETCH_HEAD) && \
+  echo \"ECS 同步到 SHA: \$REMOTE_SHA\" && \
+  git reset --hard FETCH_HEAD && \
+  echo \"--- Dockerfile 基础镜像:" && head -8 Dockerfile.prebuilt && \
+  echo \"--- package.json:" && head -3 package.json && \
   [ -f next-build.tar.gz ] && cp next-build.tar.gz next-build-backup-\$(date +%Y%m%d-%H%M%S).tar.gz || true && \
   rm -rf .next/standalone .next/static && \
   tar -xzf next-build.tar.gz && \
@@ -122,6 +134,8 @@ ssh ecs "cd /root/L2C && \
   docker rm -f l2c-app l2c-db-migrate l2c-nginx 2>/dev/null || true; \
   docker compose -f docker-compose.prod.yml up -d"
 ```
+
+> ❗ **关键变更**：使用 `git reset --hard FETCH_HEAD` 替代旧的 `git checkout FETCH_HEAD -- 文件列表`，确保 ECS 上的**所有文件**（包括 Dockerfile）完全同步为最新代码。旧方案只同步部分文件，导致 Dockerfile 残留旧版 `FROM node:20-alpine`（v1.3.8 事故根因）。
 
 > 备份文件命名为 `next-build-backup-YYYYMMDD-HHMMSS.tar.gz`，支持紧急回滚。
 
@@ -136,6 +150,16 @@ ssh ecs "docker ps --format 'table {{.Names}}\t{{.Status}}' && curl -s -o /dev/n
 ```
 
 > 预期: `l2c-app Up x minutes (healthy)` + `HTTP 200`
+
+### 7.1 运行时版本校验（铁律，不可跳过）
+
+```bash
+ssh ecs "docker exec l2c-app node -v && docker exec l2c-app cat /app/package.json | head -3"
+```
+
+> - Node.js 版本必须 ≥22.21.0（与 `package.json` 的 `engines.node` 一致）
+> - `version` 必须与本次发布版本号一致
+> - 如果不一致，说明部署链路有错误，**禁止宣告部署完成**，需排查重新部署
 
 ## 注意事项
 

@@ -11,14 +11,14 @@ import {
   updateAlertRule,
   resetRateLimiterForTest,
 } from '../actions/alert-rules';
-import { auth, checkPermission } from '@/shared/lib/auth';
+import { auth, requirePermission } from '@/shared/lib/auth';
 import { AuditService } from '@/shared/services/audit-service';
 
 // ===== Mock 依赖 =====
 
 vi.mock('@/shared/lib/auth', () => ({
   auth: vi.fn(),
-  checkPermission: vi.fn(),
+  requirePermission: vi.fn(),
 }));
 
 // 控制 update 是否返回空数组（模拟规则未找到）
@@ -155,7 +155,7 @@ const makeSession = (overrides?: Record<string, unknown>) => ({
 });
 
 const mockAuth = vi.mocked(auth);
-const mockCheckPermission = vi.mocked(checkPermission);
+const mockRequirePermission = vi.mocked(requirePermission);
 
 // ===== 测试套件 =====
 
@@ -164,7 +164,7 @@ describe('Monitoring 告警规则 CRUD', () => {
     vi.clearAllMocks();
     (globalThis as any).__failUpdateCrud = false;
     mockAuth.mockResolvedValue(makeSession() as never);
-    mockCheckPermission.mockImplementation(() => undefined as never);
+    mockRequirePermission.mockImplementation(() => undefined as never);
     resetRateLimiterForTest();
   });
 
@@ -213,7 +213,7 @@ describe('Monitoring 告警规则 CRUD', () => {
   });
 
   it('无权限用户更新规则应被拒绝', async () => {
-    mockCheckPermission.mockImplementation(() => {
+    mockRequirePermission.mockImplementation(() => {
       throw new Error('权限不足');
     });
 

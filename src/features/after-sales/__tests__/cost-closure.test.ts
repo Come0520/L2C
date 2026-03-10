@@ -5,7 +5,8 @@ import { auth } from '@/shared/lib/auth';
 import { AuditService } from '@/shared/services/audit-service';
 
 // Pre-define mocks to maintain identity
-const mockWhere = vi.fn().mockResolvedValue({ success: true });
+const mockReturning = vi.fn().mockResolvedValue([{ id: 'mock-id' }]);
+const mockWhere = vi.fn().mockReturnValue({ returning: mockReturning });
 const mockSet = vi.fn(() => ({ where: mockWhere }));
 const mockUpdate = vi.fn(() => ({ set: mockSet }));
 
@@ -45,7 +46,7 @@ describe('After-Sales Cost Closure (成本结案验证)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     (auth as any).mockResolvedValue(mockSession);
-    mockWhere.mockResolvedValue({ success: true });
+    mockWhere.mockReturnValue({ returning: mockReturning });
     mockSet.mockReturnValue({ where: mockWhere });
     mockUpdate.mockReturnValue({ set: mockSet });
   });

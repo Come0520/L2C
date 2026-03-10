@@ -30,7 +30,9 @@ vi.mock('@/shared/api/db', () => ({
     })),
     update: vi.fn(() => ({
       set: vi.fn(() => ({
-        where: vi.fn(() => Promise.resolve({})),
+        where: vi.fn(() => ({
+          returning: vi.fn(() => Promise.resolve([{ id: 'mock-id' }])),
+        })),
       })),
     })),
     transaction: vi.fn((cb) =>

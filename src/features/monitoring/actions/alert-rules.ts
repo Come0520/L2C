@@ -5,7 +5,7 @@ import { riskAlerts } from '@/shared/api/schema/traceability';
 import { eq, and } from 'drizzle-orm';
 import { createSafeAction } from '@/shared/lib/server-action';
 import { z } from 'zod';
-import { checkPermission } from '@/shared/lib/auth';
+import { requirePermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
 import { logger } from '@/shared/lib/logger';
 import { AuditService } from '@/shared/services/audit-service';
@@ -157,50 +157,13 @@ export function renderTemplate(
 }
 
 // ============================================================
-// 速率限制器 (Rate Limiter) - 防止告警风暴
-// ============================================================
-
-/**
- * 内存级滑动窗口速率限制器
- * 用于防止告警风暴时短时间内产生海量通知调用（导致三方通道或数据库压力剧增）
- *
- * @param maxCalls - 窗口期内允许的最大调用次数
- * @param windowMs - 滑动窗口时长（毫秒）
- */
-function createRateLimiter(maxCalls: number, windowMs: number) {
-  const callTimestamps: number[] = [];
-  return {
-    /** 尝试获取调用令牌，若超限则返回 false */
-    tryAcquire(): boolean {
-      const now = Date.now();
-      // 清理掉滑动窗口期之前的过期时间戳
-      while (callTimestamps.length > 0 && callTimestamps[0] <= now - windowMs) {
-        callTimestamps.shift();
-      }
-      if (callTimestamps.length >= maxCalls) {
-        return false;
-      }
-      callTimestamps.push(now);
-      return true;
-    },
-    /** 重置计数器（主要用于测试） */
-    reset() {
-      callTimestamps.length = 0;
-    },
-  };
-}
-
-/** 全局通知速率限制器：设置每分钟最高 100 次通知派发 */
-const notificationRateLimiter = createRateLimiter(100, 60_000);
-
-/** 暴露重置接口供外部测试套件使用 */
-export function resetRateLimiterForTest() {
-  notificationRateLimiter.reset();
-}
-
-// ============================================================
 // Actions
 // ============================================================
+
+import { checkRateLimit } from '@/shared/middleware/rate-limit';
+
+// 提供空的方法供测试文件遗留引用（实际限流通过 checkRateLimit 控制）
+export function resetRateLimiterForTest() { }
 
 /**
  * 创建新的告警规则
@@ -212,12 +175,17 @@ export function resetRateLimiterForTest() {
 const createAlertRuleInternal = createSafeAction(
   createAlertRuleSchema,
   async (data, { session }) => {
-    checkPermission(session, PERMISSIONS.NOTIFICATION.MANAGE);
+    await requirePermission(session, PERMISSIONS.NOTIFICATION.MANAGE);
 
-    // 防护：防止恶意或失控脚本短时间内创建海量规则
-    if (!notificationRateLimiter.tryAcquire()) {
+    // 防风暴：更严格的跨实例 Redis 限流，按租户防止滥用
+    const rl = await checkRateLimit(`alert-rule:${session.user.tenantId}`, {
+      max: 100,
+      windowMs: 60_000,
+      keyType: 'user',
+      prefix: 'ratelimit:alerts',
+    });
+    if (!rl.allowed) {
       logger.warn('系统触发限流保护：告警规则创建频率过高', { tenantId: session.user.tenantId });
-      // 需要 throw 让 createSafeAction 捕获，才能在顶层返回 success: false
       throw new Error('操作过于频繁，请稍后再试');
     }
 
@@ -297,7 +265,7 @@ export async function listAlertRules() {
 const deleteAlertRuleInternal = createSafeAction(
   deleteAlertRuleSchema,
   async (data, { session }) => {
-    checkPermission(session, PERMISSIONS.NOTIFICATION.MANAGE);
+    await requirePermission(session, PERMISSIONS.NOTIFICATION.MANAGE);
 
     try {
       // 确保只能删除自己租户的规则
@@ -339,7 +307,7 @@ export async function deleteAlertRule(data: z.infer<typeof deleteAlertRuleSchema
 const updateAlertRuleInternal = createSafeAction(
   updateAlertRuleSchema,
   async (data, { session }) => {
-    checkPermission(session, PERMISSIONS.NOTIFICATION.MANAGE);
+    await requirePermission(session, PERMISSIONS.NOTIFICATION.MANAGE);
 
     try {
       const { ruleId, ...updateData } = data;
@@ -408,12 +376,17 @@ export async function updateAlertRule(data: z.infer<typeof updateAlertRuleSchema
 const sendBulkNotificationInternal = createSafeAction(
   sendBulkNotificationSchema,
   async (data, { session }) => {
-    checkPermission(session, PERMISSIONS.NOTIFICATION.MANAGE);
+    await requirePermission(session, PERMISSIONS.NOTIFICATION.MANAGE);
 
     // 防风暴：批量通知下发路径必须受限
-    if (!notificationRateLimiter.tryAcquire()) {
+    const rl = await checkRateLimit(`bulk-notification:${session.user.tenantId}`, {
+      max: 100,
+      windowMs: 60_000,
+      keyType: 'user',
+      prefix: 'ratelimit:bulk-notifications',
+    });
+    if (!rl.allowed) {
       logger.warn('系统触发限流保护：批量通知下发频率过快', { tenantId: session.user.tenantId });
-      // 需要 throw 让 createSafeAction 捕获，才能在顶层返回 success: false
       throw new Error('系统通知繁忙，请稍后再试');
     }
 

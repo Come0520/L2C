@@ -138,7 +138,7 @@ export async function checkMultipleDeductionsAllowed(
   const deductionMap = new Map(currentDeductions.map((d) => [d.partyId, Number(d.totalAmount || 0)]));
 
   return liabilities.map((l) => {
-    if (!l.partyId) return { allowed: true, message: '无需验证', remainingQuota: Infinity };
+    if (!l.partyId) return { allowed: true, message: '无需验证', remainingQuota: Infinity, status: 'NORMAL' as const };
 
     const quota = quotaMap.get(l.partyId) || 0;
     const current = deductionMap.get(l.partyId) || 0;
@@ -148,15 +148,19 @@ export async function checkMultipleDeductionsAllowed(
     if (newTotal > quota) {
       return {
         allowed: false,
+        status: 'BLOCKED' as const,
         message: `此方定责已扣 ${current}，本次申报 ${pendingAmount}，合计 ${newTotal} 已超出单周期风险限额 ${quota}，如需强行定责请走特批扩额流程。`,
         remainingQuota: quota - current,
       };
     }
 
+    const isWarning = newTotal >= quota * DEDUCTION_SAFETY_CONFIG.WARNING_THRESHOLD;
+
     return {
       allowed: true,
+      status: (isWarning ? 'WARNING' : 'NORMAL') as 'WARNING' | 'NORMAL',
       remainingQuota: quota - newTotal,
-      message: '额度充足',
+      message: isWarning ? '接近限额预警' : '额度充足',
     };
   });
 }

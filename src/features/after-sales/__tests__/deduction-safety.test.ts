@@ -9,6 +9,16 @@ import { db } from '@/shared/api/db';
 import { liabilityNotices } from '@/shared/api/schema/after-sales';
 import { sql } from 'drizzle-orm';
 
+const createSelectChain = (mockData: any) => {
+  const chain: any = {
+    from: vi.fn(() => chain),
+    where: vi.fn(() => chain),
+    groupBy: vi.fn(() => Promise.resolve(mockData)),
+    then: (res: any, rej: any) => Promise.resolve(mockData).then(res, rej),
+  };
+  return chain;
+};
+
 // Mock Dependencies
 vi.mock('@/shared/api/db', () => ({
   db: {
@@ -18,12 +28,7 @@ vi.mock('@/shared/api/db', () => ({
       users: { findFirst: vi.fn(), findMany: vi.fn() },
       customers: { findFirst: vi.fn(), findMany: vi.fn() },
     },
-    select: vi.fn(() => ({
-      from: vi.fn(() => ({
-        where: vi.fn(() => Promise.resolve([])),
-        groupBy: vi.fn(() => Promise.resolve([])),
-      })),
-    })),
+    select: vi.fn(() => createSelectChain([])),
   },
 }));
 
@@ -117,12 +122,14 @@ describe('Deduction Safety Logic (Optimized)', () => {
     it('should respect limits', async () => {
       (db.select as any).mockReturnValue({
         from: vi.fn().mockReturnThis(),
-        where: vi.fn().mockResolvedValue([
-          {
-            totalDeducted: '4500',
-            totalSettled: '0',
-          },
-        ]),
+        where: vi.fn().mockReturnValue({
+          groupBy: vi.fn().mockResolvedValue([
+            {
+              partyId: 'inst-1',
+              totalAmount: '4500',
+            },
+          ]),
+        }),
       });
       (db.query.users.findFirst as any).mockResolvedValue({ name: 'Installer A' });
 
@@ -134,33 +141,39 @@ describe('Deduction Safety Logic (Optimized)', () => {
     it('should allow if new deduction is within limit for new party', async () => {
       (db.select as any).mockReturnValue({
         from: vi.fn().mockReturnThis(),
-        where: vi.fn().mockResolvedValue([{ totalDeducted: null, totalSettled: null }]), // empty ledger
+        where: vi.fn().mockReturnValue({
+          groupBy: vi.fn().mockResolvedValue([]),
+        }),
       });
-      const result = await checkDeductionAllowed('INSTALLER', 'inst-2', 1000); // Installer max is 5000
+      const result = await checkDeductionAllowed('INSTALLER', 'inst-2', 1000); // Installer max is 2000 in new code
       expect(result.allowed).toBe(true);
       expect(result.status).toBe('NORMAL');
-      expect(result.remainingQuota).toBe(4000);
+      expect(result.remainingQuota).toBe(1000);
     });
 
     it('should block if new deduction exceeds limit for new party', async () => {
       (db.select as any).mockReturnValue({
         from: vi.fn().mockReturnThis(),
-        where: vi.fn().mockResolvedValue([{ totalDeducted: null, totalSettled: null }]), // empty ledger
+        where: vi.fn().mockReturnValue({
+          groupBy: vi.fn().mockResolvedValue([]),
+        }),
       });
-      const result = await checkDeductionAllowed('INSTALLER', 'inst-2', 6000); // Exceeds 5000
+      const result = await checkDeductionAllowed('INSTALLER', 'inst-2', 6000); // Exceeds 2000
       expect(result.allowed).toBe(false);
       expect(result.status).toBe('BLOCKED');
-      expect(result.remainingQuota).toBe(5000);
+      expect(result.remainingQuota).toBe(2000);
     });
 
     it('should warn if new total approaches limit', async () => {
       (db.select as any).mockReturnValue({
         from: vi.fn().mockReturnThis(),
-        where: vi.fn().mockResolvedValue([{ totalDeducted: '3000', totalSettled: '0' }]),
+        where: vi.fn().mockReturnValue({
+          groupBy: vi.fn().mockResolvedValue([{ partyId: 'inst-1', totalAmount: '1000' }]),
+        }),
       });
       (db.query.users.findFirst as any).mockResolvedValue({ name: 'Installer A' });
 
-      const result = await checkDeductionAllowed('INSTALLER', 'inst-1', 1500); // 3000+1500=4500, ratio 0.9
+      const result = await checkDeductionAllowed('INSTALLER', 'inst-1', 800); // 1000+800=1800, ratio 0.9
       expect(result.allowed).toBe(true);
       expect(result.status).toBe('WARNING');
     });

@@ -4,7 +4,7 @@ import { createSafeAction } from '@/shared/lib/server-action';
 import { z } from 'zod';
 import { notificationService } from '@/features/notifications/service';
 import { NotificationType } from '@/shared/api/schema';
-import { checkPermission } from '@/shared/lib/auth';
+import { requirePermission } from '@/shared/lib/auth';
 import { PERMISSIONS } from '@/shared/config/permissions';
 import { logger } from '@/shared/lib/logger';
 
@@ -55,7 +55,7 @@ const createNotificationSchema = z.object({
 const createNotificationActionInternal = createSafeAction(
   createNotificationSchema,
   async (params, { session }) => {
-    checkPermission(session, PERMISSIONS.NOTIFICATION.MANAGE);
+    await requirePermission(session, PERMISSIONS.NOTIFICATION.MANAGE);
 
     // 将旧版定义的类型字符串映射至系统标准的 NotificationType 枚举值
     // 映射逻辑：WARNING 或 ERROR 映射为 ALERT (告警)，其它默认为 SYSTEM (系统通知)

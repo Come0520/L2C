@@ -15,13 +15,13 @@ import {
   sendBulkNotification,
   updateAlertRule,
 } from '../actions/alert-rules';
-import { auth, checkPermission } from '@/shared/lib/auth';
+import { auth, requirePermission } from '@/shared/lib/auth';
 
 // ===== Mock 依赖 =====
 
 vi.mock('@/shared/lib/auth', () => ({
   auth: vi.fn(),
-  checkPermission: vi.fn(),
+  requirePermission: vi.fn(),
 }));
 
 // 使用 mock 内部状态模拟失败
@@ -108,6 +108,20 @@ vi.mock('@/shared/lib/logger', () => ({
   logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn() },
 }));
 
+vi.mock('@/shared/middleware/rate-limit', () => {
+  let callCount = 0;
+  return {
+    checkRateLimit: vi.fn().mockImplementation(async () => {
+      if (callCount >= 100) return { allowed: false };
+      callCount++;
+      return { allowed: true };
+    }),
+    __resetMockRateLimit: () => {
+      callCount = 0;
+    },
+  };
+});
+
 vi.mock('@/shared/services/audit-service', () => ({
   AuditService: {
     log: vi.fn().mockResolvedValue(undefined),
@@ -164,7 +178,7 @@ const makeSession = (overrides?: Record<string, unknown>) => ({
 });
 
 const mockAuth = vi.mocked(auth);
-const mockCheckPermission = vi.mocked(checkPermission);
+const mockRequirePermission = vi.mocked(requirePermission);
 
 // ===== T1: createNotification 类型映射测试 =====
 
@@ -172,7 +186,7 @@ describe('createNotification 类型映射', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockAuth.mockResolvedValue(makeSession() as never);
-    mockCheckPermission.mockImplementation(() => undefined as never);
+    mockRequirePermission.mockResolvedValue(undefined as never);
   });
 
   it('INFO 类型应映射为 SYSTEM 通知类型', async () => {
@@ -215,7 +229,7 @@ describe('createNotification 类型映射', () => {
   });
 
   it('无权限用户创建通知应被拒绝', async () => {
-    mockCheckPermission.mockImplementation(() => {
+    mockRequirePermission.mockImplementation(() => {
       throw new Error('权限不足');
     });
     const result = await createNotification({
@@ -276,7 +290,8 @@ describe('告警规则管理 (alert-rules)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockAuth.mockResolvedValue(makeSession() as never);
-    mockCheckPermission.mockImplementation(() => undefined as never);
+    mockRequirePermission.mockImplementation(() => undefined as never);
+    mockRequirePermission.mockResolvedValue(undefined as never);
   });
 
   describe('createAlertRule', () => {
@@ -304,7 +319,7 @@ describe('告警规则管理 (alert-rules)', () => {
     });
 
     it('无权限应被拒绝', async () => {
-      mockCheckPermission.mockImplementation(() => {
+      mockRequirePermission.mockImplementation(() => {
         throw new Error('权限不足');
       });
       const result = await createAlertRule({
@@ -402,14 +417,14 @@ describe('告警规则管理 (alert-rules)', () => {
 
 // ===== T3: 速率限制器 (Rate Limiter) 测试 =====
 
-import { resetRateLimiterForTest } from '../actions/alert-rules';
+import { __resetMockRateLimit } from '@/shared/middleware/rate-limit';
 
 describe('告警风暴速率限制保护', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockAuth.mockResolvedValue(makeSession() as never);
-    mockCheckPermission.mockImplementation(() => undefined as never);
-    resetRateLimiterForTest();
+    mockRequirePermission.mockImplementation(() => undefined as never);
+    __resetMockRateLimit();
   });
 
   it('在限额内的调用应能成功通过', async () => {
@@ -466,7 +481,7 @@ describe('告警风暴速率限制保护', () => {
     expect(failRes.success).toBe(false);
 
     // 手动重置（模拟窗口期过后或管理员干预）
-    resetRateLimiterForTest();
+    __resetMockRateLimit();
 
     // 再次调用应成功
     const successRes = await sendBulkNotification({

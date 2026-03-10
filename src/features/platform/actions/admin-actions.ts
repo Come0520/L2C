@@ -10,7 +10,7 @@ import { db } from '@/shared/api/db';
 import { tenants, users } from '@/shared/api/schema';
 import { verificationCodes } from '@/shared/api/schema/verification_codes';
 import { auth } from '@/shared/lib/auth';
-import { eq, desc, sql, and } from 'drizzle-orm';
+import { eq, desc, sql, and, ilike, or } from 'drizzle-orm';
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 import {
@@ -114,14 +114,17 @@ export async function getPendingTenants(options?: { search?: string }): Promise<
     await requirePlatformAdmin();
     const { search } = options || {};
 
-    let whereCondition = eq(tenants.status, 'pending_approval');
+    let whereCondition: any = eq(tenants.status, 'pending_approval');
     if (search) {
-      whereCondition = sql`${whereCondition} AND (
-                ${tenants.name} LIKE ${`%${search}%`} OR 
-                ${tenants.code} LIKE ${`%${search}%`} OR 
-                ${tenants.applicantName} LIKE ${`%${search}%`} OR 
-                ${tenants.applicantPhone} LIKE ${`%${search}%`}
-            )`;
+      whereCondition = and(
+        whereCondition,
+        or(
+          ilike(tenants.name, `%${search}%`),
+          ilike(tenants.code, `%${search}%`),
+          ilike(tenants.applicantName, `%${search}%`),
+          ilike(tenants.applicantPhone, `%${search}%`)
+        )
+      );
     }
 
     const pendingList = await db.query.tenants.findMany({
@@ -195,7 +198,12 @@ export async function getAllTenants(options?: {
 
         if (search) {
           whereConditions.push(
-            sql`(${tenants.name} LIKE ${`%${search}%`} OR ${tenants.code} LIKE ${`%${search}%`} OR ${tenants.applicantName} LIKE ${`%${search}%`} OR ${tenants.applicantPhone} LIKE ${`%${search}%`})`
+            or(
+              ilike(tenants.name, `%${search}%`),
+              ilike(tenants.code, `%${search}%`),
+              ilike(tenants.applicantName, `%${search}%`),
+              ilike(tenants.applicantPhone, `%${search}%`)
+            )
           );
         }
 

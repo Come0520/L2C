@@ -28,6 +28,7 @@ description: Use when you are ready to release a new version, update the honor w
 - **跳过质量门禁：** "门禁太慢了，直接部署吧" → 不行。Step 0 所有硬性门禁必须通过。
 - **跳过测试：** "改动很小，直接部署吧" → 不行。测试必须全部通过。
 - **忽略构建报错：** "只有几个类型警告，可以强行打包" → 绝对不行。必须在本地完整运行 `pnpm run build` 且做到 0 报错，否则绝对禁止部署。
+- **复用旧 build：** "Step 0 已经 build 过了，跳过 Step 5" → 绝对不行。Step 0 的 build 产物中 `package.json` 的版本号是递增**之前**的旧版本。必须在 Step 2 版本递增后重新清除 `.next` 并 build，否则线上版本号永远落后一个版本。（根因：2026-03 v1.3.8 部署事故）
 - **在 ECS 上构建：** "我在服务器上跑 `pnpm build`" → 绝对不行。ECS 只有 4GB 内存，会 OOM 崩溃。
 - **跳过贡献墙更新：** "贡献墙回头再改" → 不行。UI 必须在 commit 之前更新。
 - **忽略 .env 变更：** "环境变量没问题" → 不行。必须主动询问用户是否已同步 ECS 的 `.env` 文件。
@@ -36,6 +37,7 @@ description: Use when you are ready to release a new version, update the honor w
 - **schema 改动未 generate：** "虽然改了 schema.ts，但没有执行 `pnpm db:generate`" → 绝对不行。每次修改 `src/shared/api/schema/` 下的任何文件，必须立即运行 `pnpm db:generate` 生成迁移 SQL 文件，并将生成的文件一并提交到 Git，否则 ECS 上的 db-migrate 容器将无法感知变更。
 - **忽略门禁 FAIL：** "只有一个模块低于 L3，无所谓" → 不行。门禁 FAIL 就是 FAIL。
 - **跳过 API 检查：** "API 应该没问题" → 不行。"应该" 不是证据，必须跑 `api-health-audit`。
+- **跳过产物版本校验：** "build 完直接打包" → 不行。必须在打包前验证 `.next/standalone/package.json` 的版本与预期一致。（根因：2026-03 v1.3.8 部署事故）
 
 ## The 7-Step Protocol
 
@@ -250,13 +252,28 @@ git push codeup main
 
 ### Step 5: 本地构建
 
-ECS 只有 4GB 内存，必须在本地构建。并且必须保证本地构建 0 报错。
+> 🔴 **铁律**：Step 0 的 build 仅用于质量验证，**绝对禁止复用为部署产物**。
+> 必须在 Step 2 版本递增之后**清除旧 `.next` 目录并重新执行 `pnpm run build`**。
+> 否则 `.next/standalone/package.json` 中的 version 将是旧版本，导致线上版本号永远落后一个版本。
+> 这个错误已经多次发生（v1.3.8 事故），因此本条为不可违反的铁律。
+
+ECS 只有 4GB 内存，必须在本地构建。必须保证 0 报错。
 
 ```bash
+# 必须先清除旧产物！！
+Remove-Item -Recurse -Force .next -ErrorAction SilentlyContinue
 pnpm run build
 ```
 
 > 如果有任何 TypeScript 报错，必须停下来修复，严禁带错发布。
+
+**构建完成后，执行产物版本校验（不可跳过）**：
+
+```bash
+node -e "const p=require('.next/standalone/package.json');const e=require('./package.json');console.log('构建产物版本:',p.version,'预期版本:',e.version);if(p.version!==e.version){console.error('❌ VERSION MISMATCH! 产物版本与预期不符，禁止继续！');process.exit(1)}else{console.log('✅ 版本一致，可以继续打包')}"
+```
+
+> 如果版本不匹配，说明 `.next` 产物过期，必须重新清除并 build。
 
 ### Step 6: 打包、上传与 ECS 部署
 
@@ -280,7 +297,14 @@ pnpm run build
    curl -s https://l2c.asia/api/health
    # 预期：{"status":"healthy","dbStatus":"connected","authReady":true}
    ```
-5. 向用户汇报：版本号、更新模块、部署状态。
+5. **🔴 版本与运行时校验（不可跳过，铁律）**：
+   ```bash
+   ssh ecs "docker exec l2c-app node -v && docker exec l2c-app cat /app/package.json | head -3"
+   ```
+   - Node.js 版本必须 ≥22.21.0（与 `package.json` 的 `engines.node` 一致）
+   - `version` 必须与本次发布版本号一致
+   - 如果不一致，说明部署链路有错误，**禁止宣告部署完成**，需排查重新部署
+6. 向用户汇报：版本号、Node.js 版本、更新模块、部署状态。
 
 ---
 

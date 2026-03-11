@@ -95,7 +95,7 @@ export const AceternityTabs = ({
         role="tablist"
         aria-orientation="horizontal"
         className={cn(
-          'no-visible-scrollbar relative flex w-full max-w-full flex-row items-center justify-start overflow-auto p-1 bg-neutral-100/80 dark:bg-[#1C1C1E] in-data-[style=parchment]:bg-black/5 in-data-[style=parchment]:dark:bg-white/5 in-data-[style=clay]:bg-[#ebd3c5]/50 in-data-[style=clay]:dark:bg-black/20 in-data-[style=clay]:shadow-inner rounded-full sm:overflow-visible',
+          'no-visible-scrollbar relative flex w-full max-w-full flex-row items-center justify-start overflow-auto rounded-full bg-neutral-100/80 p-1 in-data-[style=clay]:bg-[#ebd3c5]/50 in-data-[style=clay]:shadow-inner in-data-[style=parchment]:bg-black/5 sm:overflow-visible dark:bg-[#1C1C1E] in-data-[style=clay]:dark:bg-black/20 in-data-[style=parchment]:dark:bg-white/5',
           containerClassName
         )}
       >
@@ -132,7 +132,7 @@ export const AceternityTabs = ({
                     mass: 0.8,
                   }}
                   className={cn(
-                    'absolute inset-0 z-0 rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_rgba(0,0,0,0.06)] ring-1 ring-black/5 dark:bg-[#636366] dark:ring-white/10 dark:shadow-[0_1px_3px_rgba(0,0,0,0.5)]',
+                    'absolute inset-0 z-0 rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_rgba(0,0,0,0.06)] ring-1 ring-black/5 dark:bg-[#636366] dark:shadow-[0_1px_3px_rgba(0,0,0,0.5)] dark:ring-white/10',
                     'in-data-[style=parchment]:bg-primary-500 in-data-[style=parchment]:dark:bg-primary-600',
                     'in-data-[style=clay]:bg-primary-500 in-data-[style=clay]:dark:bg-primary-600 in-data-[style=clay]:shadow-[4px_4px_8px_rgba(0,0,0,0.1),-4px_-4px_8px_rgba(255,255,255,0.8)] in-data-[style=clay]:dark:shadow-[4px_4px_8px_rgba(0,0,0,0.5),-3px_-3px_6px_rgba(255,255,255,0.02)]',
                     activeTabClassName
@@ -143,9 +143,9 @@ export const AceternityTabs = ({
 
               <span
                 className={cn(
-                  'relative z-10 flex items-center gap-2 text-sm font-medium transition-colors duration-150 px-2 leading-none',
+                  'relative z-10 flex items-center gap-2 px-2 text-sm leading-none font-medium transition-colors duration-150',
                   isActive
-                    ? 'text-neutral-900 dark:text-white in-data-[style=parchment]:text-white in-data-[style=parchment]:dark:text-white in-data-[style=clay]:text-white in-data-[style=clay]:dark:text-white'
+                    ? 'text-neutral-900 in-data-[style=clay]:text-white in-data-[style=parchment]:text-white dark:text-white in-data-[style=clay]:dark:text-white in-data-[style=parchment]:dark:text-white'
                     : 'text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200'
                 )}
               >
@@ -187,7 +187,7 @@ export const FadeInDiv = ({
   tabsId: string;
 }) => {
   return (
-    <div className={cn('relative h-full w-full', className)}>
+    <div className={cn('relative min-h-[640px] w-full', className)}>
       {tabs.map((tab) => {
         const isActive = tab.value === active.value;
         return (
@@ -204,8 +204,8 @@ export const FadeInDiv = ({
             style={
               hovering
                 ? {
-                  // Optional: Add hover 3D lift effect logic here if desired
-                }
+                    // Optional: Add hover 3D lift effect logic here if desired
+                  }
                 : {}
             }
           >

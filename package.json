@@ -169,6 +169,7 @@
     "@types/react-dom": "^19",
     "@types/react-grid-layout": "^2.1.0",
     "@types/react-signature-canvas": "^1.0.7",
+    "@types/testing-library__jest-dom": "^6.0.0",
     "@types/wechat-miniprogram": "^3.4.9",
     "@vitejs/plugin-react": "^5.1.2",
     "@vitest/coverage-v8": "4.0.16",
@@ -190,6 +191,7 @@
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "uuid": "^13.0.0",
+    "vite-tsconfig-paths": "^6.1.1",
     "vitest": "^4.0.16",
     "xlsx": "^0.18.5"
   },

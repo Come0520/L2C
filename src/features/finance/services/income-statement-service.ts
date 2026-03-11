@@ -1,6 +1,7 @@
 import { db } from '@/shared/api/db';
 import { journalEntries, journalEntryLines, chartOfAccounts } from '@/shared/api/schema';
 import { eq, inArray, and, gte, lte } from 'drizzle-orm';
+import { unstable_cache } from 'next/cache';
 
 export interface IncomeStatementData {
   periodStart: string;
@@ -20,14 +21,11 @@ export interface IncomeStatementData {
  * 获取指定期间范围的利润表数据
  * 利润表是“期间数”，计算指定日期区间内的发生额
  */
-export async function getIncomeStatementData(
+async function getIncomeStatementDataInternal(
   tenantId: string,
-  startDate: Date,
-  endDate: Date
+  formattedStart: string,
+  formattedEnd: string
 ): Promise<IncomeStatementData> {
-  const formattedStart = startDate.toISOString().split('T')[0];
-  const formattedEnd = endDate.toISOString().split('T')[0];
-
   const result: IncomeStatementData = {
     periodStart: formattedStart,
     periodEnd: formattedEnd,
@@ -124,4 +122,27 @@ export async function getIncomeStatementData(
   result.netIncome = Number(result.netIncome.toFixed(2));
 
   return result;
+}
+
+/**
+ * 获取指定期间范围的利润表数据
+ * 利润表是“期间数”，计算指定日期区间内的发生额
+ */
+export async function getIncomeStatementData(
+  tenantId: string,
+  startDate: Date,
+  endDate: Date
+): Promise<IncomeStatementData> {
+  const formattedStart = startDate.toISOString().split('T')[0];
+  const formattedEnd = endDate.toISOString().split('T')[0];
+
+  const getCached = unstable_cache(
+    async (tId: string, fStart: string, fEnd: string) => {
+      return getIncomeStatementDataInternal(tId, fStart, fEnd);
+    },
+    ['income-statement-data'],
+    { revalidate: 300 }
+  );
+
+  return getCached(tenantId, formattedStart, formattedEnd);
 }

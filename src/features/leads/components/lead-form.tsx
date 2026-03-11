@@ -68,7 +68,7 @@ export function LeadForm({ initialData, isEdit = false, onSuccess, tenantId }: L
     },
   });
 
-  const onSubmit = async (values: LeadFormValues) => {
+  const onSubmit = async (values: LeadFormValues & { forceCreate?: boolean }) => {
     const handleServerError = (errorMsg: string, fallbackMsg: string) => {
       try {
         const parsed = JSON.parse(errorMsg);
@@ -135,10 +135,16 @@ export function LeadForm({ initialData, isEdit = false, onSuccess, tenantId }: L
     }
   };
 
-  const handleStrategySelect = (strategy: 'LINK' | 'OVERWRITE' | 'CANCEL') => {
+  const handleStrategySelect = async (strategy: 'LINK' | 'OVERWRITE' | 'CANCEL') => {
     setShowDuplicateDialog(false);
     if (strategy === 'LINK' && conflictData?.existingEntity?.id) {
       router.push(`/leads/${conflictData.existingEntity.id}`);
+    } else if (strategy === 'OVERWRITE') {
+      // 在原有的表单值之上附带 forceCreate 并重新提交
+      const values = form.getValues();
+      await onSubmit({ ...values, forceCreate: true } as LeadFormValues & {
+        forceCreate?: boolean;
+      });
     }
   };
 

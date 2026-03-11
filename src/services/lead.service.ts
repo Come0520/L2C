@@ -38,7 +38,7 @@ export class LeadService {
       | 'createdBy'
       | 'assignedAt'
       | 'status'
-    >,
+    > & { forceCreate?: boolean },
     tenantId: string,
     userId: string
   ): Promise<{
@@ -56,8 +56,8 @@ export class LeadService {
         'LEAD_DUPLICATE_STRATEGY',
         tenantId
       )) as string;
-      // 消重策略：NONE=不校验, AUTO_LINK=自动关联(复用为查重), REJECT=拒绝
-      if (deduplicationSetting !== 'NONE') {
+      // 消重策略：NONE=不校验, AUTO_LINK=自动关联(复用为查重), REJECT=拒绝，若强制创建则忽略查重
+      if (!data.forceCreate && deduplicationSetting !== 'NONE') {
         const activeLead = await tx.query.leads.findFirst({
           where: and(
             eq(leads.customerPhone, data.customerPhone),

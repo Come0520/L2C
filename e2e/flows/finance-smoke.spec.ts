@@ -28,6 +28,8 @@ test.describe('财务模块 E2E 冒烟测试', () => {
         for (const sheet of sheets) {
             const success = await safeGoto(page, sheet.path);
             if (success) {
+                // 等待页面骨架屏消失
+                await page.waitForFunction(() => !document.querySelector('[data-loading="true"]'), { timeout: 30000 }).catch(() => {});
                 await expect(page.locator('body')).toContainText(sheet.expected, { timeout: 15000 });
                 console.log(`✅ 报表 [${sheet.path}] 加载成功`);
             }

@@ -33,8 +33,24 @@ test.describe('Lead Duplicate Check', () => {
         await fillLeadForm(page, { name: name + '_Dupe', phone }); // 相同手机号
         await page.click('button:has-text("创建线索")');
 
-        // 验证重复提示
-        await page.waitForTimeout(3000);
+        // 验证重复提示出现
+        const alertLocator = page.locator('[role="alertdialog"], .alert-dialog, div:has-text("相似"), div:has-text("重复")').first();
+        await expect(alertLocator).toBeVisible({ timeout: 10000 });
+        
+        // 尝试操作 "取消" 继续或者强行建单，根据系统实际情况点击
+        const continueBtn = page.locator('button:has-text("继续录入"), button:has-text("仍然创建")').first();
+        if (await continueBtn.isVisible()) {
+            await continueBtn.click();
+            // 等待弹窗消失
+            await expect(alertLocator).toBeHidden({ timeout: 5000 });
+        } else {
+            const cancelBtn = page.locator('button:has-text("取消"), button:has-text("关闭")').first();
+            if (await cancelBtn.isVisible()) {
+                await cancelBtn.click();
+            }
+        }
+        
+        await page.waitForTimeout(1000);
         console.log('✅ 重复线索检查测试完成');
     });
 

@@ -8,7 +8,7 @@
  * 4. 多责任方分摊
  */
 import { test, expect } from '@playwright/test';
-import { skipOnDataLoadError, getValidOrderId } from '../helpers/test-utils';
+import { skipOnDataLoadError, getValidOrderId, waitForDetailLoad } from '../helpers/test-utils';
 
 test.describe('售后定责流程 (After-Sales Liability)', () => {
     let createdTicketId: string | null = null;
@@ -74,6 +74,7 @@ test.describe('售后定责流程 (After-Sales Liability)', () => {
         if (detailOk) {
             createdTicketId = page.url().split('/').pop() || null;
             console.log(`✅ 创建工单成功: ${createdTicketId}`);
+            await waitForDetailLoad(page);
         } else {
             console.log('⚠️ 工单创建后未自动跳转详情页');
         }
@@ -99,6 +100,7 @@ test.describe('售后定责流程 (After-Sales Liability)', () => {
         await firstTicketLink.click();
         // graceful check：点击后 URL 应变化
         await page.waitForURL(/\/after-sales\/.+/, { timeout: 15000 }).catch(() => { });
+        await waitForDetailLoad(page);
 
         // 查找 "新建定责单" 按钮
         const liabilityBtn = page.getByRole('button', { name: /新建定责单/ });
@@ -176,6 +178,7 @@ test.describe('售后定责流程 (After-Sales Liability)', () => {
             return;
         }
         await firstTicketLink.click();
+        await waitForDetailLoad(page);
 
         // 查找定责单列表区域
         const liabilitySection = page.locator('text=定责单').first();
@@ -203,6 +206,7 @@ test.describe('售后定责流程 (After-Sales Liability)', () => {
         }
         await firstTicketLink.click();
         await page.waitForLoadState('domcontentloaded', { timeout: 15000 }).catch(() => { });
+        await waitForDetailLoad(page);
         await page.waitForTimeout(1500); // 等待定责单区块渲染
 
         // 查找 "确认" 按钮（定责单列表中的确认操作）
@@ -234,6 +238,7 @@ test.describe('售后定责流程 (After-Sales Liability)', () => {
             return;
         }
         await firstTicketLink.click();
+        await waitForDetailLoad(page);
 
         // 查找扣款金额字段
         const deductionField = page.locator('text=扣款金额').first();
@@ -262,6 +267,7 @@ test.describe('定责异议与仲裁 (Liability Dispute)', () => {
             return;
         }
         await firstTicketLink.click();
+        await waitForDetailLoad(page);
 
         // 查找异议按钮
         const disputeBtn = page.getByRole('button', { name: /异议|申诉/ });
@@ -320,6 +326,7 @@ test.describe('定责异议与仲裁 (Liability Dispute)', () => {
             }
             await firstLink.click();
             await page.waitForLoadState('domcontentloaded');
+            await waitForDetailLoad(page);
             await page.waitForTimeout(3000);
 
             if (ticketData && Array.isArray((ticketData as Record<string, unknown>).liabilities)) {
@@ -373,6 +380,7 @@ test.describe('定责异议与仲裁 (Liability Dispute)', () => {
             }
             await completedLink.click();
             await page.waitForLoadState('domcontentloaded');
+            await waitForDetailLoad(page);
 
             // 查找 AP 付款单关联信息
             const apSection = page.locator('text=/付款单|应付|AP/').first();
@@ -411,6 +419,7 @@ test.describe('定责异议与仲裁 (Liability Dispute)', () => {
 
             await disputedRow.locator('a').first().click();
             await page.waitForLoadState('domcontentloaded');
+            await waitForDetailLoad(page);
 
             // 验证可以重新定责
             const reAssignBtn = page.getByRole('button', { name: /重新定责|再次定责|新建定责单/ });

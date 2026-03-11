@@ -19,14 +19,17 @@ git add -A && git commit -m "deploy: <描述>" && git push origin main && git pu
 
 ### 2. 本地构建生产环境产物
 
-```bash
-# 强制清除旧产物，确保本次构建是全量的
-Remove-Item -Recurse -Force .next -ErrorAction SilentlyContinue
+```powershell
+# Windows 专用：先用 cmd /c rmdir 强制释放文件句柄（避免 EBUSY 错误），再做兜底删除
+# 注意：直接用 Remove-Item 在 .next/standalone 被占用时会返回 EBUSY，导致旧 chunk 残留
+cmd /c "if exist .next rmdir /s /q .next" 2>$null
+if (Test-Path .next) { Remove-Item -Recurse -Force .next -ErrorAction SilentlyContinue }
 pnpm run build
 ```
 
 > 这一步会在 `.next/` 目录下生成 standalone 模式的产物。
 > **构建必须无 Error**（Warning 可接受）——如有 Error，禁止继续后续步骤。
+> ⚠️ **EBUSY 说明**：如果 `rmdir` 也失败（目录被其他进程占用），请先关闭占用 `.next` 的终端或进程（如本地 `node server.js`），再重试。
 
 ### 2.5. ⚠️ 本地生产冒烟测试（新增强制 Gate）
 
@@ -97,11 +100,16 @@ node -e "
 
 > 🔴 **打包前必须验证产物版本**（铁律，不可跳过）：
 
-```bash
+```powershell
+# 先确认产物文件存在（如果 build 中途失败会导致文件缺失）
+if (-not (Test-Path ".next/standalone/package.json")) {
+  Write-Error "❌ .next/standalone/package.json 不存在，构建可能未成功完成，禁止继续！"
+  exit 1
+}
 node -e "const p=require('.next/standalone/package.json');const e=require('./package.json');console.log('构建产物版本:',p.version,'预期版本:',e.version);if(p.version!==e.version){console.error('❌ VERSION MISMATCH! 产物过期，必须重新 build！');process.exit(1)}else{console.log('✅ 版本一致')}"
 ```
 
-> 如果不匹配，说明 `.next` 产物是版本递增之前的旧构建。必须 `Remove-Item -Recurse -Force .next && pnpm run build` 重新构建。
+> 如果不匹配，说明 `.next` 产物是版本递增之前的旧构建。必须重新清除并构建（见 Step 2）。
 
 // turbo
 

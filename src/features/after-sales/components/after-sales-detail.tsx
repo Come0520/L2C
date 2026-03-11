@@ -28,12 +28,14 @@ const SLAStatus = dynamic(() => import('./sla-status').then((mod) => mod.SLAStat
 
 interface AfterSalesDetailProps {
   ticketId: string;
+  initialData?: Awaited<ReturnType<typeof getTicketDetail>>;
 }
 
-export function AfterSalesDetail({ ticketId }: AfterSalesDetailProps) {
+export function AfterSalesDetail({ ticketId, initialData }: AfterSalesDetailProps) {
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['after-sales-detail', ticketId],
     queryFn: () => getTicketDetail(ticketId),
+    initialData,
   });
 
   if (isLoading) {

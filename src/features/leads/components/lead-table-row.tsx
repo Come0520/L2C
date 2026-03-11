@@ -101,6 +101,8 @@ export interface LeadTableRowProps {
   handleAction: (action: string, leadId: string) => void;
   style?: React.CSSProperties;
   className?: string;
+  isSelected?: boolean;
+  onToggleSelect?: (leadId: string, checked: boolean) => void;
 }
 
 /**
@@ -112,6 +114,8 @@ export const LeadTableRow = React.memo(function LeadTableRow({
   handleAction,
   style,
   className,
+  isSelected = false,
+  onToggleSelect,
 }: LeadTableRowProps) {
   const statusConfig = STATUS_MAP[lead.status || ''] || {
     label: lead.status || '未知',
@@ -126,9 +130,19 @@ export const LeadTableRow = React.memo(function LeadTableRow({
       style={style}
       className={cn(
         'hover:bg-muted/50 group transition-all duration-200 active:scale-[0.99]',
-        className
+        className,
+        isSelected && 'bg-primary/5'
       )}
     >
+      <TableCell className="flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+        <input
+          type="checkbox"
+          className="h-4 w-4 rounded border-gray-300"
+          checked={isSelected}
+          onChange={(e) => onToggleSelect?.(lead.id, e.target.checked)}
+          aria-label={`选择该线索 ${lead.leadNo}`}
+        />
+      </TableCell>
       <TableCell className="font-medium">
         <Link href={`/leads/${lead.id}`} className="text-primary hover:underline">
           {lead.leadNo}

@@ -2,7 +2,7 @@
 
 import { createSafeAction } from '@/shared/lib/server-action';
 import { z } from 'zod';
-import { revalidatePath, updateTag } from 'next/cache';
+import { revalidatePath, updateTag, unstable_cache } from 'next/cache';
 import { cache } from 'react';
 import { db } from '@/shared/api/db';
 import { eq, desc, and, ilike, sql } from 'drizzle-orm';
@@ -98,10 +98,10 @@ export const getAfterSalesTickets = cache(
       ...ticket,
       customer: ticket.customer
         ? {
-          ...ticket.customer,
-          phone: maskPhoneNumber(ticket.customer.phone),
-          phoneSecondary: maskPhoneNumber(ticket.customer.phoneSecondary),
-        }
+            ...ticket.customer,
+            phone: maskPhoneNumber(ticket.customer.phone),
+            phoneSecondary: maskPhoneNumber(ticket.customer.phoneSecondary),
+          }
         : null,
     }));
 
@@ -196,79 +196,102 @@ export async function createAfterSalesTicket(data: z.infer<typeof createTicketSc
 }
 
 /**
+ * 获取工单详情 (内部逻辑)
+ */
+async function getAfterSalesTicketDetailInternal(id: string, tenantId: string) {
+  if (tenantId === '__PLATFORM__') return { success: false, message: '平台管理员不能查看工单详情' };
+
+  // 1. 获取核心单据及直接的一对一关联数据
+  const ticketPromise = db.query.afterSalesTickets.findFirst({
+    where: and(
+      eq(afterSalesTickets.id, id),
+      eq(afterSalesTickets.tenantId, tenantId) // 租户隔离
+    ),
+    with: {
+      customer: true,
+      order: true,
+      assignee: true,
+      creator: true,
+      installTask: true,
+    },
+  });
+
+  // 2. 独立获取复杂的关联集合数据 (与核心查询并行)
+  const noticesPromise = db.query.liabilityNotices.findMany({
+    where: and(eq(liabilityNotices.afterSalesId, id), eq(liabilityNotices.tenantId, tenantId)),
+    with: {
+      confirmer: true,
+      sourcePurchaseOrder: true,
+      sourceInstallTask: true,
+    },
+    orderBy: (notices, { desc }) => [desc(notices.createdAt)],
+  });
+
+  const [ticket, notices] = await Promise.all([ticketPromise, noticesPromise]);
+
+  if (!ticket) return { success: false, message: '工单不存在' };
+
+  // 3. 填装分离的嵌套数据 (Notices)
+  const assembledTicket = {
+    ...ticket,
+    notices,
+  } as Record<string, unknown>;
+
+  // 4. 按需并行获取 Order 下面的其它一对多集合（如果原 order 存在）
+  if (ticket.order) {
+    const [installTasks, purchaseOrders] = await Promise.all([
+      db.query.installTasks.findMany({
+        where: eq(sql`"orderId"`, ticket.order.id),
+      }),
+      db.query.purchaseOrders.findMany({
+        where: eq(sql`"orderId"`, ticket.order.id),
+      }),
+    ]);
+    assembledTicket.order = {
+      ...ticket.order,
+      installTasks,
+      purchaseOrders,
+    };
+  }
+
+  // P1 FIX (AS-15): 详情页手机号脱敏
+  if (assembledTicket.customer) {
+    const cust = assembledTicket.customer as Record<string, unknown>;
+    assembledTicket.customer = {
+      ...cust,
+      phone: maskPhoneNumber(cust.phone as string),
+      phoneSecondary: maskPhoneNumber(cust.phoneSecondary as string),
+    };
+  }
+
+  return { success: true, data: assembledTicket };
+}
+
+/**
+ * 获取带缓存的工单详情
+ */
+export async function getAfterSalesTicketDetailCached(id: string, tenantId: string) {
+  const getCached = unstable_cache(
+    async (ticketId: string, tId: string) => {
+      return getAfterSalesTicketDetailInternal(ticketId, tId);
+    },
+    [`after-sales-detail-${id}`],
+    {
+      tags: [`after-sales-ticket-${id}`, 'after-sales-tickets'],
+      revalidate: 30,
+    }
+  );
+  return getCached(id, tenantId);
+}
+
+/**
  * 获取工单详情 (Server Action)
  * 包含关联的客户、订单、责任单及处理记录。
  */
 const getAfterSalesTicketDetailAction = createSafeAction(
   z.object({ id: z.string().uuid() }),
   async ({ id }, { session }) => {
-    const tenantId = session.user.tenantId;
-
-    if (tenantId === '__PLATFORM__') return { success: false, message: '平台管理员不能查看工单详情' };
-
-    // 1. 获取核心单据及直接的一对一关联数据
-    const ticketPromise = db.query.afterSalesTickets.findFirst({
-      where: and(
-        eq(afterSalesTickets.id, id),
-        eq(afterSalesTickets.tenantId, tenantId) // 租户隔离
-      ),
-      with: {
-        customer: true,
-        order: true,
-        assignee: true,
-        creator: true,
-        installTask: true,
-      },
-    });
-
-    // 2. 独立获取复杂的关联集合数据 (与核心查询并行)
-    const noticesPromise = db.query.liabilityNotices.findMany({
-      where: and(eq(liabilityNotices.afterSalesId, id), eq(liabilityNotices.tenantId, tenantId)),
-      with: {
-        confirmer: true,
-        sourcePurchaseOrder: true,
-        sourceInstallTask: true,
-      },
-      orderBy: (notices, { desc }) => [desc(notices.createdAt)],
-    });
-
-    const [ticket, notices] = await Promise.all([ticketPromise, noticesPromise]);
-
-    if (!ticket) return { success: false, message: '工单不存在' };
-
-    // 3. 填装分离的嵌套数据 (Notices)
-    const assembledTicket: any = {
-      ...ticket,
-      notices,
-    };
-
-    // 4. 按需并行获取 Order 下面的其它一对多集合（如果原 order 存在）
-    if (ticket.order) {
-      const [installTasks, purchaseOrders] = await Promise.all([
-        db.query.installTasks.findMany({
-          where: eq(sql`"orderId"`, ticket.order.id),
-        }),
-        db.query.purchaseOrders.findMany({
-          where: eq(sql`"orderId"`, ticket.order.id),
-        }),
-      ]);
-      assembledTicket.order = {
-        ...ticket.order,
-        installTasks,
-        purchaseOrders,
-      };
-    }
-
-    // P1 FIX (AS-15): 详情页手机号脱敏
-    if (assembledTicket.customer) {
-      assembledTicket.customer = {
-        ...assembledTicket.customer,
-        phone: maskPhoneNumber(assembledTicket.customer.phone),
-        phoneSecondary: maskPhoneNumber(assembledTicket.customer.phoneSecondary),
-      };
-    }
-
-    return { success: true, data: assembledTicket };
+    return getAfterSalesTicketDetailCached(id, session.user.tenantId);
   }
 );
 
@@ -401,7 +424,8 @@ export const getTicketLogs = cache(async (ticketId: string) => {
 export async function closeResolutionCostClosure(ticketId: string, expectedVersion?: number) {
   const session = await auth();
   if (!session?.user?.id || !session?.user?.tenantId) return { success: false, error: '未授权' };
-  if (session.user.tenantId === '__PLATFORM__') return { success: false, error: '平台管理员不能操作工单' };
+  if (session.user.tenantId === '__PLATFORM__')
+    return { success: false, error: '平台管理员不能操作工单' };
 
   try {
     const ticket = await db.query.afterSalesTickets.findFirst({
@@ -472,7 +496,8 @@ export async function closeResolutionCostClosure(ticketId: string, expectedVersi
 export const checkTicketFinancialClosure = cache(async (ticketId: string) => {
   const session = await auth();
   if (!session?.user?.tenantId) return { success: false, error: '未授权' };
-  if (session.user.tenantId === '__PLATFORM__') return { success: true, isClosed: true, message: '平台管理员无需校验' };
+  if (session.user.tenantId === '__PLATFORM__')
+    return { success: true, isClosed: true, message: '平台管理员无需校验' };
 
   const notices = await db.query.liabilityNotices.findMany({
     where: and(
@@ -508,7 +533,8 @@ export const checkTicketFinancialClosure = cache(async (ticketId: string) => {
 export async function createExchangeOrder(ticketId: string) {
   const session = await auth();
   if (!session?.user?.tenantId) return { success: false, error: '未授权' };
-  if (session.user.tenantId === '__PLATFORM__') return { success: false, error: '平台管理员不能操作工单' };
+  if (session.user.tenantId === '__PLATFORM__')
+    return { success: false, error: '平台管理员不能操作工单' };
 
   const ticket = await db.query.afterSalesTickets.findFirst({
     where: and(

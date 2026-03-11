@@ -47,10 +47,12 @@ export function SmartDuplicateCheck({
 
           <AlertDialogAction onClick={() => onStrategySelect('LINK')}>查看详情</AlertDialogAction>
 
-          {/* Only allow overwrite if user has permission (handled by parent logic preferably) */}
-          {/* <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => onStrategySelect('OVERWRITE')}>
-                        Force Overwrite
-                     </AlertDialogAction> */}
+          <AlertDialogAction
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            onClick={() => onStrategySelect('OVERWRITE')}
+          >
+            继续录入
+          </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

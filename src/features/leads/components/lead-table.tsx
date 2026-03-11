@@ -11,12 +11,23 @@ import { followUpTypeEnum } from '../schemas';
 import { AssignLeadDialog } from './dialogs/assign-lead-dialog';
 import { FollowUpDialog } from './dialogs/followup-dialog';
 import { VoidLeadDialog } from './void-lead-dialog';
-import { claimFromPool } from '../actions/mutations';
+import { claimFromPool, assignLead, voidLead, releaseToPool } from '../actions/mutations';
+import { getSalesUsers } from '../actions/queries';
 import { restoreLeadAction } from '../actions/restore';
-import { useTransition, useState, useRef } from 'react';
+import { useTransition, useState, useRef, useEffect } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { toast } from 'sonner';
 import { EmptyUI } from '@/shared/ui/empty-ui';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
+import { Textarea } from '@/shared/ui/textarea';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from '@/shared/ui/dialog';
 import { cn } from '@/shared/lib/utils';
 
 import { LeadData } from './lead-table-constants';
@@ -72,10 +83,96 @@ export const LeadTable = React.memo(function LeadTable({
   const [selectedLeadCustomerName, setSelectedLeadCustomerName] = useState<string>('');
   const [isPending, startTransition] = useTransition();
 
+  const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
+
+  // Bulk Actions State
+  const [bulkAssignOpen, setBulkAssignOpen] = useState(false);
+  const [bulkReturnOpen, setBulkReturnOpen] = useState(false);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkSalesId, setBulkSalesId] = useState('');
+  const [bulkReturnReason, setBulkReturnReason] = useState('');
+  const [bulkSalesList, setBulkSalesList] = useState<{ id: string; name: string }[]>([]);
+  const [loadingSales, setLoadingSales] = useState(false);
+
+  useEffect(() => {
+    if (bulkAssignOpen && bulkSalesList.length === 0) {
+      setLoadingSales(true);
+      getSalesUsers().then((users) => {
+        setBulkSalesList(users);
+        setLoadingSales(false);
+      });
+    }
+  }, [bulkAssignOpen, bulkSalesList.length]);
+
+  const handleBulkAssign = () => {
+    if (!bulkSalesId) return toast.warning('请选择销售');
+    startTransition(async () => {
+      let success = 0;
+      for (const id of selectedLeadIds) {
+        const res = await assignLead({ id, salesId: bulkSalesId });
+        if (res.success) success++;
+      }
+      toast.success(`成功分配 ${success} 条线索`);
+      setBulkAssignOpen(false);
+      setSelectedLeadIds([]);
+      onReload?.();
+    });
+  };
+
+  const handleBulkReturn = () => {
+    startTransition(async () => {
+      let success = 0;
+      for (const id of selectedLeadIds) {
+        const lead = data.find((l) => l.id === id);
+        const res = await releaseToPool({ id, version: lead?.version });
+        if (res.success) success++;
+      }
+      toast.success(`成功退回 ${success} 条线索`);
+      setBulkReturnOpen(false);
+      setSelectedLeadIds([]);
+      onReload?.();
+    });
+  };
+
+  const handleBulkDelete = () => {
+    startTransition(async () => {
+      let success = 0;
+      for (const id of selectedLeadIds) {
+        const lead = data.find((l) => l.id === id);
+        const res = await voidLead({ id, reason: '批量删除', version: lead?.version });
+        if (res.success) success++;
+      }
+      toast.success(`成功删除 ${success} 条线索`);
+      setBulkDeleteOpen(false);
+      setSelectedLeadIds([]);
+      onReload?.();
+    });
+  };
+
   // 响应式布局列定义
   // Tailwind breakpoint: sm(640), md(768), lg(1024), xl(1280)
   const gridColsBasis =
-    'grid-cols-[100px_1fr_80px_50px] sm:grid-cols-[100px_1fr_80px_80px_50px] md:grid-cols-[130px_150px_60px_80px_80px_100px_50px] lg:grid-cols-[130px_150px_60px_80px_160px_80px_100px_50px] xl:grid-cols-[130px_150px_60px_80px_160px_100px_80px_100px_50px]';
+    'grid-cols-[40px_100px_1fr_80px_50px] sm:grid-cols-[40px_100px_1fr_80px_80px_50px] md:grid-cols-[40px_130px_150px_60px_80px_80px_100px_50px] lg:grid-cols-[40px_130px_150px_60px_80px_160px_80px_100px_50px] xl:grid-cols-[40px_130px_150px_60px_80px_160px_100px_80px_100px_50px]';
+
+  /**
+   * 处理单行/全选复选框
+   */
+  const handleSelectAll = useCallback(
+    (checked: boolean) => {
+      if (checked) {
+        setSelectedLeadIds(data.map((lead) => lead.id));
+      } else {
+        setSelectedLeadIds([]);
+      }
+    },
+    [data]
+  );
+
+  const handleToggleSelect = useCallback((leadId: string, checked: boolean) => {
+    setSelectedLeadIds((prev) =>
+      checked ? [...prev, leadId] : prev.filter((id) => id !== leadId)
+    );
+  }, []);
 
   /**
    * 处理线索相关的业务动作
@@ -179,7 +276,7 @@ export const LeadTable = React.memo(function LeadTable({
 
       <div
         ref={parentRef}
-        className="bg-card overflow-x-hidden overflow-y-auto rounded-md border hidden md:block"
+        className="bg-card hidden overflow-x-hidden overflow-y-auto rounded-md border md:block"
         style={{ height: '600px', position: 'relative' }}
       >
         <Table className="grid min-w-full">
@@ -190,6 +287,21 @@ export const LeadTable = React.memo(function LeadTable({
             <TableRow
               className={cn('grid auto-cols-min items-center hover:bg-transparent', gridColsBasis)}
             >
+              <TableHead className="flex items-center justify-center">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-gray-300"
+                  checked={data.length > 0 && selectedLeadIds.length === data.length}
+                  ref={(input) => {
+                    if (input) {
+                      input.indeterminate =
+                        selectedLeadIds.length > 0 && selectedLeadIds.length < data.length;
+                    }
+                  }}
+                  onChange={(e) => handleSelectAll(e.target.checked)}
+                  aria-label="全选"
+                />
+              </TableHead>
               <TableHead className="flex items-center text-[11px] font-bold tracking-wider uppercase sm:text-xs">
                 线索编号
               </TableHead>
@@ -247,12 +359,15 @@ export const LeadTable = React.memo(function LeadTable({
             ) : (
               rowVirtualizer.getVirtualItems().map((virtualRow) => {
                 const lead = data[virtualRow.index];
+                const isSelected = selectedLeadIds.includes(lead.id);
                 return (
                   <LeadTableRow
                     key={virtualRow.key}
                     lead={lead}
                     isManager={isManager}
                     handleAction={handleAction}
+                    isSelected={isSelected}
+                    onToggleSelect={handleToggleSelect}
                     className={gridColsBasis}
                     style={{
                       position: 'absolute',
@@ -272,7 +387,10 @@ export const LeadTable = React.memo(function LeadTable({
       </div>
 
       {/* 移动端卡片流视图 (Mobile View) */}
-      <div className="block md:hidden overflow-y-auto space-y-3 pb-2" style={{ maxHeight: '600px' }}>
+      <div
+        className="block space-y-3 overflow-y-auto pb-2 md:hidden"
+        style={{ maxHeight: '600px' }}
+      >
         {data.length === 0 ? (
           <div className="flex h-[300px] w-full items-center justify-center">
             <div className="animate-in fade-in slide-in-from-bottom-4 flex flex-col items-center duration-500">
@@ -356,6 +474,111 @@ export const LeadTable = React.memo(function LeadTable({
           />
         </>
       )}
+
+      {/* 批量操作浮动栏 */}
+      {selectedLeadIds.length > 0 && (
+        <div className="bg-background/95 animate-in slide-in-from-bottom-5 fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-4 rounded-full border px-6 py-3 shadow-xl">
+          <span className="text-sm font-medium">已选择 {selectedLeadIds.length} 项</span>
+          <div className="flex items-center gap-2 border-l pl-4">
+            <Button size="sm" variant="outline" onClick={() => setBulkAssignOpen(true)}>
+              批量分配
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setBulkReturnOpen(true)}>
+              批量退回
+            </Button>
+            <Button size="sm" variant="destructive" onClick={() => setBulkDeleteOpen(true)}>
+              批量删除
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* 批量操作对话框 */}
+      <Dialog open={bulkAssignOpen} onOpenChange={setBulkAssignOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>批量分配线索</DialogTitle>
+            <DialogDescription>
+              将选中的 {selectedLeadIds.length} 条线索分配给指定的销售人员
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Select
+              value={bulkSalesId}
+              onValueChange={setBulkSalesId}
+              disabled={loadingSales || isPending}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={loadingSales ? '加载中...' : '选择销售...'} />
+              </SelectTrigger>
+              <SelectContent>
+                {bulkSalesList.map((u) => (
+                  <SelectItem key={u.id} value={u.id}>
+                    {u.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkAssignOpen(false)} disabled={isPending}>
+              取消
+            </Button>
+            <Button onClick={handleBulkAssign} disabled={isPending || loadingSales || !bulkSalesId}>
+              {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              确认分配
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={bulkReturnOpen} onOpenChange={setBulkReturnOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>批量退回线索</DialogTitle>
+            <DialogDescription>
+              将选中的 {selectedLeadIds.length} 条线索释放到公海池
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Textarea
+              placeholder="测试退回原因（选填）"
+              value={bulkReturnReason}
+              onChange={(e) => setBulkReturnReason(e.target.value)}
+              disabled={isPending}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkReturnOpen(false)} disabled={isPending}>
+              取消
+            </Button>
+            <Button onClick={handleBulkReturn} disabled={isPending}>
+              {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              确定
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>批量删除线索</DialogTitle>
+            <DialogDescription>
+              确认删除选定的 {selectedLeadIds.length} 条线索吗？此操作不可逆。
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setBulkDeleteOpen(false)} disabled={isPending}>
+              取消
+            </Button>
+            <Button variant="destructive" onClick={handleBulkDelete} disabled={isPending}>
+              {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              确认删除
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 });

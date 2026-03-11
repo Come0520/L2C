@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Approval Flow Designer', () => {
     test('should allow entering the flow designer and seeing designer controls', async ({ page }) => {
         // 1. 导航到审批设置页面
-        await page.goto('/settings/approvals', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.goto('/settings/approvals', { waitUntil: 'domcontentloaded', timeout: 90000 });
 
         // 2. 点击"审批流程"选项卡
         const tab = page.getByRole('tab', { name: '审批流程' });

@@ -145,27 +145,50 @@ export async function createLead(
         }
     }
 
-    // 等待页面刷新
+    // 等待对话框关闭后，页面刷新完成
     await page.waitForLoadState('domcontentloaded');
 
-    // 如果提供了具体名称，尝试精确定位包含该名称的行（避免由于刷新延迟导致抓取到旧数据）
-    let targetRow = page.locator('table tbody tr').first();
+    // 使用搜索框定位刚创建的线索，避免列表数据量大时新线索不在第一页
+    let leadId = '';
     if (name) {
         try {
-            // 等待包含新建名称的元素出现在视图中
-            await page.getByText(name).first().waitFor({ state: 'visible', timeout: 5000 });
-            targetRow = page.locator('table tbody tr', { hasText: name }).first();
+            // 在搜索框输入名称过滤
+            const searchInput = page.locator('input[placeholder*="搜索"]').first();
+            if (await searchInput.isVisible({ timeout: 3000 })) {
+                await searchInput.fill(name);
+                await page.waitForTimeout(800); // 等待防抖搜索触发
+
+                // 等待过滤后的目标行出现
+                const targetRow = page.locator('table tbody tr', { hasText: name }).first();
+                await targetRow.waitFor({ state: 'visible', timeout: 10000 });
+                const leadLink = await targetRow.locator('a').first().getAttribute('href');
+                leadId = leadLink?.split('/leads/')[1]?.split('?')[0] || '';
+
+                // 清空搜索框，恢复列表原貌
+                await searchInput.clear();
+                await page.waitForTimeout(300);
+            } else {
+                // 降级：搜索框不存在，等待包含名称的文本出现后取第一行
+                console.log('ℹ️ 未找到搜索框，尝试滚动定位新行...');
+                await page.getByText(name).first().waitFor({ state: 'visible', timeout: 8000 });
+                const targetRow = page.locator('table tbody tr', { hasText: name }).first();
+                const leadLink = await targetRow.locator('a').first().getAttribute('href');
+                leadId = leadLink?.split('/leads/')[1]?.split('?')[0] || '';
+            }
         } catch (e) {
-            console.log(`ℹ️ 在 5s 内未找到包含新名称 ${name} 的行，回退到第一行...`);
-            targetRow = page.locator('table tbody tr').first();
+            console.log(`⚠️ 搜索定位线索失败，回退到第一行: ${e}`);
+            const fallbackRow = page.locator('table tbody tr').first();
+            await fallbackRow.waitFor({ state: 'visible', timeout: 10000 });
+            const leadLink = await fallbackRow.locator('a').first().getAttribute('href');
+            leadId = leadLink?.split('/leads/')[1]?.split('?')[0] || '';
         }
     } else {
-        await targetRow.waitFor({ state: 'visible', timeout: 10000 });
+        // 无名称时取第一行
+        const firstRow = page.locator('table tbody tr').first();
+        await firstRow.waitFor({ state: 'visible', timeout: 10000 });
+        const leadLink = await firstRow.locator('a').first().getAttribute('href');
+        leadId = leadLink?.split('/leads/')[1]?.split('?')[0] || '';
     }
-
-    // 从获取到的行中提取线索ID
-    const leadLink = await targetRow.locator('a').first().getAttribute('href');
-    const leadId = leadLink?.split('/leads/')[1]?.split('?')[0] || '';
 
     return leadId;
 }

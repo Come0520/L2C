@@ -1,6 +1,7 @@
 import { db } from '@/shared/api/db';
 import { journalEntries, journalEntryLines, chartOfAccounts } from '@/shared/api/schema';
 import { eq, inArray, and, lte } from 'drizzle-orm';
+import { unstable_cache } from 'next/cache';
 
 export interface BalanceSheetData {
   assets: {
@@ -22,12 +23,10 @@ export interface BalanceSheetData {
  * 获取截至指定日期的资产负债表数据
  * 资产负债表是“时点数”，计算截至该日期的累计余额
  */
-export async function getBalanceSheetData(
+async function getBalanceSheetDataInternal(
   tenantId: string,
-  asOfDate: Date
+  formattedDate: string
 ): Promise<BalanceSheetData> {
-  const formattedDate = asOfDate.toISOString().split('T')[0];
-
   // 1. 查出所有已记账凭证并且日期早于等于截止日期
   const validEntries = await db
     .select({ id: journalEntries.id })
@@ -148,6 +147,27 @@ export async function getBalanceSheetData(
   result.isBalanced = roundingDiff < 0.01;
 
   return result;
+}
+
+/**
+ * 获取截至指定日期的资产负债表数据
+ * 资产负债表是“时点数”，计算截至该日期的累计余额
+ */
+export async function getBalanceSheetData(
+  tenantId: string,
+  asOfDate: Date
+): Promise<BalanceSheetData> {
+  const formattedDate = asOfDate.toISOString().split('T')[0];
+
+  const getCached = unstable_cache(
+    async (tId: string, fDate: string) => {
+      return getBalanceSheetDataInternal(tId, fDate);
+    },
+    ['balance-sheet-data'],
+    { revalidate: 300 }
+  );
+
+  return getCached(tenantId, formattedDate);
 }
 
 function buildEmptyBalanceSheet(): BalanceSheetData {

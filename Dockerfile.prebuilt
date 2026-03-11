@@ -10,23 +10,26 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV NPM_CONFIG_REGISTRY=https://registry.npmmirror.com
 
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nextjs
 
-# 这些文件已在 CI 中构建好，直接 COPY（不消耗内存）
+# 第一步：把 standalone 产物 COPY 进来（standalone 自带完整 node_modules，不能被覆盖）
 COPY public ./public
-RUN mkdir .next
-RUN chown nextjs:nodejs .next
+RUN mkdir -p .next && chown nextjs:nodejs .next
 
 COPY --chown=nextjs:nodejs .next/standalone ./
 COPY --chown=nextjs:nodejs .next/static ./.next/static
 
-# 补装 Next.js standalone 运行时必须的依赖
-# 原因：pnpm 用符号链接管理 node_modules，CI 打包时部分链接丢失
-# 这几个包体积极小（<2MB），不会 OOM
-ENV NPM_CONFIG_REGISTRY=https://registry.npmmirror.com
-RUN npm install --prefix /app styled-jsx react react-dom jsdom
+# 第二步：仅在 standalone node_modules 不存在对应包时，用 --no-save 追加安装
+# 注意：standalone/node_modules 已有大部分依赖；styled-jsx 等有时因 pnpm symlink 丢失需补装
+# 用 --no-package-lock --ignore-scripts 避免修改 package.json 或重建已有依赖
+RUN if [ ! -d /app/node_modules/styled-jsx ]; then \
+      echo '{"name":"l2c","version":"1.0.0","private":true}' > /tmp/patch-pkg.json && \
+      npm install --prefix /tmp/patch --no-save styled-jsx react react-dom jsdom && \
+      cp -rn /tmp/patch/node_modules/. /app/node_modules/ 2>/dev/null || true; \
+    fi
 
 USER nextjs
 

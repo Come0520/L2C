@@ -48,9 +48,11 @@ export const updateLeadSchema = leadSchema
 
 // ==================== Mutation Schemas ====================
 
-export const createLeadSchema = leadSchema.describe(
-  '创建新线索的数据结构定义，包含客户基本信息及来源维度'
-);
+export const createLeadSchema = leadSchema
+  .extend({
+    forceCreate: z.boolean().optional(),
+  })
+  .describe('创建新线索的数据结构定义，包含客户基本信息及来源维度');
 
 export const createCustomerSchema = z
   .object({

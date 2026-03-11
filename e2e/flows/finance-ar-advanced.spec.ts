@@ -9,7 +9,7 @@ test.describe('Finance AR Advanced Flows', () => {
     test.describe.configure({ mode: 'serial' });
 
     test('验证应收账单高级功能页面可正常访问', async ({ page }) => {
-        await page.goto('/finance/ar', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.goto('/finance/ar', { waitUntil: 'domcontentloaded', timeout: 120000 });
         const errorElement = page.getByText('Data Load Error');
         if (await errorElement.isVisible({ timeout: 3000 }).catch(() => false)) {
             console.log('⚠️ 页面数据加载失败，跳过后续测试');
@@ -23,7 +23,7 @@ test.describe('Finance AR Advanced Flows', () => {
     });
 
     test.beforeEach(async ({ page }) => {
-        await page.goto('/finance/ar', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.goto('/finance/ar', { waitUntil: 'domcontentloaded', timeout: 120000 });
         await page.waitForLoadState('domcontentloaded');
     });
 

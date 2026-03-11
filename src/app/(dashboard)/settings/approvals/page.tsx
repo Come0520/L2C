@@ -1,4 +1,4 @@
-export const dynamic = 'force-dynamic';
+export const revalidate = 60;
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs';
 import { BusinessRulesConfig } from '@/features/settings/components/business-rules-config';
 import { getMyQuoteConfig } from '@/features/quotes/actions/config-actions';
@@ -9,8 +9,7 @@ import {
 } from '@/features/approval/components/approval-settings-content';
 
 export default async function ApprovalsSettingsPage() {
-  const config = await getMyQuoteConfig();
-  const flowsParams = await getApprovalFlows();
+  const [config, flowsParams] = await Promise.all([getMyQuoteConfig(), getApprovalFlows()]);
   let flows = [];
   if (flowsParams.success && flowsParams.data) {
     if (Array.isArray(flowsParams.data)) {

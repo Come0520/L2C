@@ -3,6 +3,24 @@ import { redirect } from 'next/navigation';
 import { getIncomeStatementData } from '@/features/finance';
 import { IncomeStatementClient } from './client';
 import { startOfMonth, endOfMonth, format } from 'date-fns';
+import { Suspense } from 'react';
+
+async function IncomeStatementContent({
+  tenantId,
+  startDate,
+  endDate,
+  rawStart,
+  rawEnd,
+}: {
+  tenantId: string;
+  startDate: Date;
+  endDate: Date;
+  rawStart: string;
+  rawEnd: string;
+}) {
+  const data = await getIncomeStatementData(tenantId, startDate, endDate);
+  return <IncomeStatementClient data={data} initialStartDate={rawStart} initialEndDate={rawEnd} />;
+}
 
 export const metadata = { title: '利润表 - 财务模块' };
 
@@ -26,13 +44,22 @@ export default async function IncomeStatementPage({
   const startDate = new Date(rawStart);
   const endDate = new Date(rawEnd);
 
-  // 获取报表数据
-  const data = await getIncomeStatementData(tenantId, startDate, endDate);
-
   return (
     <div className="mx-auto max-w-7xl space-y-6 p-6">
       <h1 className="text-2xl font-bold tracking-tight">财务报表</h1>
-      <IncomeStatementClient data={data} initialStartDate={rawStart} initialEndDate={rawEnd} />
+      <Suspense
+        fallback={
+          <div data-loading="true" className="bg-muted h-[600px] w-full animate-pulse rounded-lg" />
+        }
+      >
+        <IncomeStatementContent
+          tenantId={tenantId}
+          startDate={startDate}
+          endDate={endDate}
+          rawStart={rawStart}
+          rawEnd={rawEnd}
+        />
+      </Suspense>
     </div>
   );
 }

@@ -29,8 +29,13 @@ test.describe('Lead Bulk Operations', () => {
      * 如果没有复选框则返回 0
      */
     async function selectTableRows(page: import('@playwright/test').Page, count?: number): Promise<number> {
-        // 等待表格加载
-        await page.waitForLoadState('domcontentloaded');
+        // 等待表格加载完成，并在规定时间内等待复选框可见（对付 rowVirtualizer 异步挂载）
+        try {
+            await page.waitForSelector('table tbody tr input[type="checkbox"]', { state: 'visible', timeout: 10000 });
+        } catch (e) {
+            console.log('⚠️ 在规定的时间内未能获取到包含复选框的表格行，表格可能为空或未渲染复选框列');
+            return 0;
+        }
 
         // 查找表格行内的复选框
         const checkboxes = page.locator('table tbody tr input[type="checkbox"]');

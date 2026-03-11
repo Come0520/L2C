@@ -24,6 +24,7 @@ import Star from 'lucide-react/dist/esm/icons/star';
 import FileText from 'lucide-react/dist/esm/icons/file-text';
 import { SendToCustomerDialog } from '@/shared/components/send-to-customer-dialog';
 
+import { Skeleton } from '@/shared/ui/skeleton';
 import { Suspense } from 'react';
 
 const statusMap = {
@@ -36,9 +37,31 @@ const statusMap = {
   CANCELLED: { label: '已取消', color: 'bg-red-500' },
 };
 
-export default function InstallTaskDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function InstallTaskDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense
+      fallback={
+        <div data-loading className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="space-y-2">
+              <Skeleton className="h-8 w-48" />
+              <Skeleton className="h-4 w-32" />
+            </div>
+            <Skeleton className="h-6 w-16" />
+          </div>
+          <Skeleton className="h-20 w-full" />
+          <div className="grid gap-4 md:grid-cols-2">
+            <Skeleton className="h-[200px]" />
+            <Skeleton className="h-[200px]" />
+          </div>
+          <Skeleton className="h-[400px]" />
+        </div>
+      }
+    >
       <InstallTaskDetailDataWrapper params={params} />
     </Suspense>
   );
@@ -46,14 +69,17 @@ export default function InstallTaskDetailPage({ params }: { params: Promise<{ id
 
 async function InstallTaskDetailDataWrapper({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const result = await getInstallTaskById(id);
+
+  const [result, workerRes] = await Promise.all([
+    getInstallTaskById(id),
+    getInstallWorkersAction(),
+  ]);
 
   if (!result.data || !result.success) {
     notFound();
   }
 
   const task = result.data;
-  const workerRes = await getInstallWorkersAction();
   const workers = workerRes.success ? workerRes.data || [] : [];
   const statusInfo = statusMap[task.status as keyof typeof statusMap] || statusMap.PENDING;
 

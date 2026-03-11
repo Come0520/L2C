@@ -1,6 +1,7 @@
 import { db } from '@/shared/api/db';
 import { journalEntries, journalEntryLines, chartOfAccounts } from '@/shared/api/schema';
 import { eq, inArray, and, gte, lte } from 'drizzle-orm';
+import { unstable_cache } from 'next/cache';
 
 export interface CashFlowData {
   periodStart: string;
@@ -20,14 +21,11 @@ export interface CashFlowData {
  * 获取指定期间范围的现金流量表数据（简易法近似推导）
  * 逻辑：寻找分录中涉及“现金及现金等价物”的凭证。如果现金科目在借方，为净流入；在贷方，为净流出。
  */
-export async function getCashFlowData(
+async function getCashFlowDataInternal(
   tenantId: string,
-  startDate: Date,
-  endDate: Date
+  formattedStart: string,
+  formattedEnd: string
 ): Promise<CashFlowData> {
-  const formattedStart = startDate.toISOString().split('T')[0];
-  const formattedEnd = endDate.toISOString().split('T')[0];
-
   const result: CashFlowData = {
     periodStart: formattedStart,
     periodEnd: formattedEnd,
@@ -148,4 +146,27 @@ export async function getCashFlowData(
   result.netIncrease = Number(result.netIncrease.toFixed(2));
 
   return result;
+}
+
+/**
+ * 获取指定期间范围的现金流量表数据（简易法近似推导）
+ * 逻辑：寻找分录中涉及“现金及现金等价物”的凭证。如果现金科目在借方，为净流入；在贷方，为净流出。
+ */
+export async function getCashFlowData(
+  tenantId: string,
+  startDate: Date,
+  endDate: Date
+): Promise<CashFlowData> {
+  const formattedStart = startDate.toISOString().split('T')[0];
+  const formattedEnd = endDate.toISOString().split('T')[0];
+
+  const getCached = unstable_cache(
+    async (tId: string, fStart: string, fEnd: string) => {
+      return getCashFlowDataInternal(tId, fStart, fEnd);
+    },
+    ['cash-flow-data'],
+    { revalidate: 300 }
+  );
+
+  return getCached(tenantId, formattedStart, formattedEnd);
 }

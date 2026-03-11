@@ -96,6 +96,18 @@ export async function safeWaitForLoad(
 }
 
 /**
+ * 等待详情页骨架屏卸载（防异步阻塞）
+ * 此操作会等待 data-loading 属性元素消失，如果元素不存在会立即往下执行
+ * @param page Playwright Page 对象
+ * @param timeout 最大等待时间 (ms)
+ */
+export async function waitForDetailLoad(page: Page, timeout: number = 15000): Promise<void> {
+    await page.waitForSelector('[data-loading]', { state: 'hidden', timeout }).catch(() => {
+        console.log('⚠️ 等待 [data-loading] 消失时超时');
+    });
+}
+
+/**
  * 安全检查元素可见性（带容错）
  * @param page Page 对象
  * @param selector 选择器

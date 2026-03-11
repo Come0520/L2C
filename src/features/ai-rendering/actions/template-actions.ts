@@ -74,15 +74,14 @@ export async function createTemplate(input: z.infer<typeof templateSchema>) {
       })
       .returning();
 
-    await AuditService.log(
-      {
-        action: 'CREATE_STYLE_TEMPLATE',
-        tableName: 'ai_curtain_style_templates',
-        recordId: record.id,
-        newValues: record,
-      },
-      { session: session as any, tx }
-    );
+    await AuditService.log(tx, {
+      action: 'CREATE_STYLE_TEMPLATE',
+      tableName: 'ai_curtain_style_templates',
+      recordId: record.id,
+      userId: session.user.id,
+      tenantId: (session.user as any).tenantId,
+      newValues: record as Record<string, unknown>,
+    });
 
     return record;
   });
@@ -112,16 +111,15 @@ export async function updateTemplate(id: string, input: Partial<z.infer<typeof t
       .returning();
 
     if (newRecord) {
-      await AuditService.log(
-        {
-          action: 'UPDATE_STYLE_TEMPLATE',
-          tableName: 'ai_curtain_style_templates',
-          recordId: id,
-          oldValues: oldRecord,
-          newValues: newRecord,
-        },
-        { session: session as any, tx }
-      );
+      await AuditService.log(tx, {
+        action: 'UPDATE_STYLE_TEMPLATE',
+        tableName: 'ai_curtain_style_templates',
+        recordId: id,
+        userId: session.user.id,
+        tenantId: (session.user as any).tenantId,
+        oldValues: oldRecord as Record<string, unknown>,
+        newValues: newRecord as Record<string, unknown>,
+      });
     }
   });
 
@@ -149,16 +147,15 @@ export async function toggleTemplateStatus(id: string, isActive: 0 | 1) {
       .returning();
 
     if (newRecord) {
-      await AuditService.log(
-        {
-          action: 'TOGGLE_STYLE_TEMPLATE_STATUS',
-          tableName: 'ai_curtain_style_templates',
-          recordId: id,
-          oldValues: oldRecord,
-          newValues: newRecord,
-        },
-        { session: session as any, tx }
-      );
+      await AuditService.log(tx, {
+        action: 'TOGGLE_STYLE_TEMPLATE_STATUS',
+        tableName: 'ai_curtain_style_templates',
+        recordId: id,
+        userId: session.user.id,
+        tenantId: (session.user as any).tenantId,
+        oldValues: oldRecord as Record<string, unknown>,
+        newValues: newRecord as Record<string, unknown>,
+      });
     }
   });
 
@@ -180,15 +177,14 @@ export async function deleteTemplate(id: string) {
 
     await tx.delete(aiCurtainStyleTemplates).where(eq(aiCurtainStyleTemplates.id, id));
 
-    await AuditService.log(
-      {
-        action: 'DELETE_STYLE_TEMPLATE',
-        tableName: 'ai_curtain_style_templates',
-        recordId: id,
-        oldValues: oldRecord,
-      },
-      { session: session as any, tx }
-    );
+    await AuditService.log(tx, {
+      action: 'DELETE_STYLE_TEMPLATE',
+      tableName: 'ai_curtain_style_templates',
+      recordId: id,
+      userId: session.user.id,
+      tenantId: (session.user as any).tenantId,
+      oldValues: oldRecord as Record<string, unknown>,
+    });
   });
 
   revalidatePath('/platform/ai-templates');

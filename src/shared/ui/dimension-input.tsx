@@ -31,8 +31,12 @@ const DimensionInput = React.forwardRef<HTMLDivElement, DimensionInputProps>(
     ref
   ) => {
     const area = React.useMemo(() => {
-      const w = Number(width) || 0;
-      const h = Number(height) || 0;
+      // 当为空字符串、或者为非法数字时，放弃计算并返回 null
+      if (!width || !height || isNaN(Number(width)) || isNaN(Number(height))) {
+        return null;
+      }
+      const w = Number(width);
+      const h = Number(height);
       return (w * h).toFixed(2);
     }, [width, height]);
 
@@ -41,7 +45,9 @@ const DimensionInput = React.forwardRef<HTMLDivElement, DimensionInputProps>(
         <div className="flex items-center gap-1">
           <div className="relative flex-1">
             <Input
-              type="number"
+              type="text"
+              inputMode="decimal"
+              aria-label="宽度"
               value={width}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => onWidthChange?.(e.target.value)}
               placeholder="宽"
@@ -55,7 +61,9 @@ const DimensionInput = React.forwardRef<HTMLDivElement, DimensionInputProps>(
           <span className="text-muted-foreground shrink-0 text-xs">×</span>
           <div className="relative flex-1">
             <Input
-              type="number"
+              type="text"
+              inputMode="decimal"
+              aria-label="高度"
               value={height}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 onHeightChange?.(e.target.value)
@@ -70,7 +78,7 @@ const DimensionInput = React.forwardRef<HTMLDivElement, DimensionInputProps>(
           </div>
           <span className="text-muted-foreground text-xs select-none">{unit}</span>
         </div>
-        {showArea && (
+        {showArea && area !== null && (
           <div className="text-muted-foreground pl-1 text-[10px]">
             面积: <span className="font-medium">{area}</span> {unit}²
           </div>

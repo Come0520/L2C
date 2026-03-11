@@ -1,11 +1,10 @@
 'use client';
 
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { Responsive, WidthProvider } from 'react-grid-layout';
 import type { Layout } from 'react-grid-layout';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
-import { Card, CardContent } from '@/shared/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -29,11 +28,7 @@ import Save from 'lucide-react/dist/esm/icons/save';
 import Loader2 from 'lucide-react/dist/esm/icons/loader';
 import X from 'lucide-react/dist/esm/icons/x';
 import { toast } from 'sonner';
-import {
-  getDashboardConfigAction,
-  saveDashboardConfigAction,
-  resetDashboardConfigAction,
-} from '../actions/config';
+import { saveDashboardConfigAction, resetDashboardConfigAction } from '../actions/config';
 import type { UserDashboardConfig, WidgetConfig, WidgetType } from '../types';
 import { getDefaultDashboardConfig } from '../utils';
 import { WIDGET_REGISTRY, getAvailableWidgets } from '../widgets/registry';
@@ -48,45 +43,28 @@ const ResponsiveGridLayout = WidthProvider(Responsive);
 
 interface DashboardEditorProps {
   userRole: string;
+  /** 服务端预取的初始配置，用于消除客户端 useEffect 瀑布流 */
+  initialConfig: UserDashboardConfig;
   onConfigChange?: (config: UserDashboardConfig) => void;
 }
 
 /**
  * 仪表盘编辑器组件
  * 使用 react-grid-layout 支持拖拽布局和调整大小
+ * 性能优化：initialConfig 由父级 Server Component 预取并传入，消除客户端瀑布流
  */
-export function DashboardEditor({ userRole, onConfigChange }: DashboardEditorProps) {
-  const [config, setConfig] = useState<UserDashboardConfig | null>(null);
+export function DashboardEditor({ userRole, initialConfig, onConfigChange }: DashboardEditorProps) {
+  // 直接用服务端预取的配置初始化，无需 useEffect 额外请求
+  const [config, setConfig] = useState<UserDashboardConfig>(initialConfig);
   const [isEditing, setIsEditing] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-
-  // 加载用户配置
-  useEffect(() => {
-    async function loadConfig() {
-      try {
-        const savedConfig = await getDashboardConfigAction();
-        if (savedConfig && savedConfig.widgets?.length > 0) {
-          setConfig(savedConfig);
-        } else {
-          setConfig(getDefaultDashboardConfig(userRole));
-        }
-      } catch {
-        // 加载失败时回退到默认配置
-        setConfig(getDefaultDashboardConfig(userRole));
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadConfig();
-  }, [userRole]);
 
   // 获取可用的 Widget 列表（已过滤权限）
   const availableWidgets = useMemo(() => getAvailableWidgets(userRole), [userRole]);
 
   // 获取已添加和未添加的 Widget
   const addedWidgetTypes = useMemo(
-    () => new Set(config?.widgets.map((w) => w.type) || []),
+    () => new Set(config?.widgets?.map((w) => w.type) || []),
     [config?.widgets]
   );
   const hiddenWidgets = useMemo(
@@ -96,7 +74,7 @@ export function DashboardEditor({ userRole, onConfigChange }: DashboardEditorPro
 
   // 将 WidgetConfig 转换为 react-grid-layout 的 Layout
   const layout: Layout[] = useMemo(() => {
-    if (!config) return [];
+    if (!config || !config.widgets || !Array.isArray(config.widgets)) return [];
     return config.widgets
       .filter((w) => w.visible)
       .map((w) => ({
@@ -118,7 +96,7 @@ export function DashboardEditor({ userRole, onConfigChange }: DashboardEditorPro
       if (!isEditing) return;
 
       setConfig((prev) => {
-        if (!prev) return prev;
+        if (!prev || !prev.widgets || !Array.isArray(prev.widgets)) return prev;
         const updatedWidgets = prev.widgets.map((widget) => {
           const layoutItem = newLayout.find((l) => l.i === widget.id);
           if (layoutItem) {
@@ -143,49 +121,45 @@ export function DashboardEditor({ userRole, onConfigChange }: DashboardEditorPro
   );
 
   // 添加 Widget（使用函数式 setState 确保基于最新 state）
-  const handleAddWidget = useCallback(
-    (type: WidgetType) => {
-      const meta = WIDGET_REGISTRY[type];
-      if (!meta) return;
+  const handleAddWidget = useCallback((type: WidgetType) => {
+    const meta = WIDGET_REGISTRY[type];
+    if (!meta) return;
 
-      setConfig((prev) => {
-        if (!prev) return prev;
-        // 如果已经存在同类型 widget，直接返回不重复添加
-        if (prev.widgets.some((w) => w.type === type)) return prev;
+    setConfig((prev) => {
+      if (!prev) return prev;
+      const currentWidgets = Array.isArray(prev.widgets) ? prev.widgets : [];
+      // 如果已经存在同类型 widget，直接返回不重复添加
+      if (currentWidgets.some((w) => w.type === type)) return prev;
 
-        const newWidget: WidgetConfig = {
-          id: `w-${Date.now()}`,
-          type,
-          title: meta.title || 'Widget',
-          x: 0,
-          y: Infinity, // 放到最底部
-          w: meta.defaultSize.w,
-          h: meta.defaultSize.h,
-          visible: true,
-        };
+      const newWidget: WidgetConfig = {
+        id: `w-${Date.now()}`,
+        type,
+        title: meta.title || 'Widget',
+        x: 0,
+        y: Infinity, // 放到最底部
+        w: meta.defaultSize.w,
+        h: meta.defaultSize.h,
+        visible: true,
+      };
 
-        return {
-          ...prev,
-          widgets: [...prev.widgets, newWidget],
-        };
-      });
-    },
-    []
-  );
+      return {
+        ...prev,
+        widgets: [...currentWidgets, newWidget],
+      };
+    });
+  }, []);
 
   // 移除 Widget（使用函数式 setState 确保基于最新 state）
-  const handleRemoveWidget = useCallback(
-    (widgetId: string) => {
-      setConfig((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          widgets: prev.widgets.filter((w) => w.id !== widgetId),
-        };
-      });
-    },
-    []
-  );
+  const handleRemoveWidget = useCallback((widgetId: string) => {
+    setConfig((prev) => {
+      if (!prev) return prev;
+      const currentWidgets = Array.isArray(prev.widgets) ? prev.widgets : [];
+      return {
+        ...prev,
+        widgets: currentWidgets.filter((w) => w.id !== widgetId),
+      };
+    });
+  }, []);
 
   // 保存配置
   const handleSave = useCallback(async () => {
@@ -223,26 +197,9 @@ export function DashboardEditor({ userRole, onConfigChange }: DashboardEditorPro
     }
   }, [userRole]);
 
-  if (loading) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
-        <span className="text-muted-foreground ml-2">加载中...</span>
-      </div>
-    );
-  }
-
-  if (!config) {
-    return (
-      <Card className="glass-liquid border-white/10">
-        <CardContent className="text-muted-foreground py-8 text-center">
-          <p>无法加载仪表盘配置</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  const visibleWidgets = config.widgets.filter((w) => w.visible);
+  const visibleWidgets = Array.isArray(config.widgets)
+    ? config.widgets.filter((w) => w.visible)
+    : [];
 
   return (
     <div className="space-y-4">

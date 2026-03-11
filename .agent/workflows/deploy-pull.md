@@ -64,10 +64,29 @@ scp -o StrictHostKeyChecking=no next-build.tar.gz ecs:/root/next-build.tar.gz
 ## Step 4：ECS 解压 + 重建镜像 + 启动
 
 ```bash
-ssh ecs "cd /root/L2C && tar -xzf /root/next-build.tar.gz && docker compose -f docker-compose.prod.yml build app && docker compose -f docker-compose.prod.yml up -d && sleep 10 && docker ps --format 'table {{.Names}}\t{{.Status}}'"
+ssh ecs "
+  # ⚠️ 关键：必须解压到临时目录，再 cp -f 覆盖，否则旧的 0 字节文件无法被正确覆盖
+  mkdir -p /tmp/deploy &&
+  tar -xzf /root/next-build.tar.gz -C /tmp/deploy &&
+  ls -la /tmp/deploy/.next/standalone/server.js &&
+  cp -rf /tmp/deploy/.next /root/L2C/ &&
+  cp -rf /tmp/deploy/public /root/L2C/ &&
+  rm -rf /tmp/deploy &&
+  echo 'server.js:' && ls -la /root/L2C/.next/standalone/server.js &&
+  cd /root/L2C &&
+  docker compose -f docker-compose.prod.yml build --no-cache app &&
+  docker compose -f docker-compose.prod.yml down &&
+  docker compose -f docker-compose.prod.yml up -d &&
+  sleep 20 &&
+  docker ps --format 'table {{.Names}}\t{{.Status}}'
+"
 ```
 
-> **说明**：`build app` 只构建 runner 阶段（Dockerfile.prebuilt），跳过 migrator 的 pnpm install，约 30-60 秒。
+> **说明**：
+>
+> - 解压到 `/tmp/deploy` 再 `cp -rf` 是因为直接 `tar -xzf -C /root/L2C` 时 0 字节文件无法被覆盖（已在生产验证）
+> - `--no-cache` 确保 Dockerfile.prebuilt 的 `COPY` 步骤不走 BuildKit 缓存
+> - `build app` 只构建 runner 阶段，约 30-60 秒
 
 ---
 

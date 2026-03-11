@@ -33,23 +33,31 @@ if (-not $testConn) {
 
 Write-Host "✅ [E2E-Parallel] 服务器已就绪，启动 4 个并行批次..." -ForegroundColor Green
 
-# ─── 3. 获取所有 spec 文件并分成 4 批 ──────────────────────────────
+# ─── 3. 获取所有 spec 文件：midscene 单独批次，其余分成 4 批 ────────────────
 $specDir = "$ROOT\e2e\flows"
 $allSpecs = Get-ChildItem -Path $specDir -Filter "*.spec.ts" | Select-Object -ExpandProperty FullName | Sort-Object
 
-$total = $allSpecs.Count
+# 将重量级 AI 测试（midscene）分离到 Batch E，避免与其他批次竞争内存（OOM）
+$midsceneSpecs = $allSpecs | Where-Object { $_ -match 'midscene' }
+$normalSpecs   = $allSpecs | Where-Object { $_ -notmatch 'midscene' }
+
+$total = $normalSpecs.Count
 $batchSize = [Math]::Ceiling($total / 4)
 
 $batches = @(
-    ($allSpecs | Select-Object -First $batchSize),
-    ($allSpecs | Select-Object -Skip $batchSize -First $batchSize),
-    ($allSpecs | Select-Object -Skip ($batchSize * 2) -First $batchSize),
-    ($allSpecs | Select-Object -Skip ($batchSize * 3))
+    ($normalSpecs | Select-Object -First $batchSize),
+    ($normalSpecs | Select-Object -Skip $batchSize -First $batchSize),
+    ($normalSpecs | Select-Object -Skip ($batchSize * 2) -First $batchSize),
+    ($normalSpecs | Select-Object -Skip ($batchSize * 3))
 )
 
 $labels = @("A", "B", "C", "D")
 
-Write-Host "📋 [E2E-Parallel] 共 $total 个 spec 文件，分为 4 批并行运行" -ForegroundColor Cyan
+if ($midsceneSpecs.Count -gt 0) {
+    Write-Host "🤖 [E2E-Parallel] 检测到 $($midsceneSpecs.Count) 个 Midscene AI 测试，将在 Batch E 独立顺序执行" -ForegroundColor Magenta
+}
+Write-Host "📋 [E2E-Parallel] 普通 spec $total 个，分为 4 批并行运行" -ForegroundColor Cyan
+
 
 # ─── 4. 并行启动 4 个批次 ─────────────────────────────────────────
 $jobs = @()
@@ -67,8 +75,10 @@ for ($i = 0; $i -lt 4; $i++) {
     $job = Start-Job -ScriptBlock {
         param($root, $specList, $label)
         Set-Location $root
-        $env:PLAYWRIGHT_WORKERS = "2"
+        # 修复：降低为 1 Worker，避免每批次同时跑多个 Chromium 导致 OOM（0xC000013A）
+        $env:PLAYWRIGHT_WORKERS = "1"
         $env:CI = "1"  # 设置 CI=1 让 Playwright 不再尝试启动新的 web server
+        $env:REUSE_SERVER = "1"  # 复用已有服务器
         $cmd = "npx playwright test --project=chromium $specList 2>&1"
         Write-Host "🚀 [Batch-$label] 开始执行..."
         Invoke-Expression $cmd
@@ -100,7 +110,25 @@ foreach ($item in $jobs) {
     Remove-Job -Job $job
 }
 
-# ─── 6. 关闭服务器 ────────────────────────────────────────────────
+# ─── 6. Batch E：顺序执行 Midscene AI 测试（独立，避免内存竞争）────────────
+if ($midsceneSpecs.Count -gt 0) {
+    Write-Host "`n🤖 [Batch-E] 开始顺序执行 Midscene AI 测试（$($midsceneSpecs.Count) 个）..." -ForegroundColor Magenta
+    
+    $midsceneSpecList = ($midsceneSpecs | ForEach-Object {
+        $rel = $_.Replace("$ROOT\", "").Replace("\", "/")
+        "`"$rel`""
+    }) -join " "
+    
+    $env:PLAYWRIGHT_WORKERS = "1"
+    $env:CI = "1"
+    $env:REUSE_SERVER = "1"
+    $midsceneCmd = "npx playwright test --project=chromium $midsceneSpecList 2>&1"
+    Invoke-Expression $midsceneCmd
+    $midsceneExit = $LASTEXITCODE
+    Write-Host "🏁 [Batch-E] Midscene 测试完成，退出码: $midsceneExit" -ForegroundColor Magenta
+}
+
+# ─── 7. 关闭服务器 ────────────────────────────────────────────────
 Write-Host "`n🛑 [E2E-Parallel] 关闭 standalone 服务器..." -ForegroundColor Red
 Stop-Job -Job $serverJob
 Remove-Job -Job $serverJob

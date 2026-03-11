@@ -81,7 +81,9 @@ export const DesktopSidebar = ({
   children,
   ...props
 }: React.ComponentProps<typeof motion.div>) => {
-  const { open, setOpen, animate } = useSidebar();
+  const { animate } = useSidebar();
+  // 桌面端使用独立的 hover 状态，避免影响 MobileSidebar 的全局 open 状态
+  const [hoverOpen, setHoverOpen] = React.useState(false);
   const timeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleMouseEnter = () => {
@@ -89,34 +91,37 @@ export const DesktopSidebar = ({
       clearTimeout(timeoutRef.current);
       timeoutRef.current = null;
     }
-    setOpen(true);
+    setHoverOpen(true);
   };
 
   const handleMouseLeave = () => {
     timeoutRef.current = setTimeout(() => {
-      setOpen(false);
+      setHoverOpen(false);
     }, 300);
   };
 
   return (
     <>
-      <motion.aside
-        className={cn(
-          'relative z-50 hidden h-full shrink-0 overflow-hidden border-r border-white/20 bg-white/50 py-4 backdrop-blur-md md:flex md:flex-col dark:bg-black/40',
-          className
-        )}
-        animate={{
-          width: animate ? (open ? '280px' : '72px') : '280px',
-          paddingLeft: animate ? (open ? '16px' : '12px') : '16px',
-          paddingRight: animate ? (open ? '16px' : '12px') : '16px',
-        }}
-        transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
-        {...props}
-      >
-        {children}
-      </motion.aside>
+      {/* 桌面端使用独立的 SidebarContext 覆盖，将 hoverOpen 注入子组件 */}
+      <SidebarProvider open={hoverOpen} setOpen={setHoverOpen} animate={animate}>
+        <motion.aside
+          className={cn(
+            'relative z-50 hidden h-full shrink-0 overflow-hidden border-r border-white/20 bg-white/50 py-4 backdrop-blur-md md:flex md:flex-col dark:bg-black/40',
+            className
+          )}
+          animate={{
+            width: animate ? (hoverOpen ? '280px' : '72px') : '280px',
+            paddingLeft: animate ? (hoverOpen ? '16px' : '12px') : '16px',
+            paddingRight: animate ? (hoverOpen ? '16px' : '12px') : '16px',
+          }}
+          transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+          {...props}
+        >
+          {children}
+        </motion.aside>
+      </SidebarProvider>
     </>
   );
 };

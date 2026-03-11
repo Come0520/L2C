@@ -13,6 +13,7 @@ import {
   CommandList,
 } from '@/shared/ui/command';
 import { globalSearch } from '../actions';
+import { useGlobalSearch } from '../hooks/use-global-search';
 import {
   Loader2,
   Search,
@@ -37,19 +38,19 @@ import {
 interface SearchResultItem {
   /** 模块类型标识 */
   type:
-  | 'customer'
-  | 'lead'
-  | 'order'
-  | 'quote'
-  | 'product'
-  | 'ticket'
-  | 'channel'
-  | 'finance'
-  | 'ap_supplier'
-  | 'ap_labor'
-  | 'receipt_bill'
-  | 'payment_bill'
-  | 'history';
+    | 'customer'
+    | 'lead'
+    | 'order'
+    | 'quote'
+    | 'product'
+    | 'ticket'
+    | 'channel'
+    | 'finance'
+    | 'ap_supplier'
+    | 'ap_labor'
+    | 'receipt_bill'
+    | 'payment_bill'
+    | 'history';
   /** 实体唯一 ID */
   id: string;
   /** 显示标签 */
@@ -74,7 +75,7 @@ interface SearchResultItem {
  * 5. 根据结果类型自动路由至对应的业务详情页。
  */
 export function GlobalSearchCommand() {
-  const [open, setOpen] = React.useState(false);
+  const { isOpen, toggleSearch, closeSearch } = useGlobalSearch();
   const [query, setQuery] = React.useState('');
   // 全局搜索使用 300ms 防抖（快速响应感）
   const debouncedQuery = useDebounce(query, 300);
@@ -115,19 +116,15 @@ export function GlobalSearchCommand() {
     const down = (e: KeyboardEvent) => {
       if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
-        setOpen((open) => !open);
+        toggleSearch();
       }
     };
     document.addEventListener('keydown', down);
 
-    const onCustomOpen = () => setOpen(true);
-    window.addEventListener('open-global-search', onCustomOpen);
-
     return () => {
       document.removeEventListener('keydown', down);
-      window.removeEventListener('open-global-search', onCustomOpen);
     };
-  }, []);
+  }, [toggleSearch]);
 
   React.useEffect(() => {
     let isActive = true;
@@ -162,28 +159,28 @@ export function GlobalSearchCommand() {
       }
     };
 
-    if (open) {
+    if (isOpen) {
       fetchResults();
     }
 
     return () => {
       isActive = false;
     };
-  }, [debouncedQuery, open]);
+  }, [debouncedQuery, isOpen]);
 
   React.useEffect(() => {
-    if (!open) {
+    if (!isOpen) {
       setQuery('');
     }
-  }, [open]);
+  }, [isOpen]);
 
   const handleSelect = (item: SearchResultItem) => {
-    setOpen(false);
+    closeSearch();
     setQuery('');
 
     if (item.type === 'history') {
       setQuery(item.label || '');
-      setOpen(true);
+      useGlobalSearch.getState().openSearch(); // 保持打开状态
       return;
     }
 
@@ -252,7 +249,10 @@ export function GlobalSearchCommand() {
     results.paymentBills.length > 0;
 
   return (
-    <CommandDialog open={open} onOpenChange={setOpen}>
+    <CommandDialog
+      open={isOpen}
+      onOpenChange={(val) => (val ? useGlobalSearch.getState().openSearch() : closeSearch())}
+    >
       <CommandInput
         placeholder="搜索任意您有权限访问的业务数据..."
         value={query}

@@ -5,10 +5,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/shared/ui/input';
 import { cn } from '@/shared/lib/utils';
 
-// 直接导入数据，Vite/Next.js 会自动优化
-import provinces from 'china-division/dist/provinces.json';
-import cities from 'china-division/dist/cities.json';
-import areas from 'china-division/dist/areas.json';
+// 声明全量数据存储对象，用到时才从前端动态 chunk 加载
+let provincesCache: any[] | null = null;
+let citiesCache: any[] | null = null;
+let areasCache: any[] | null = null;
 
 export interface AddressValue {
   province?: string;
@@ -54,6 +54,21 @@ export function AddressInput({
 }: AddressInputProps) {
   const [internalValue, setInternalValue] = React.useState<AddressValue>(parseValue(value));
 
+  // 数据加载状态
+  const [dataLoaded, setDataLoaded] = React.useState(false);
+
+  // 挂载后懒加载 JSON 数据
+  React.useEffect(() => {
+    async function loadData() {
+      if (!provincesCache)
+        provincesCache = (await import('china-division/dist/provinces.json')).default;
+      if (!citiesCache) citiesCache = (await import('china-division/dist/cities.json')).default;
+      if (!areasCache) areasCache = (await import('china-division/dist/areas.json')).default;
+      setDataLoaded(true);
+    }
+    loadData();
+  }, []);
+
   // 记录是否已初始化默认值，防止用户手动修改后被重新覆盖
   const hasInitializedDefault = React.useRef(false);
 
@@ -67,16 +82,16 @@ export function AddressInput({
     let defDist = '';
 
     // 优先匹配省
-    const foundProv = provinces.find((p) => defaultRegion.includes(p.name));
+    const foundProv = (provincesCache || []).find((p: any) => defaultRegion.includes(p.name));
     if (foundProv) {
       defProv = foundProv.name;
       // 匹配市
-      const provCities = cities.filter((c) => c.provinceCode === foundProv.code);
+      const provCities = (citiesCache || []).filter((c: any) => c.provinceCode === foundProv.code);
       const foundCity = provCities.find((c) => defaultRegion.includes(c.name));
       if (foundCity) {
         defCity = foundCity.name;
         // 匹配区
-        const cityAreas = areas.filter((a) => a.cityCode === foundCity.code);
+        const cityAreas = (areasCache || []).filter((a: any) => a.cityCode === foundCity.code);
         const foundDist = cityAreas.find((a) => defaultRegion.includes(a.name));
         if (foundDist) defDist = foundDist.name;
       }
@@ -91,14 +106,31 @@ export function AddressInput({
       }));
       hasInitializedDefault.current = true;
     }
-  }, [defaultRegion, internalValue.province]);
+  }, [defaultRegion, internalValue.province, dataLoaded]);
 
   // 同步外部 value 变化
   React.useEffect(() => {
-    if (typeof value === 'string' && value !== internalValue.detail && !internalValue.province) {
-      setInternalValue({ detail: value });
+    if (typeof value === 'object' && value !== null) {
+      setInternalValue((prev) => {
+        // 如果外部对象和内部状态不同才进行同步
+        if (
+          prev.province !== value.province ||
+          prev.city !== value.city ||
+          prev.district !== value.district ||
+          prev.detail !== value.detail
+        ) {
+          return { ...prev, ...value, fullAddress: value.fullAddress };
+        }
+        return prev;
+      });
+    } else if (
+      typeof value === 'string' &&
+      value !== internalValue.detail &&
+      !internalValue.province
+    ) {
+      setInternalValue((prev) => ({ ...prev, detail: value }));
     }
-  }, [value, internalValue.detail, internalValue.province]);
+  }, [value, internalValue.province, internalValue.detail]);
 
   const updateAddress = (updates: Partial<AddressValue>) => {
     const newValue = { ...internalValue, ...updates };
@@ -126,16 +158,16 @@ export function AddressInput({
 
   // 根据当前选择获取列表
   const currentCities = React.useMemo(() => {
-    if (!internalValue.province) return [];
-    const prov = provinces.find((p) => p.name === internalValue.province);
-    return prov ? cities.filter((c) => c.provinceCode === prov.code) : [];
-  }, [internalValue.province]);
+    if (!internalValue.province || !dataLoaded) return [];
+    const prov = provincesCache?.find((p: any) => p.name === internalValue.province);
+    return prov ? citiesCache?.filter((c: any) => c.provinceCode === prov.code) || [] : [];
+  }, [internalValue.province, dataLoaded]);
 
   const currentAreas = React.useMemo(() => {
-    if (!internalValue.city) return [];
-    const city = cities.find((c) => c.name === internalValue.city);
-    return city ? areas.filter((a) => a.cityCode === city.code) : [];
-  }, [internalValue.city]);
+    if (!internalValue.city || !dataLoaded) return [];
+    const city = citiesCache?.find((c: any) => c.name === internalValue.city);
+    return city ? areasCache?.filter((a: any) => a.cityCode === city.code) || [] : [];
+  }, [internalValue.city, dataLoaded]);
 
   return (
     <div className={cn('space-y-3', className)}>
@@ -143,15 +175,15 @@ export function AddressInput({
         {/* 省份 */}
         <div className="min-w-[120px] flex-1">
           <Select
-            value={internalValue.province}
+            value={internalValue.province || ''}
             onValueChange={(v) => updateAddress({ province: v })}
-            disabled={disabled}
+            disabled={disabled || !dataLoaded}
           >
-            <SelectTrigger>
-              <SelectValue placeholder="选择省份" />
+            <SelectTrigger aria-label="选择省份">
+              <SelectValue placeholder={dataLoaded ? '选择省份' : '加载中...'} />
             </SelectTrigger>
             <SelectContent>
-              {provinces.map((p) => (
+              {provincesCache?.map((p: any) => (
                 <SelectItem key={p.code} value={p.name}>
                   {p.name}
                 </SelectItem>
@@ -163,15 +195,19 @@ export function AddressInput({
         {/* 城市 */}
         <div className="min-w-[120px] flex-1">
           <Select
-            value={internalValue.city}
+            value={internalValue.city || ''}
             onValueChange={(v) => updateAddress({ city: v })}
-            disabled={disabled || !internalValue.province}
+            disabled={disabled || !internalValue.province || !dataLoaded}
           >
-            <SelectTrigger>
+            <SelectTrigger
+              aria-label="选择城市"
+              aria-disabled={!internalValue.province}
+              title={!internalValue.province ? '请先选择省份' : ''}
+            >
               <SelectValue placeholder="选择城市" />
             </SelectTrigger>
             <SelectContent>
-              {currentCities.map((c) => (
+              {currentCities.map((c: any) => (
                 <SelectItem key={c.code} value={c.name}>
                   {c.name}
                 </SelectItem>
@@ -183,15 +219,19 @@ export function AddressInput({
         {/* 区县 */}
         <div className="min-w-[120px] flex-1">
           <Select
-            value={internalValue.district}
+            value={internalValue.district || ''}
             onValueChange={(v) => updateAddress({ district: v })}
-            disabled={disabled || !internalValue.city}
+            disabled={disabled || !internalValue.city || !dataLoaded}
           >
-            <SelectTrigger>
+            <SelectTrigger
+              aria-label="选择区县"
+              aria-disabled={!internalValue.city}
+              title={!internalValue.city ? '请先选择城市' : ''}
+            >
               <SelectValue placeholder="选择区县" />
             </SelectTrigger>
             <SelectContent>
-              {currentAreas.map((a) => (
+              {currentAreas.map((a: any) => (
                 <SelectItem key={a.code} value={a.name}>
                   {a.name}
                 </SelectItem>
@@ -207,6 +247,7 @@ export function AddressInput({
         value={internalValue.detail || ''}
         onChange={(e) => updateAddress({ detail: e.target.value })}
         disabled={disabled}
+        maxLength={255}
       />
     </div>
   );

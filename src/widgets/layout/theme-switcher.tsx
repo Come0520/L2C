@@ -19,6 +19,7 @@ export function ThemeSwitcher({ open = true }: { open?: boolean; animate?: boole
 
   // 点击外部关闭
   React.useEffect(() => {
+    if (!isMenuOpen) return;
     const handleClickOutside = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         setIsMenuOpen(false);
@@ -26,11 +27,11 @@ export function ThemeSwitcher({ open = true }: { open?: boolean; animate?: boole
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [isMenuOpen]);
 
   return (
     <div className="group relative flex items-center" ref={containerRef}>
-      {/* Logo 区域 - �?Logo 作为触发�?*/}
+      {/* Logo 区域 - 用 Logo 作为触发器 */}
       <button
         onClick={() => setIsMenuOpen(!isMenuOpen)}
         className={cn(
@@ -39,13 +40,14 @@ export function ThemeSwitcher({ open = true }: { open?: boolean; animate?: boole
           isMenuOpen && 'bg-black/5 shadow-inner dark:bg-white/10'
         )}
         title="切换主题"
+        aria-label="切换主题"
       >
         <div className="relative h-7 w-7 shrink-0">
           <Image src="/l2c-logo.svg" alt="L2C Logo" fill className="object-contain" priority />
         </div>
       </button>
 
-      {/* 系统标题 - 不触发切�?*/}
+      {/* 系统标题 - 不触发切换 */}
       <AnimatePresence mode="wait">
         {open && (
           <motion.span
@@ -59,7 +61,7 @@ export function ThemeSwitcher({ open = true }: { open?: boolean; animate?: boole
         )}
       </AnimatePresence>
 
-      {/* Pill Nav 主题选择�?- 悬浮�?Logo 右侧上方层级 */}
+      {/* Pill Nav 主题选择器 - 悬浮在 Logo 右侧上方层级 */}
       <AnimatePresence>
         {isMenuOpen && (
           <motion.div

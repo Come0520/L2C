@@ -1,5 +1,6 @@
 'use client';
 
+import React, { useState, useTransition } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -11,7 +12,6 @@ import {
   DialogClose,
 } from '@/shared/ui/dialog';
 import { Button } from '@/shared/ui/button';
-import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
 
 interface ActionConfirmDialogProps {
@@ -20,6 +20,8 @@ interface ActionConfirmDialogProps {
   trigger: React.ReactNode;
   action: () => Promise<void>;
   onSuccess?: () => void;
+  onError?: (error: Error) => void;
+  successMessage?: string;
 }
 
 export function ActionConfirmDialog({
@@ -28,6 +30,8 @@ export function ActionConfirmDialog({
   trigger,
   action,
   onSuccess,
+  onError,
+  successMessage = '操作成功',
 }: ActionConfirmDialogProps) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -38,11 +42,12 @@ export function ActionConfirmDialog({
       try {
         await action();
         setOpen(false);
-        toast.success('操作成功');
+        toast.success(successMessage);
         onSuccess?.();
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : '操作失败';
-        toast.error(errorMessage);
+        const err = error instanceof Error ? error : new Error('操作失败');
+        toast.error(err.message);
+        onError?.(err);
       }
     });
   };
@@ -50,19 +55,19 @@ export function ActionConfirmDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent>
+      <DialogContent aria-describedby="action-confirm-description">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
+          <DialogDescription id="action-confirm-description">{description}</DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <DialogClose asChild>
-            <Button variant="outline" disabled={isPending}>
+            <Button variant="outline" disabled={isPending} aria-label="取消">
               取消
             </Button>
           </DialogClose>
           <Button onClick={handleConfirm} disabled={isPending}>
-            {isPending ? '提交�?..' : '确认'}
+            {isPending ? '提交中...' : '确认'}
           </Button>
         </DialogFooter>
       </DialogContent>

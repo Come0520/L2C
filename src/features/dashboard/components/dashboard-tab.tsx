@@ -5,20 +5,26 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
 import TrendingUp from 'lucide-react/dist/esm/icons/trending-up';
 import { useSession } from 'next-auth/react';
 import { DashboardEditor } from './dashboard-editor';
+import type { UserDashboardConfig } from '../types';
+
+interface DashboardTabProps {
+  /** 服务端预取的仪表盘配置，直接传给 DashboardEditor 避免客户端瀑布流 */
+  initialConfig: UserDashboardConfig;
+}
 
 /**
  * 仪表盘 Tab 内容组件
  * 使用可配置的 DashboardEditor 展示用户自定义的 KPI 卡片
  * 性能优化：直接从 session 获取角色，消除冗余的 /api/me 请求
  */
-export function DashboardTab() {
+export function DashboardTab({ initialConfig }: DashboardTabProps) {
   const { data: session } = useSession();
   const userRole = session?.user?.role || 'USER';
 
   return (
     <div className="space-y-6">
       {/* 可配置仪表盘 */}
-      <DashboardEditor userRole={userRole || 'USER'} />
+      <DashboardEditor userRole={userRole || 'USER'} initialConfig={initialConfig} />
 
       {/* 销售趋势图表（固定位置） */}
       <Card className="glass-liquid border-white/10">

@@ -14,15 +14,58 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
 export interface DatePickerWithRangeProps extends React.HTMLAttributes<HTMLDivElement> {
   date?: DateRange;
   setDate?: (date?: DateRange) => void;
+  /** 最大允许跨度的天数 */
+  maxSpanDays?: number;
+  /** 最大可选日期 */
+  maxDate?: Date;
+  /** 表单所需唯一 id */
+  id?: string;
 }
 
-export function DatePickerWithRange({ className, date, setDate }: DatePickerWithRangeProps) {
+export function DatePickerWithRange({
+  className,
+  date,
+  setDate,
+  maxSpanDays,
+  maxDate,
+  id,
+}: DatePickerWithRangeProps) {
+  const [isMobile, setIsMobile] = React.useState(false);
+
+  React.useEffect(() => {
+    const checkIsMobile = () => setIsMobile(window.innerWidth <= 640);
+    checkIsMobile();
+    window.addEventListener('resize', checkIsMobile);
+    return () => window.removeEventListener('resize', checkIsMobile);
+  }, []);
+
+  // 自定义 disabled 逻辑（合并 maxDate）
+  const isDateDisabled = (day: Date) => {
+    if (maxDate && day > maxDate) return true;
+    return false;
+  };
+
+  // 拦截并校验日期选择
+  const handleSelect = (newDate: DateRange | undefined) => {
+    if (maxSpanDays && newDate?.from && newDate?.to) {
+      const diffTime = Math.abs(newDate.to.getTime() - newDate.from.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      // 超出跨度时，截断 to 日期为从 from 开始的 maxSpanDays 之后
+      if (diffDays > maxSpanDays) {
+        const adjustedTo = new Date(newDate.from);
+        adjustedTo.setDate(adjustedTo.getDate() + maxSpanDays - 1);
+        setDate?.({ from: newDate.from, to: adjustedTo });
+        return;
+      }
+    }
+    setDate?.(newDate);
+  };
   return (
     <div className={cn('grid gap-2', className)}>
       <Popover>
         <PopoverTrigger asChild>
           <Button
-            id="date"
+            id={id}
             variant={'outline'}
             className={cn(
               'bg-muted/20 h-9 w-full justify-start border-white/10 text-left font-normal',
@@ -50,8 +93,9 @@ export function DatePickerWithRange({ className, date, setDate }: DatePickerWith
             mode="range"
             defaultMonth={date?.from}
             selected={date}
-            onSelect={setDate}
-            numberOfMonths={2}
+            onSelect={handleSelect}
+            numberOfMonths={isMobile ? 1 : 2}
+            disabled={isDateDisabled}
             locale={zhCN}
           />
         </PopoverContent>

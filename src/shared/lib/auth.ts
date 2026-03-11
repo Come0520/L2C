@@ -97,15 +97,23 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           }
 
           // 超管直接进入平台管理上下文，不参与任何租户业务
+          // 超管登录逻辑
           if (user.isPlatformAdmin) {
+            // 支持租户视角切换：如果有 lastActiveTenantId，并且不等于 __PLATFORM__，则将其作为本次会话的 tenantId
+            const impersonateTenantId =
+              user.lastActiveTenantId && user.lastActiveTenantId !== '__PLATFORM__'
+                ? user.lastActiveTenantId
+                : '__PLATFORM__';
+
             return {
               id: user.id,
               name: user.name ?? '',
               email: user.email ?? '',
               image: user.avatarUrl ?? '',
-              tenantId: '__PLATFORM__',
+              tenantId: impersonateTenantId,
               role: 'PLATFORM_ADMIN',
-              roles: ['PLATFORM_ADMIN'],
+              // 同时包含 PLATFORM_ADMIN 和 SUPER_ADMIN，确保 hasModuleAccess 全量放行
+              roles: ['PLATFORM_ADMIN', 'SUPER_ADMIN'],
               isPlatformAdmin: true,
             };
           }

@@ -23,6 +23,7 @@ import {
   Network, // 渠道管理图标
   UserCheck, // 客户管理图标
   Bell, // 通知中心图标
+  ShieldCheck, // 平台管理图标（仅超管可见）
 } from 'lucide-react';
 
 import { motion } from 'motion/react';
@@ -31,7 +32,7 @@ import { useTenant } from '@/shared/providers/tenant-provider';
 import { VerifiedIcon } from '@/shared/ui/verification-badge';
 import Image from 'next/image';
 import { useSession } from 'next-auth/react';
-import { ROLES } from '@/shared/config/roles';
+import { hasModuleAccess } from '@/shared/lib/sidebar-permissions';
 
 /**
  * 导航链接项类型定义
@@ -110,33 +111,24 @@ const navGroups: NavGroup[] = [
   {
     title: '系统',
     items: [
-      { label: '系统设置', href: '/settings', icon: Settings, requiredPermission: 'settings' },
+      {
+        label: '系统设置',
+        href: '/settings',
+        icon: Settings,
+        // 使用 admin 前缀：只有 ADMIN/BOSS/MANAGER(admin.settings)/SUPER_ADMIN 有此权限
+        // DISPATCHER 只有 settings.invite_worker，不会命中 admin.* 前缀
+        requiredPermission: 'admin',
+      },
+      {
+        label: '平台管理',
+        href: '/admin/platform',
+        icon: ShieldCheck,
+        // 仅超管可见（PLATFORM_ADMIN / SUPER_ADMIN）
+        requiredPermission: '__PLATFORM__',
+      },
     ],
   },
 ];
-
-/**
- * 检查角色是否拥有某模块的任意权限
- * @param roles 用户角色列表
- * @param modulePrefix 模块权限前缀（如 'lead', 'order', 'finance'）
- * @returns 是否有权限访问该模块
- */
-function hasModuleAccess(roles: string[], modulePrefix: string): boolean {
-  // ADMIN / TENANT_ADMIN 拥有全部模块访问权限
-  if (roles.includes('ADMIN')) return true;
-
-  // 从 ROLES 配置中检查用户的任一角色是否拥有该模块的某个权限
-  for (const roleCode of roles) {
-    const roleDef = ROLES[roleCode];
-    if (!roleDef) continue;
-    // 检查该角色是否拥有以 modulePrefix 开头的任意权限
-    const hasPermission = (roleDef.permissions as string[]).some(
-      (perm: string) => perm === '**' || perm === '*' || perm.startsWith(`${modulePrefix}.`)
-    );
-    if (hasPermission) return true;
-  }
-  return false;
-}
 
 /**
  * 应用侧边栏导航组件
@@ -200,8 +192,10 @@ export function AppSidebar() {
               )}
               {/* 导航项 */}
               {group.items.map((link) => {
+                // 精确路由匹配：必须以 / 分隔，防止 /finance 误命中 /finance-ar 等路由
                 const isActive =
-                  pathname === link.href || (link.href !== '/' && pathname.startsWith(link.href));
+                  pathname === link.href ||
+                  (link.href !== '/' && pathname.startsWith(link.href + '/'));
                 return (
                   <NavLink
                     key={link.href}

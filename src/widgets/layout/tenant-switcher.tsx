@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { Check, ChevronsUpDown, Building2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { Check, ChevronsUpDown, Building2, Loader2 } from 'lucide-react';
 import { Session } from 'next-auth';
 
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
@@ -15,12 +15,9 @@ import {
 } from '@/shared/ui/command';
 import { Button } from '@/shared/ui/button';
 import { cn } from '@/shared/lib/utils';
-
-interface TenantOption {
-  id: string;
-  name: string;
-  role: string;
-}
+import { useTenants } from '@/shared/hooks/use-tenants';
+import { getRoleLabel } from '@/shared/config/roles';
+import { ActionConfirmDialog } from '@/shared/ui/action-confirm-dialog';
 
 interface TenantSwitcherProps {
   session: Session;
@@ -28,58 +25,10 @@ interface TenantSwitcherProps {
 
 export function TenantSwitcher({ session }: TenantSwitcherProps) {
   const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [tenants, setTenants] = useState<TenantOption[]>([]);
   const currentTenantId = session.user?.tenantId;
-
-  // 获取该用户所有关联的租户
-  useEffect(() => {
-    async function fetchTenants() {
-      try {
-        const res = await fetch('/api/auth/switch-tenant');
-        const json = await res.json();
-        if (json.success && json.tenants) {
-          setTenants(json.tenants);
-        }
-      } catch (error) {
-        console.error('Failed to fetch tenants:', error);
-      }
-    }
-    fetchTenants();
-  }, []);
+  const { tenants, loading, switchTenant } = useTenants();
 
   const currentTenant = tenants.find((t) => t.id === currentTenantId);
-
-  // 切换租户
-  const handleSwitchTenant = async (targetTenantId: string) => {
-    if (targetTenantId === currentTenantId) return;
-
-    try {
-      setLoading(true);
-      const res = await fetch('/api/auth/switch-tenant', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ targetTenantId }),
-      });
-
-      const json = await res.json();
-      if (!res.ok || !json.success) {
-        throw new Error(json.message || '切换企业失败');
-      }
-
-      // 切换成功提示
-
-      // 切换租户后，需要重新走登录认证流程以刷新 Token
-      setTimeout(() => {
-        // 先调用 NextAuth 的 API 强制登出，并自动跳转回 /login 刷新（也可直接刷新本页但 JWT 更新可能延迟）
-        // 最好直接强制 reload 页面，并且使用 signOut
-        window.location.href = '/api/auth/signout?callbackUrl=/login';
-      }, 500);
-    } catch (error: unknown) {
-      console.error('切换企业失败:', error);
-      setLoading(false);
-    }
-  };
 
   // 超级管理员由于没有绑定实际租户，直接显示平台管理标识
   if (session.user?.isPlatformAdmin && currentTenantId === '__PLATFORM__') {
@@ -109,6 +58,7 @@ export function TenantSwitcher({ session }: TenantSwitcherProps) {
           role="combobox"
           aria-expanded={open}
           disabled={loading}
+          aria-label="切换企业"
           className="w-[240px] justify-between border-white/10 bg-white/5 transition-colors hover:bg-white/10 hover:text-white"
         >
           <div className="flex items-center gap-2 truncate">
@@ -125,28 +75,42 @@ export function TenantSwitcher({ session }: TenantSwitcherProps) {
             <CommandEmpty>未找到企业</CommandEmpty>
             <CommandGroup heading="您所在的企业">
               {tenants.map((tenant) => (
-                <CommandItem
+                <ActionConfirmDialog
                   key={tenant.id}
-                  value={tenant.name}
-                  onSelect={() => {
-                    handleSwitchTenant(tenant.id);
+                  title="确认切换企业？"
+                  description={`您即将切换到【${tenant.name}】，这将会刷新您的登录状态。`}
+                  action={async () => {
+                    await switchTenant(tenant.id, currentTenantId);
                     setOpen(false);
                   }}
-                  className="flex items-center gap-2"
-                >
-                  <Check
-                    className={cn(
-                      'mr-2 h-4 w-4',
-                      currentTenantId === tenant.id ? 'opacity-100' : 'opacity-0'
-                    )}
-                  />
-                  <div className="flex flex-1 flex-col overflow-hidden">
-                    <span className="truncate text-sm font-medium">{tenant.name}</span>
-                    <span className="text-muted-foreground text-xs">
-                      身份: {tenant.role === 'ADMIN' ? '拥有者' : '员工'}
-                    </span>
-                  </div>
-                </CommandItem>
+                  trigger={
+                    <CommandItem
+                      value={tenant.name}
+                      onSelect={() => {
+                        // 阻止默认的选择行为触发Popover关闭，让弹窗获得控制权
+                        // Popover 由外层的 open 状态控制
+                      }}
+                      className="flex w-full cursor-pointer items-center gap-2"
+                      disabled={loading || currentTenantId === tenant.id}
+                    >
+                      <Check
+                        className={cn(
+                          'mr-2 h-4 w-4',
+                          currentTenantId === tenant.id ? 'opacity-100' : 'opacity-0'
+                        )}
+                      />
+                      <div className="flex flex-1 flex-col overflow-hidden">
+                        <span className="truncate text-sm font-medium">{tenant.name}</span>
+                        <span className="text-muted-foreground text-xs">
+                          身份: {getRoleLabel(tenant.role)}
+                        </span>
+                      </div>
+                      {loading && currentTenantId !== tenant.id && (
+                        <Loader2 className="text-muted-foreground h-3 w-3 animate-spin" />
+                      )}
+                    </CommandItem>
+                  }
+                />
               ))}
             </CommandGroup>
           </CommandList>

@@ -20,13 +20,9 @@ import {
 } from '@/shared/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar';
 import { cn } from '@/shared/lib/utils';
-import { toast } from 'sonner';
-
-interface TenantOption {
-  id: string;
-  name: string;
-  role: string;
-}
+import { useTenants } from '@/shared/hooks/use-tenants';
+import { getRoleLabel } from '@/shared/config/roles';
+import { ActionConfirmDialog } from '@/shared/ui/action-confirm-dialog';
 
 /**
  * 用户菜单组件
@@ -40,68 +36,19 @@ export function UserMenu({ session }: UserMenuProps) {
   const user = session.user;
   // 用户头像文字：优先使用自定义文字，否则使用名字前两位，再否则使用邮箱前两位
   const avatarText =
-    user?.preferences?.avatarText ||
-    user?.name?.slice(0, 2) ||
-    user?.email?.slice(0, 2) ||
-    'U';
+    user?.preferences?.avatarText || user?.name?.slice(0, 2) || user?.email?.slice(0, 2) || 'U';
 
   const avatarBgColor = user?.preferences?.avatarBgColor || 'bg-primary-500';
 
   const [mounted, setMounted] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [tenants, setTenants] = useState<TenantOption[]>([]);
   const currentTenantId = session.user?.tenantId;
+  const { tenants, loading, switchTenant } = useTenants();
 
   useEffect(() => {
-    setMounted(true);
+    // 避免在 render 期间同步 setState，使用 setTimeout 延迟到下一个 tick
+    const timer = setTimeout(() => setMounted(true), 0);
+    return () => clearTimeout(timer);
   }, []);
-
-  // 获取该用户所有关联的租户
-  useEffect(() => {
-    if (!mounted) return;
-    async function fetchTenants() {
-      try {
-        const res = await fetch('/api/auth/switch-tenant');
-        const json = await res.json();
-        if (json.success && json.tenants) {
-          setTenants(json.tenants);
-        }
-      } catch (error) {
-        console.error('Failed to fetch tenants:', error);
-      }
-    }
-    fetchTenants();
-  }, [mounted]);
-
-  // 切换租户
-  const handleSwitchTenant = async (targetTenantId: string) => {
-    if (targetTenantId === currentTenantId) return;
-
-    try {
-      setLoading(true);
-      const res = await fetch('/api/auth/switch-tenant', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ targetTenantId }),
-      });
-
-      const json = await res.json();
-      if (!res.ok || !json.success) {
-        throw new Error(json.message || '切换企业失败');
-      }
-
-      toast.success('企业切换成功！');
-
-      // 切换租户后，需要重新走登录认证流程以刷新 Token
-      setTimeout(() => {
-        window.location.href = '/api/auth/signout?callbackUrl=/login';
-      }, 500);
-    } catch (error: any) {
-      console.error('切换企业失败:', error);
-      toast.error(error.message || '切换企业失败');
-      setLoading(false);
-    }
-  };
 
   if (!mounted) {
     return (
@@ -109,10 +56,11 @@ export function UserMenu({ session }: UserMenuProps) {
         variant="ghost"
         size="icon"
         className="h-9 w-9 rounded-full hover:opacity-90"
+        aria-label="用户菜单加载中"
       >
         <Avatar className="h-9 w-9">
           <AvatarFallback
-            className={`${avatarBgColor} text-sm text-white flex items-center justify-center rounded-full`}
+            className={`${avatarBgColor} flex items-center justify-center rounded-full text-sm text-white`}
             style={avatarBgColor.startsWith('#') ? { backgroundColor: avatarBgColor } : {}}
           >
             {avatarText}
@@ -130,12 +78,17 @@ export function UserMenu({ session }: UserMenuProps) {
         <Button
           variant="ghost"
           size="icon"
-          className="h-9 w-9 rounded-full hover:opacity-90 transition-opacity"
+          className="h-9 w-9 rounded-full transition-opacity hover:opacity-90"
+          aria-label="打开用户菜单"
         >
           <Avatar className="h-9 w-9">
-            <AvatarImage src={user?.image || undefined} alt={user?.name || 'User'} className="object-cover" />
+            <AvatarImage
+              src={user?.image || undefined}
+              alt={user?.name || 'User'}
+              className="object-cover"
+            />
             <AvatarFallback
-              className={`${avatarBgColor} text-sm text-white flex items-center justify-center rounded-full`}
+              className={`${avatarBgColor} flex items-center justify-center rounded-full text-sm text-white`}
               style={avatarBgColor.startsWith('#') ? { backgroundColor: avatarBgColor } : {}}
             >
               {avatarText}
@@ -156,11 +109,11 @@ export function UserMenu({ session }: UserMenuProps) {
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
             <Building2 className="mr-2 h-4 w-4" />
-            <span className="truncate max-w-[140px]">{currentTenant?.name || '当前企业'}</span>
+            <span className="max-w-[140px] truncate">{currentTenant?.name || '当前企业'}</span>
           </DropdownMenuSubTrigger>
           <DropdownMenuPortal>
-            <DropdownMenuSubContent className="w-56 max-h-[300px] overflow-y-auto">
-              <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">
+            <DropdownMenuSubContent className="max-h-[300px] w-56 overflow-y-auto">
+              <DropdownMenuLabel className="text-muted-foreground text-xs font-normal">
                 切换您当前的管理企业
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
@@ -171,28 +124,40 @@ export function UserMenu({ session }: UserMenuProps) {
                 </DropdownMenuItem>
               )}
               {tenants.map((tenant) => (
-                <DropdownMenuItem
+                <ActionConfirmDialog
                   key={tenant.id}
-                  onClick={() => handleSwitchTenant(tenant.id)}
-                  className="flex items-center gap-2 cursor-pointer"
-                  disabled={loading}
-                >
-                  <Check
-                    className={cn(
-                      'h-4 w-4 shrink-0',
-                      currentTenantId === tenant.id ? 'opacity-100' : 'opacity-0'
-                    )}
-                  />
-                  <div className="flex flex-1 flex-col overflow-hidden">
-                    <span className="truncate text-sm font-medium">{tenant.name}</span>
-                    <span className="text-muted-foreground text-xs">
-                      身份: {tenant.role === 'ADMIN' ? '拥有者' : '员工'}
-                    </span>
-                  </div>
-                  {loading && currentTenantId !== tenant.id && (
-                    <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
-                  )}
-                </DropdownMenuItem>
+                  title="确认切换企业？"
+                  description={`您即将切换到【${tenant.name}】，这将会刷新您的登录状态。`}
+                  action={async () => {
+                    await switchTenant(tenant.id, currentTenantId);
+                  }}
+                  trigger={
+                    <DropdownMenuItem
+                      className="flex w-full cursor-pointer items-center gap-2"
+                      disabled={loading || currentTenantId === tenant.id}
+                      onSelect={(e) => {
+                        // 阻止默认关闭，让弹窗可以显示
+                        e.preventDefault();
+                      }}
+                    >
+                      <Check
+                        className={cn(
+                          'h-4 w-4 shrink-0',
+                          currentTenantId === tenant.id ? 'opacity-100' : 'opacity-0'
+                        )}
+                      />
+                      <div className="flex flex-1 flex-col overflow-hidden">
+                        <span className="truncate text-sm font-medium">{tenant.name}</span>
+                        <span className="text-muted-foreground text-xs">
+                          身份: {getRoleLabel(tenant.role)}
+                        </span>
+                      </div>
+                      {loading && currentTenantId !== tenant.id && (
+                        <Loader2 className="text-muted-foreground h-3 w-3 animate-spin" />
+                      )}
+                    </DropdownMenuItem>
+                  }
+                />
               ))}
             </DropdownMenuSubContent>
           </DropdownMenuPortal>
@@ -206,7 +171,12 @@ export function UserMenu({ session }: UserMenuProps) {
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
-          onClick={() => signOut({ callbackUrl: '/login', redirect: true })}
+          onClick={() => {
+            // 立即跳转给用户即时反馈，服务端 signOut 在后台异步完成（清除 cookie）
+            // 使用 redirect: false 避免等待服务端响应导致页面卡住
+            signOut({ callbackUrl: '/login', redirect: false });
+            window.location.href = '/login';
+          }}
           className="text-destructive focus:text-destructive cursor-pointer"
         >
           <LogOut className="mr-2 h-4 w-4" />

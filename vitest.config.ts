@@ -1,20 +1,11 @@
-import { defineConfig, configDefaults } from 'vitest/config';
+import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
-import path from 'path';
+import tsconfigPaths from 'vite-tsconfig-paths';
 
 export default defineConfig({
-    plugins: [react()],
-    test: {
-        environment: 'jsdom',
-        globals: true,
-        setupFiles: ['./src/test/setup.ts'],
-        exclude: [...configDefaults.exclude, 'e2e/**', 'miniprogram-taro/**', 'miniprogram/**', '**/*.integration.test.*'],
-        testTimeout: 15000,
-        pool: 'forks',
-    },
-    resolve: {
-        alias: {
-            '@': path.resolve(__dirname, './src'),
-        },
-    },
+  plugins: [react(), tsconfigPaths()],
+  test: {
+    environment: 'jsdom',
+    setupFiles: ['./vitest.setup.ts']
+  }
 });

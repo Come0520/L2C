@@ -4,6 +4,7 @@ import { getToken } from 'next-auth/jwt';
 import type { JWT } from 'next-auth/jwt';
 import { extractAndVerifyToken } from '@/shared/lib/jwt';
 import { createLogger } from '@/shared/lib/logger';
+import { checkProxyRouteAccess } from '@/shared/lib/proxy-rules';
 
 /** 认证代理专用日志记录器，用于安全事件追溯 */
 const log = createLogger('proxy:auth');
@@ -202,31 +203,23 @@ export default async function proxy(request: NextRequest): Promise<NextResponse>
     return createUnauthorizedResponse('请先登录');
   }
 
-  // 3. 验证租户绑定与超管隔离
+  // 3. 超管与平台管理路由访问控制
   const { tenantId, isPlatformAdmin } = token;
 
-  // 超管防串入业务路由
-  if (tenantId === '__PLATFORM__' || isPlatformAdmin) {
-    if (
-      pathname.startsWith('/api') &&
-      !pathname.startsWith('/api/admin') &&
-      !pathname.startsWith('/api/user')
-    ) {
-      // 超管不能访问非 admin/user 的常规后台 API，给出禁止
-      return createForbiddenResponse('超级管理员无法调用业务 API');
-    }
-    if (
-      !pathname.startsWith('/api') &&
-      !pathname.startsWith('/admin') &&
-      !pathname.startsWith('/profile')
-    ) {
-      // 访问普通业务页面跳转到 admin
-      return NextResponse.redirect(new URL('/admin', request.url));
-    }
-    // 放行超管对 /admin 路由和 /api/admin 路由的访问
+  const routeDecision = checkProxyRouteAccess({ isPlatformAdmin: !!isPlatformAdmin, pathname });
+
+  if (routeDecision === 'allow') {
+    // 超管：全量放行所有路由（业务页面、业务 API、平台管理均可访问）
     const enrichedHeaders = createEnrichedHeaders(request, token);
     return NextResponse.next({ request: { headers: enrichedHeaders } });
   }
+
+  if (routeDecision === 'deny') {
+    // 普通用户：不能访问 /admin/platform 或 /api/admin 路由
+    return createForbiddenResponse('非超级管理员无法访问平台管理中心');
+  }
+
+  // routeDecision === 'continue'：继续后续常规用户验证逻辑
 
   // 常规用户验证租户绑定
   if (!tenantId || tenantId === UNBOUND_TENANT_ID) {
@@ -236,11 +229,6 @@ export default async function proxy(request: NextRequest): Promise<NextResponse>
       tenantId: tenantId || 'null',
     });
     return createForbiddenResponse('用户未绑定企业');
-  }
-
-  // 常规用户防串入超管路由
-  if (pathname.startsWith('/admin') || pathname.startsWith('/api/admin')) {
-    return createForbiddenResponse('非超级管理员无法访问平台管理中心');
   }
 
   // 4. 注入用户上下文并放行请求

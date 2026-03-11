@@ -33,6 +33,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
     redirect('/login');
   }
 
+  // 移动端专属角色守卫：WORKER / CUSTOMER 仅限小程序，禁止访问 Web Dashboard
+  // 若这些角色误入 Web 端，侧边栏权限过滤后仍会展示部分菜单，需在 Layout 层提前拦截
+  const MOBILE_ONLY_ROLES = ['WORKER', 'CUSTOMER'];
+  if (session.user.role && MOBILE_ONLY_ROLES.includes(session.user.role)) {
+    redirect('/login?error=mobile_only');
+  }
+
   // 默认无租户数据（平台账号或未绑定租户）
   let initialTenant: {
     id: string;

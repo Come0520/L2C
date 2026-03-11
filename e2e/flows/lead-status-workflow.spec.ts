@@ -71,7 +71,7 @@ test.describe('Lead Status Workflow', () => {
         await page.waitForLoadState('domcontentloaded');
 
         // 验证详情页加载成功 - 检查面包屑中的 "线索详情" 文本
-        await expect(page.getByText('线索详情')).toBeVisible({ timeout: 10000 });
+        await expect(page.getByText('线索详情').first()).toBeVisible({ timeout: 10000 });
 
         // 验证"编辑资料"按钮存在（详情页特有）
         await expect(page.getByRole('button', { name: '编辑资料' })).toBeVisible({ timeout: 5000 });

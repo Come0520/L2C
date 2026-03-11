@@ -160,7 +160,7 @@ test.describe('完整销售流程 E2E', () => {
             }
 
             // 验证状态变更
-            await expect(page.getByText(/生效|ACTIVE/)).toBeVisible({ timeout: 5000 });
+            await expect(page.getByText(/生效|ACTIVE/).first()).toBeVisible({ timeout: 5000 });
             console.log('✅ 报价单激活成功');
         } else {
             console.log('⚠️ 激活按钮不可见，可能报价已激活或状态不对');
@@ -225,10 +225,10 @@ test.describe('完整销售流程 E2E', () => {
         await page.waitForLoadState('domcontentloaded');
 
         // 验证订单详情页加载
-        await expect(page.getByText(/订单/)).toBeVisible();
+        await expect(page.getByText(/订单/).first()).toBeVisible();
 
         // 验证客户信息
-        await expect(page.getByText(testCustomerName)).toBeVisible();
+        await expect(page.getByText(testCustomerName).first()).toBeVisible();
 
         // 验证财务信息卡片
         const financeCard = page.locator('[class*="card"]').filter({ hasText: /财务|已收/ });
@@ -263,7 +263,7 @@ test.describe('完整销售流程 E2E', () => {
             }
 
             // 验证状态变更
-            await expect(page.getByText(/生产中|IN_PRODUCTION/)).toBeVisible({ timeout: 5000 });
+            await expect(page.getByText(/生产中|IN_PRODUCTION/).first()).toBeVisible({ timeout: 5000 });
             console.log('✅ 确认排产成功');
         } else {
             console.log('⚠️ 确认排产按钮不可见，可能订单状态不对');
@@ -278,7 +278,7 @@ test.describe('完整销售流程 E2E', () => {
         await page.waitForLoadState('domcontentloaded');
 
         // 等待页面完全渲染
-        await expect(page.getByText(/订单/)).toBeVisible({ timeout: 10000 });
+        await expect(page.getByText(/订单/).first()).toBeVisible({ timeout: 10000 });
 
         // 查找发货按钮（匹配多种可能的文案）
         const shipBtn = page.getByRole('button', { name: /发货|安排发货|申请发货/ });
@@ -301,7 +301,7 @@ test.describe('完整销售流程 E2E', () => {
             }
 
             // 验证状态变更
-            await expect(page.getByText(/已发货|SHIPPED/)).toBeVisible({ timeout: 5000 });
+            await expect(page.getByText(/已发货|SHIPPED/).first()).toBeVisible({ timeout: 5000 });
             console.log('✅ 发货成功');
         } else {
             console.log('⚠️ 发货按钮不可见，可能订单状态不对');

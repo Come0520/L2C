@@ -256,8 +256,8 @@ test.describe('供应链拆单分配链路（核心差异化功能）', () => {
                 await page.waitForLoadState('domcontentloaded');
 
                 // 验证PO详情页包含关键信息
-                await expect(page.getByText(/采购单号|PO号/)).toBeVisible({ timeout: 5000 });
-                await expect(page.getByText(/供应商名称|Supplier/)).toBeVisible({ timeout: 5000 });
+                await expect(page.getByText(/采购单号|PO号/).first()).toBeVisible({ timeout: 5000 });
+                await expect(page.getByText(/供应商名称|Supplier/).first()).toBeVisible({ timeout: 5000 });
                 console.log('✅ 采购单详情页完整性验证通过');
             }
         } else {
@@ -305,7 +305,7 @@ test.describe('加工工单（WO）生成验证', () => {
             await page.waitForLoadState('domcontentloaded');
 
             // 验证加工单详情包含关联字段
-            await expect(page.getByText(/工单号|WO号|订单/)).toBeVisible({ timeout: 5000 });
+            await expect(page.getByText(/工单号|WO号|订单/).first()).toBeVisible({ timeout: 5000 });
             console.log('✅ 加工单详情页结构完整');
         }
     });

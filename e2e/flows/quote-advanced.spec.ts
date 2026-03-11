@@ -98,7 +98,7 @@ test.describe('Quote Advanced Mode', () => {
         // DrawerContent 使用 role="dialog"
         const drawerContent = page.getByRole('dialog');
         await expect(drawerContent).toBeVisible({ timeout: 5000 });
-        await expect(drawerContent.getByText('高级配置:')).toBeVisible();
+        await expect(drawerContent.getByText('高级配置:').first()).toBeVisible();
 
         // 褶皱倍数 Label 文本为 "褶皱倍数 (Fold Ratio)"
         const foldInput = drawerContent.locator('label:has-text("褶皱倍数") + input, label:has-text("褶皱倍数") ~ input').first();

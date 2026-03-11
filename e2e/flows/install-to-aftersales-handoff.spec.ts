@@ -144,7 +144,7 @@ test.describe('安装完成→售后保修联动（跨模块闭环）', () => {
         // 验证操作记录中有验收记录
         const timeline = page.locator('[class*="timeline"], [data-testid="order-timeline"]');
         if (await timeline.isVisible()) {
-            await expect(timeline.getByText(/验收|安装完成/)).toBeVisible({ timeout: 5000 });
+            await expect(timeline.getByText(/验收|安装完成/).first()).toBeVisible({ timeout: 5000 });
             console.log('✅ 订单时间线包含验收记录');
         }
     });

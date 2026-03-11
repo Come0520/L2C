@@ -20,7 +20,7 @@ test.describe('订单增强功能测试 (拆单/发货申请/变更)', () => {
             if (await splitBtn.isVisible()) {
                 await splitBtn.click();
                 await expect(page.getByRole('dialog')).toBeVisible();
-                await expect(page.getByText(/拆分订单/)).toBeVisible();
+                await expect(page.getByText(/拆分订单/).first()).toBeVisible();
 
                 // 简单的验证对话框关闭，实际拆单可能涉及更多数据准备
                 await page.keyboard.press('Escape');
@@ -47,7 +47,7 @@ test.describe('订单增强功能测试 (拆单/发货申请/变更)', () => {
                 await deliveryBtn.click();
                 const dialog = page.getByRole('dialog');
                 await expect(dialog).toBeVisible();
-                await expect(page.getByText(/发货申请/)).toBeVisible();
+                await expect(page.getByText(/发货申请/).first()).toBeVisible();
 
                 // 填写物流信息
                 await page.getByLabel('物流公司').click();
@@ -60,7 +60,7 @@ test.describe('订单增强功能测试 (拆单/发货申请/变更)', () => {
                 await page.getByRole('button', { name: /提交/ }).click();
 
                 // 验证成功
-                await expect(page.getByText(/发货申请已提交/)).toBeVisible();
+                await expect(page.getByText(/发货申请已提交/).first()).toBeVisible();
                 console.log('✅ 发货申请提交成功');
             } else {
                 console.log('⏭️ 申请发货按钮不可见');
@@ -85,7 +85,7 @@ test.describe('订单增强功能测试 (拆单/发货申请/变更)', () => {
                 await changeBtn.click();
                 const dialog = page.getByRole('dialog');
                 await expect(dialog).toBeVisible();
-                await expect(page.getByText(/申请订单变更/)).toBeVisible();
+                await expect(page.getByText(/申请订单变更/).first()).toBeVisible();
 
                 // 填写变更信息
                 await page.getByText('变更类型').click();
@@ -98,7 +98,7 @@ test.describe('订单增强功能测试 (拆单/发货申请/变更)', () => {
                 await page.getByRole('button', { name: /提交申请/ }).click();
 
                 // 验证成功
-                await expect(page.getByText(/变更请求已提交/)).toBeVisible();
+                await expect(page.getByText(/变更请求已提交/).first()).toBeVisible();
                 console.log('✅ 订单变更请求提交成功');
             } else {
                 console.log('⏭️ 变更订单按钮不可见');

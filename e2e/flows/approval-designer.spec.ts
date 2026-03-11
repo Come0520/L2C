@@ -30,16 +30,16 @@ test.describe('Approval Flow Designer', () => {
         await page.waitForSelector('.react-flow__renderer', { timeout: 15000 });
 
         // 验证"返回列表"按钮
-        await expect(page.getByText('返回列表')).toBeVisible();
+        await expect(page.getByText('返回列表').first()).toBeVisible();
 
         // 验证设计器工具栏按钮存在
-        await expect(page.getByText('添加审批人')).toBeVisible();
-        await expect(page.getByText('添加条件')).toBeVisible();
+        await expect(page.getByText('添加审批人').first()).toBeVisible();
+        await expect(page.getByText('添加条件').first()).toBeVisible();
         await expect(page.getByRole('button', { name: '保存' })).toBeVisible();
         await expect(page.getByRole('button', { name: '发布' })).toBeVisible();
 
         // 验证流程起始节点和结束节点存在
-        await expect(page.getByText('开始')).toBeVisible();
-        await expect(page.getByText('结束')).toBeVisible();
+        await expect(page.getByText('开始').first()).toBeVisible();
+        await expect(page.getByText('结束').first()).toBeVisible();
     });
 });

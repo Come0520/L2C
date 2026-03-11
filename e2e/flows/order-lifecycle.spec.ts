@@ -41,7 +41,7 @@ test.describe('订单全生命周期 E2E', () => {
         await page.getByTestId('lead-name-input').fill(testCustomerName);
         await page.getByTestId('lead-phone-input').fill(testPhone);
         await page.getByTestId('submit-lead-btn').click();
-        await expect(page.getByText(/成功/)).toBeVisible();
+        await expect(page.getByText(/成功/).first()).toBeVisible();
         await expect(page.getByTestId('create-lead-dialog')).toBeHidden();
 
         // 进入报价单预览
@@ -71,7 +71,7 @@ test.describe('订单全生命周期 E2E', () => {
         if (await confirmBtn.isVisible({ timeout: 2000 })) {
             await confirmBtn.click();
         }
-        await expect(page.getByText(/生效|ACTIVE/)).toBeVisible();
+        await expect(page.getByText(/生效|ACTIVE/).first()).toBeVisible();
         console.log('✅ 报价单准备就绪');
     });
 
@@ -109,7 +109,7 @@ test.describe('订单全生命周期 E2E', () => {
         await dialog.getByRole('button', { name: /确认|确定/ }).click();
 
         // 验证状态
-        await expect(page.getByText(/生产中|IN_PRODUCTION/)).toBeVisible({ timeout: 10000 });
+        await expect(page.getByText(/生产中|IN_PRODUCTION/).first()).toBeVisible({ timeout: 10000 });
         console.log('✅ 确认排产完成');
     });
 
@@ -135,7 +135,7 @@ test.describe('订单全生命周期 E2E', () => {
         const submitBtn = dialog.getByRole('button', { name: /提交|确定/ });
         await submitBtn.click();
 
-        await expect(page.getByText(/成功|Success/)).toBeVisible();
+        await expect(page.getByText(/成功|Success/).first()).toBeVisible();
         console.log('✅ 拆单完成');
     });
 
@@ -155,7 +155,7 @@ test.describe('订单全生命周期 E2E', () => {
         await dialog.locator('input[placeholder*="单号"]').fill('SF123456789');
         await dialog.getByRole('button', { name: /上传|确定|发货/ }).click();
 
-        await expect(page.getByText(/已发货|SHIPPED|PENDING_DELIVERY/)).toBeVisible();
+        await expect(page.getByText(/已发货|SHIPPED|PENDING_DELIVERY/).first()).toBeVisible();
         console.log('✅ 发货请求完成');
     });
 
@@ -170,7 +170,7 @@ test.describe('订单全生命周期 E2E', () => {
         const okBtn = page.getByRole('button', { name: /确认|确定/ });
         await okBtn.click();
 
-        await expect(page.getByText(/安装完成|INSTALLATION_COMPLETED/)).toBeVisible();
+        await expect(page.getByText(/安装完成|INSTALLATION_COMPLETED/).first()).toBeVisible();
         console.log('✅ 安装确认完成');
     });
 
@@ -185,7 +185,7 @@ test.describe('订单全生命周期 E2E', () => {
         const dialog = page.getByRole('dialog');
         await dialog.getByRole('button', { name: /通过|确认/ }).click();
 
-        await expect(page.getByText(/已完成|COMPLETED/)).toBeVisible();
+        await expect(page.getByText(/已完成|COMPLETED/).first()).toBeVisible();
         console.log('✅ 流程闭环：订单已完成');
     });
 });

@@ -32,6 +32,6 @@ test.describe('Supply Chain - Inventory Management', () => {
         // It might be '库存调整成功' or '调整失败' or error message.
         // Since we use '0000...' it might fail at DB level if FK constraint.
         // If FK fails, it returns error.
-        await expect(page.getByText(/库存调整成功|调整失败|系统错误/)).toBeVisible();
+        await expect(page.getByText(/库存调整成功|调整失败|系统错误/).first()).toBeVisible();
     });
 });

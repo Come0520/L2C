@@ -41,7 +41,7 @@ test.describe('订单异常流程 E2E', () => {
         await page.getByTestId('lead-name-input').fill(testCustomerName);
         await page.getByTestId('lead-phone-input').fill(testPhone);
         await page.getByTestId('submit-lead-btn').click();
-        await expect(page.getByText(/成功/)).toBeVisible();
+        await expect(page.getByText(/成功/).first()).toBeVisible();
 
         // 进入报价单预览
         await page.reload();
@@ -62,7 +62,7 @@ test.describe('订单异常流程 E2E', () => {
         await activateBtn.click();
         const confirmBtn = page.getByRole('button', { name: /确认|确定/ });
         if (await confirmBtn.isVisible({ timeout: 2000 })) await confirmBtn.click();
-        await expect(page.getByText(/生效|ACTIVE/)).toBeVisible();
+        await expect(page.getByText(/生效|ACTIVE/).first()).toBeVisible();
 
         // 转订单
         const convertBtn = page.getByRole('button', { name: /转订单/ });
@@ -90,7 +90,7 @@ test.describe('订单异常流程 E2E', () => {
         await dialog.getByRole('button', { name: /确定|叫停/ }).click();
 
         // 验证状态
-        await expect(page.getByText(/已叫停|HALTED/)).toBeVisible();
+        await expect(page.getByText(/已叫停|HALTED/).first()).toBeVisible();
 
         // 恢复订单
         const resumeBtn = page.getByRole('button', { name: /恢复/ });
@@ -120,7 +120,7 @@ test.describe('订单异常流程 E2E', () => {
         // 验证进入审批中状态 (如果配置了审批流)
         // 或者是直接撤销 (如果没配置)
         // 这里假设进入审批中
-        await expect(page.getByText(/审批中|PENDING_APPROVAL|已撤销|CANCELLED/)).toBeVisible();
+        await expect(page.getByText(/审批中|PENDING_APPROVAL|已撤销|CANCELLED/).first()).toBeVisible();
         console.log('✅ 撤单申请已提交');
     });
 
@@ -135,7 +135,7 @@ test.describe('订单异常流程 E2E', () => {
             const dialog = page.getByRole('dialog');
             await dialog.locator('textarea').fill('E2E 变更原因');
             await dialog.getByRole('button', { name: /提交|确定/ }).click();
-            await expect(page.getByText(/变更/)).toBeVisible();
+            await expect(page.getByText(/变更/).first()).toBeVisible();
             console.log('✅ 变更单创建测试通过');
         } else {
             console.log('⚠️ 变更单按钮不可见（可能订单状态已改变）');
@@ -157,7 +157,7 @@ test.describe('订单异常流程 E2E', () => {
             await dialog.getByRole('button', { name: /拒绝|确定/ }).click();
 
             // 验证状态回到待安装或安装拒绝
-            await expect(page.getByText(/验收拒绝|待安装|PENDING_INSTALL/)).toBeVisible();
+            await expect(page.getByText(/验收拒绝|待安装|PENDING_INSTALL/).first()).toBeVisible();
             console.log('✅ 验收拒绝流程通过');
         }
     });

@@ -43,7 +43,7 @@ test.describe('测量流程 (Measurement Lifecycle)', () => {
         await page.getByRole('button', { name: /确定|保存/ }).click();
 
         // 验证提示成功
-        await expect(page.getByText(/成功/)).toBeVisible();
+        await expect(page.getByText(/成功/).first()).toBeVisible();
 
         // Step 2: 验证进入测量列表
         await page.goto('/service/measurement', { waitUntil: 'domcontentloaded', timeout: 60000 });
@@ -69,7 +69,7 @@ test.describe('测量流程 (Measurement Lifecycle)', () => {
 
             // 提交
             await page.getByRole('button', { name: /指派|确定/ }).click();
-            await expect(page.getByText(/成功/)).toBeVisible();
+            await expect(page.getByText(/成功/).first()).toBeVisible();
             console.log('✅ 派单完成');
         }
     });
@@ -163,7 +163,7 @@ test.describe('测量流程 (Measurement Lifecycle)', () => {
             if (await versionsBtn.isVisible()) {
                 await versionsBtn.click();
                 // 验证 V1.A, V1.B 等标签
-                await expect(page.getByText(/V1.A/)).toBeVisible();
+                await expect(page.getByText(/V1.A/).first()).toBeVisible();
                 console.log('✅ 版本/方案管理可见');
             }
         }

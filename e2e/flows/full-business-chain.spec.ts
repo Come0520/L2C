@@ -77,7 +77,7 @@ test.describe('全链路业务流 (Full Business Chain)', () => {
         if (await shipBtn.isVisible({ timeout: 2000 })) {
             await shipBtn.click();
             await page.getByRole('button', { name: /确认|确定/ }).click();
-            await expect(page.getByText(/已发货|SHIPPED/)).toBeVisible({ timeout: 5000 });
+            await expect(page.getByText(/已发货|SHIPPED/).first()).toBeVisible({ timeout: 5000 });
             console.log('✅ 订单已发货');
         }
     });

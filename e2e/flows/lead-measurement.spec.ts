@@ -57,7 +57,7 @@ test.describe('Lead Measurement Service', () => {
         await expect(dialog).toBeVisible();
 
         // 验证表单字段存在 (可能被包裹，尝试检查特定词汇)
-        await expect(dialog.getByText('线索 ID')).toBeVisible();
+        await expect(dialog.getByText('线索 ID').first()).toBeVisible();
 
         // 关闭对话框
         const cancelBtn = dialog.getByRole('button', { name: '取消' });

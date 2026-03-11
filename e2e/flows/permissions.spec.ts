@@ -78,7 +78,7 @@ test.describe('权限与安全边界测试', () => {
 
         // 等待第一次创建完成
         await expect(page.getByRole('dialog')).toBeHidden({ timeout: 10000 });
-        await expect(page.getByText(/成功/)).toBeVisible({ timeout: 5000 });
+        await expect(page.getByText(/成功/).first()).toBeVisible({ timeout: 5000 });
 
         // 尝试第二次创建相同手机号
         await createBtn.click();

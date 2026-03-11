@@ -32,7 +32,7 @@ test.describe('权限矩阵配置 (Permission Matrix) E2E 测试', () => {
         await page.waitForLoadState('domcontentloaded');
 
         // 断言页面存在
-        await expect(page.getByText(/角色与权限设置|Role Configurations/i)).toBeVisible();
+        await expect(page.getByText(/角色与权限设置|Role Configurations/i).first()).toBeVisible();
 
         // 断言角色列表存在
         const tabs = page.locator('[role="tablist"]');

@@ -23,11 +23,11 @@ test.describe('Approval Process Flow', () => {
         await page.waitForSelector('.react-flow__renderer', { timeout: 15000 });
 
         // 验证流程起始节点和结束节点存在
-        await expect(page.getByText('开始')).toBeVisible();
-        await expect(page.getByText('结束')).toBeVisible();
+        await expect(page.getByText('开始').first()).toBeVisible();
+        await expect(page.getByText('结束').first()).toBeVisible();
 
         // 验证设计器工具栏可用
-        await expect(page.getByText('添加审批人')).toBeVisible();
+        await expect(page.getByText('添加审批人').first()).toBeVisible();
         await expect(page.getByRole('button', { name: '保存' })).toBeVisible();
         await expect(page.getByRole('button', { name: '发布' })).toBeVisible();
     });

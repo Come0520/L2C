@@ -23,16 +23,13 @@ export type TenantCreditsStats = {
  * 获取所有租户的积分使用统计（SUPER_ADMIN）
  * 返回各租户当月用量汇总
  */
-export async function getAllTenantsCreditsStats() {
+export async function getAllTenantsCreditsStats(): Promise<TenantCreditsStats[]> {
   const session = await auth();
-  const role = (session?.user as { role?: string })?.role;
-  if (!session || role !== 'SUPER_ADMIN') {
-    throw new Error('Forbidden');
+  // 权限不足时返回空数组，而非抛出异常（防止崩溃页面 Server Component）
+  const isPlatformAdmin = (session?.user as { isPlatformAdmin?: boolean })?.isPlatformAdmin;
+  if (!session || !isPlatformAdmin) {
+    return [];
   }
-
-  // 按租户统计本月总消耗
-  const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
   const stats = await db
     .select({

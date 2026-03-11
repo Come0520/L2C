@@ -62,7 +62,7 @@ test.describe('通知中心页面 (Notification Center)', () => {
             const markReadBtn = unreadItem.getByRole('button', { name: /已读|标记/ });
             if (await markReadBtn.isVisible()) {
                 await markReadBtn.click();
-                await expect(page.getByText(/成功|已标记/)).toBeVisible({ timeout: 5000 });
+                await expect(page.getByText(/成功|已标记/).first()).toBeVisible({ timeout: 5000 });
                 console.log('✅ 单条通知标记已读成功');
             }
         }
@@ -73,7 +73,7 @@ test.describe('通知中心页面 (Notification Center)', () => {
 
         if (await markAllBtn.isVisible()) {
             await markAllBtn.click();
-            await expect(page.getByText(/成功|已全部标记/)).toBeVisible({ timeout: 5000 });
+            await expect(page.getByText(/成功|已全部标记/).first()).toBeVisible({ timeout: 5000 });
             console.log('✅ 一键全部已读成功');
         } else {
             console.log('⚠️ 未找到全部已读按钮');
@@ -110,7 +110,7 @@ test.describe('通知偏好设置 (Notification Preferences)', () => {
             const channelSwitch = page.locator('input[type="checkbox"]').first().or(page.locator('[role="switch"]').first());
             if (await channelSwitch.isVisible()) {
                 await channelSwitch.click();
-                await expect(page.getByText(/成功|已保存/)).toBeVisible({ timeout: 5000 });
+                await expect(page.getByText(/成功|已保存/).first()).toBeVisible({ timeout: 5000 });
                 console.log('✅ 通知渠道切换成功');
             }
         } else {

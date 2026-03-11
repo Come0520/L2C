@@ -97,7 +97,7 @@ test.describe('Quote to Measure - Split Mechanism', () => {
         // Navigate to Service Module or check toast
         await page.goto('/service/measurement', { waitUntil: 'domcontentloaded', timeout: 60000 });
         // Filter by this customer? Or just check top rows.
-        await expect(page.getByText(leadName)).toBeVisible();
+        await expect(page.getByText(leadName).first()).toBeVisible();
 
         // Count tasks for this customer
         const tasks = page.locator('tr', { hasText: leadName });

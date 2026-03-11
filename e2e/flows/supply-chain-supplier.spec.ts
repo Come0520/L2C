@@ -38,7 +38,7 @@ test.describe('Supply Chain - Supplier Management', () => {
         // Fix: Button name is "创建", so regex needs /创建/
         await dialog.getByRole('button', { name: /确认|提交|创建/ }).click();
         await expect(dialog).toBeHidden();
-        await expect(page.getByText(supplierName)).toBeVisible();
+        await expect(page.getByText(supplierName).first()).toBeVisible();
         console.log(`✅ Supplier '${supplierName}' created successfully.`);
 
         // --- 2. Search ---

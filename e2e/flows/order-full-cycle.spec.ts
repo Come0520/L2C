@@ -55,7 +55,7 @@ test.describe('Order Full Lifecycle (Main Path)', () => {
         await page.getByTestId('submit-quote-btn').click();
 
         await expect(page).toHaveURL(/\/quotes\/.*/);
-        await expect(page.getByText('报价单详情')).toBeVisible();
+        await expect(page.getByText('报价单详情').first()).toBeVisible();
 
         // 3. Submit & Approve Quote (Required for Order Conversion)
         console.log('Step 2.5: Approving Quote...');
@@ -64,7 +64,7 @@ test.describe('Order Full Lifecycle (Main Path)', () => {
         const submitBtn = page.getByRole('button', { name: /提交审核/ });
         if (await submitBtn.isVisible()) {
             await submitBtn.click();
-            await expect(page.getByText(/已提交|待审批|PENDING_APPROVAL/)).toBeVisible();
+            await expect(page.getByText(/已提交|待审批|PENDING_APPROVAL/).first()).toBeVisible();
             // Reload to reveal Approve button (State update lag)
             await page.reload();
         } else {
@@ -79,7 +79,7 @@ test.describe('Order Full Lifecycle (Main Path)', () => {
             if (await page.getByRole('dialog').isVisible()) {
                 await page.getByRole('dialog').getByRole('button', { name: /确认/ }).click();
             }
-            await expect(page.getByText(/已批准|APPROVED/)).toBeVisible();
+            await expect(page.getByText(/已批准|APPROVED/).first()).toBeVisible();
             // Reload to reveal Convert button
             await page.reload();
         } else {
@@ -105,8 +105,8 @@ test.describe('Order Full Lifecycle (Main Path)', () => {
         // 4. Verify Order Created & Status PENDING_PO
         console.log('Step 4: Verifying Order Creation...');
         await expect(page).toHaveURL(/\/orders\/.*/, { timeout: 15000 });
-        await expect(page.getByText('订单详情')).toBeVisible();
-        await expect(page.getByText('待下单', { exact: false })).toBeVisible(); // PENDING_PO
+        await expect(page.getByText('订单详情').first()).toBeVisible();
+        await expect(page.getByText('待下单', { exact: false }).first()).toBeVisible(); // PENDING_PO
 
         // 5. Split Order (Generate POs)
         console.log('Step 5: Splitting Order...');
@@ -207,7 +207,7 @@ test.describe('Order Full Lifecycle (Main Path)', () => {
 
         // 9. Final Verification
         console.log('Step 9: Final Status Verification...');
-        await expect(page.getByText('已发货', { exact: false })).toBeVisible(); // SHIPPED
+        await expect(page.getByText('已发货', { exact: false }).first()).toBeVisible(); // SHIPPED
 
         console.log('✅ Full Cycle Test Passed!');
     });

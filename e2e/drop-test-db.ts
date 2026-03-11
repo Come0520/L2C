@@ -8,8 +8,9 @@ import { sql } from 'drizzle-orm';
 import { db } from '../src/shared/api/db';
 
 async function main() {
-    console.log('Dropping public schema...');
-    await db.execute(sql`DROP SCHEMA public CASCADE;`);
+    console.log('Dropping public and drizzle schemas...');
+    await db.execute(sql`DROP SCHEMA IF EXISTS public CASCADE;`);
+    await db.execute(sql`DROP SCHEMA IF EXISTS drizzle CASCADE;`);
     console.log('Creating public schema...');
     await db.execute(sql`CREATE SCHEMA public;`);
     console.log('Done.');

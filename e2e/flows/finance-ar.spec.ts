@@ -98,7 +98,7 @@ test.describe('财务应收 (Finance AR)', () => {
                 await scheduleTab.click();
 
                 // 验证计划项 (定金/尾款)
-                await expect(page.getByText(/定金|尾款/)).toBeVisible();
+                await expect(page.getByText(/定金|尾款/).first()).toBeVisible();
                 console.log('✅ 收款计划展示正常');
             }
         }

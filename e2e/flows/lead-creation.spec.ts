@@ -62,6 +62,6 @@ test.describe('Lead Management', () => {
         // 简单等待 reload 完成
         await expect(page.getByTestId('create-lead-btn')).toBeVisible();
 
-        await expect(page.getByText(randomName)).toBeVisible();
+        await expect(page.getByText(randomName).first()).toBeVisible();
     });
 });

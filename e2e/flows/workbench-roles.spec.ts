@@ -24,7 +24,7 @@ test.describe('工作台角色视图 (Workbench Roles) E2E 测试', () => {
         }).toPass({ timeout: 15000 });
 
         const nav = page.locator('nav');
-        await expect(nav.getByText(/系统设置|Settings/i)).toBeVisible();
+        await expect(nav.getByText(/系统设置|Settings/i).first()).toBeVisible();
     });
 
     test.skip('SALES 角色登录应看到个人业绩为主的看板', async ({ page }) => {

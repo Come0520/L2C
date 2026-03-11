@@ -86,7 +86,7 @@ test.describe('Quote Multi-Category', () => {
         // Or check if table count increased.
         // Assuming we added 'Wall...' something or just check if a new row exists.
         // Or check for the success toast.
-        await expect(page.getByText('Item added successfully').or(page.getByText('Item added'))).toBeVisible();
+        await expect(page.getByText('Item added successfully').or(page.getByText('Item added')).first()).toBeVisible();
 
         console.log('Test Complete');
     });

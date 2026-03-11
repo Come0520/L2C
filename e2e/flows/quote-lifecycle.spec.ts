@@ -145,7 +145,7 @@ test.describe('Quote Lifecycle Flow', () => {
         const submitBtn = page.getByRole('button', { name: /提交审核/ });
         if (await submitBtn.isVisible()) {
             await submitBtn.click();
-            await expect(page.getByText(/已提交|待审批/)).toBeVisible({ timeout: 5000 });
+            await expect(page.getByText(/已提交|待审批/).first()).toBeVisible({ timeout: 5000 });
         }
 
         // 3. Handle Pending Approval (Risk Control)
@@ -156,7 +156,7 @@ test.describe('Quote Lifecycle Flow', () => {
             console.log('Detected PENDING_APPROVAL, approving...');
             page.once('dialog', dialog => dialog.accept());
             await approveBtn.click();
-            await expect(page.getByText(/已批准|APPROVED|已接受/)).toBeVisible({ timeout: 5000 });
+            await expect(page.getByText(/已批准|APPROVED|已接受/).first()).toBeVisible({ timeout: 5000 });
         }
 
         // 4. Convert to Order
@@ -168,7 +168,7 @@ test.describe('Quote Lifecycle Flow', () => {
 
             await Promise.race([
                 expect(page).toHaveURL(/\/orders\/.*/, { timeout: 15000 }),
-                expect(page.getByText(/订单创建成功/)).toBeVisible({ timeout: 15000 })
+                expect(page.getByText(/订单创建成功/).first()).toBeVisible({ timeout: 15000 })
             ]);
             console.log('✅ 报价转订单流程验证通过');
         } else {

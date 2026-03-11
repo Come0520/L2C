@@ -228,7 +228,7 @@ test.describe('发货后财务与渠道结算闭环', () => {
             await page.waitForLoadState('domcontentloaded');
 
             // 验证状态为已核销
-            await expect(page.getByText(/已核销|COLLECTED|核销完成/)).toBeVisible({ timeout: 5000 });
+            await expect(page.getByText(/已核销|COLLECTED|核销完成/).first()).toBeVisible({ timeout: 5000 });
             console.log('✅ 核销状态验证通过');
         } else {
             console.log('ℹ️ 未找到已核销记录（可能当前环境数据不足）');

@@ -66,7 +66,7 @@ test.describe('Lead Excel Import', () => {
         await page.click('button:has-text("导入线索")');
 
         await expect(page.getByRole('dialog')).toBeVisible();
-        await expect(page.getByText('批量导入线索')).toBeVisible();
+        await expect(page.getByText('批量导入线索').first()).toBeVisible();
 
         // Upload file
         // Input type=file is present in the dialog
@@ -74,20 +74,20 @@ test.describe('Lead Excel Import', () => {
         await fileInput.setInputFiles(filePath);
 
         // Wait for preview or verification
-        await expect(page.getByText(`Preview before 5 lines (Total ${data.length} lines)`).or(page.getByText(`预览前 5 条 (共 ${data.length} 条数据)`))).toBeVisible();
+        await expect(page.getByText(`Preview before 5 lines (Total ${data.length} lines)`).or(page.getByText(`预览前 5 条 (共 ${data.length} 条数据)`)).first()).toBeVisible();
 
         // Click Confirm Import
         await page.click('button:has-text("确认导入")');
 
         // Check for success message
         // excel-import-dialog.tsx emits toast: `成功导入 ${count} 条线索`
-        await expect(page.locator('.toast-success').or(page.getByText(/成功导入/))).toBeVisible();
-        await expect(page.getByText(`${data.length} 条线索`)).toBeVisible();
+        await expect(page.locator('.toast-success').or(page.getByText(/成功导入/)).first()).toBeVisible();
+        await expect(page.getByText(`${data.length} 条线索`).first()).toBeVisible();
 
         // Verify leads in list
         await page.reload();
-        await expect(page.getByText(`ImportTest1_${uniqueId}`)).toBeVisible();
-        await expect(page.getByText(`ImportTest2_${uniqueId}`)).toBeVisible();
+        await expect(page.getByText(`ImportTest1_${uniqueId}`).first()).toBeVisible();
+        await expect(page.getByText(`ImportTest2_${uniqueId}`).first()).toBeVisible();
 
         // Cleanup
         if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
@@ -130,7 +130,7 @@ test.describe('Lead Excel Import', () => {
         await page.click('button:has-text("导入线索")');
         await page.locator('input[type="file"]').setInputFiles(filePath);
 
-        await expect(page.getByText(/预览/)).toBeVisible();
+        await expect(page.getByText(/预览/).first()).toBeVisible();
         await page.click('button:has-text("确认导入")');
 
         // Expect Import Complete Alert
@@ -139,21 +139,21 @@ test.describe('Lead Excel Import', () => {
         // If errors.length > 0, it shows "X 条数据导入失败，请查看详情" warning toast.
         // It also shows Alert in dialog with success count and error count.
 
-        await expect(page.getByText('导入完成')).toBeVisible();
-        await expect(page.getByText('成功: 1 条')).toBeVisible();
-        await expect(page.getByText('失败: 1 条')).toBeVisible();
+        await expect(page.getByText('导入完成').first()).toBeVisible();
+        await expect(page.getByText('成功: 1 条').first()).toBeVisible();
+        await expect(page.getByText('失败: 1 条').first()).toBeVisible();
 
         // Verify Error details
-        await expect(page.getByText(/重复线索/)).toBeVisible();
-        await expect(page.getByText(/第 2 行/)).toBeVisible();
+        await expect(page.getByText(/重复线索/).first()).toBeVisible();
+        await expect(page.getByText(/第 2 行/).first()).toBeVisible();
 
         // Verify only new lead added
         await page.reload();
-        await expect(page.getByText(`NewImport_${uniqueId}`)).toBeVisible();
+        await expect(page.getByText(`NewImport_${uniqueId}`).first()).toBeVisible();
         // The duplicate entry shouldn't have overwritten the old one (name change check)
         // Old name: Existing_{uid}, New csv name: DuplicateImport_{uid}
         // If system blocked it, the name should still be Existing_{uid}
-        await expect(page.getByText(`Existing_${uniqueId}`)).toBeVisible();
+        await expect(page.getByText(`Existing_${uniqueId}`).first()).toBeVisible();
         await expect(page.getByText(`DuplicateImport_${uniqueId}`)).toBeHidden();
 
         // Cleanup

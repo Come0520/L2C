@@ -52,7 +52,7 @@ test.describe('物流更新 E2E', () => {
         // 进入生产中以解锁物流编辑
         await page.getByRole('button', { name: /确认排产/ }).click();
         await page.getByRole('dialog').getByRole('button', { name: /确认|确定/ }).click();
-        await expect(page.getByText(/生产中/)).toBeVisible();
+        await expect(page.getByText(/生产中/).first()).toBeVisible();
     });
 
     test('Step 1: 更新物流单号', async ({ page }) => {
@@ -72,7 +72,7 @@ test.describe('物流更新 E2E', () => {
         await dialog.locator('input[placeholder*="单号"]').fill('SF-LOG-12345');
         await dialog.getByRole('button', { name: /确定|保存/ }).click();
 
-        await expect(page.getByText('SF-LOG-12345')).toBeVisible();
+        await expect(page.getByText('SF-LOG-12345').first()).toBeVisible();
         console.log('✅ 物流单号录入成功');
     });
 
@@ -84,7 +84,7 @@ test.describe('物流更新 E2E', () => {
         const refreshBtn = page.getByRole('button', { name: /刷新轨迹|同步物流/ });
         if (await refreshBtn.isVisible()) {
             await refreshBtn.click();
-            await expect(page.getByText(/同步成功/)).toBeVisible();
+            await expect(page.getByText(/同步成功/).first()).toBeVisible();
         }
 
         // 验证轨迹内容展示

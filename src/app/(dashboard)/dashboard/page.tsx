@@ -61,93 +61,98 @@ export default async function DashboardPage() {
   ];
 
   if (isPlatformAdmin) {
-    const [
-      tenantsResult,
-      overviewResult,
-      templates,
-      stats,
-      planConfig
-    ] = await Promise.all([
-      getAllTenants({ page: 1, pageSize: 200 }),
-      getPlatformOverview(),
-      getAllTemplates(),
-      getAllTenantsCreditsStats(),
-      Promise.resolve(getPlanCreditsConfig())
-    ]);
+    try {
+      const [
+        tenantsResult,
+        overviewResult,
+        templates,
+        stats,
+        planConfig
+      ] = await Promise.all([
+        getAllTenants({ page: 1, pageSize: 100 }),
+        getPlatformOverview(),
+        getAllTemplates(),
+        getAllTenantsCreditsStats(),
+        Promise.resolve(getPlanCreditsConfig())
+      ]);
 
-    const rawTenants = tenantsResult.success ? (tenantsResult.data?.tenants ?? []) : [];
-    const tenants: TenantWithPlan[] = rawTenants.map((t) => ({
-      id: t.id,
-      name: t.name,
-      code: t.code,
-      status: t.status,
-      planType: ((t as unknown as Record<string, unknown>).planType as 'base' | 'pro' | 'enterprise') ?? 'base',
-      planExpiresAt: null,
-      createdAt: t.createdAt,
-    }));
+      const rawTenants = tenantsResult.success ? (tenantsResult.data?.tenants ?? []) : [];
+      const tenants: TenantWithPlan[] = rawTenants.map((t) => ({
+        id: t.id,
+        name: t.name,
+        code: t.code,
+        status: t.status,
+        planType: ((t as unknown as Record<string, unknown>).planType as 'base' | 'pro' | 'enterprise') ?? 'base',
+        planExpiresAt: null,
+        createdAt: t.createdAt,
+      }));
 
-    const overview: TenantOverview = overviewResult.success && overviewResult.data
-      ? {
-        totalTenants: overviewResult.data.totalCount ?? 0,
-        activeTenants: overviewResult.data.activeCount ?? 0,
-        pendingTenants: overviewResult.data.pendingCount ?? 0,
-        suspendedTenants: overviewResult.data.suspendedCount ?? 0,
-      }
-      : {
-        totalTenants: 0,
-        activeTenants: 0,
-        pendingTenants: 0,
-        suspendedTenants: 0,
-      };
+      const overview: TenantOverview = overviewResult.success && overviewResult.data
+        ? {
+          totalTenants: overviewResult.data.totalCount ?? 0,
+          activeTenants: overviewResult.data.activeCount ?? 0,
+          pendingTenants: overviewResult.data.pendingCount ?? 0,
+          suspendedTenants: overviewResult.data.suspendedCount ?? 0,
+        }
+        : {
+          totalTenants: 0,
+          activeTenants: 0,
+          pendingTenants: 0,
+          suspendedTenants: 0,
+        };
 
-    const adminTabs = [
-      {
-        title: '平台总览(租户管理)',
-        value: 'tenants',
-        content: (
-          <div className="glass-liquid relative h-full w-full overflow-auto rounded-2xl border border-white/10 p-2 md:p-6">
-            <Suspense fallback={<Skeleton className="h-full w-full rounded-2xl" />}>
-              <TenantManagementClient initialTenants={rawTenants} initialTotal={tenantsResult.success ? (tenantsResult.data?.total ?? 0) : 0} overview={overview} />
-            </Suspense>
-          </div>
-        )
-      },
-      {
-        title: '套餐与配置',
-        value: 'plans',
-        content: (
-          <div className="glass-liquid relative h-full w-full overflow-auto rounded-2xl border border-white/10 p-2 md:p-6">
-            <Suspense fallback={<Skeleton className="h-full w-full rounded-2xl" />}>
-              <PlanManagementClient tenants={tenants} />
-            </Suspense>
-          </div>
-        )
-      },
-      {
-        title: 'AI 款式模板',
-        value: 'ai-templates',
-        content: (
-          <div className="glass-liquid relative h-full w-full overflow-auto rounded-2xl border border-white/10 p-2 md:p-6">
-            <Suspense fallback={<Skeleton className="h-full w-full rounded-2xl" />}>
-              <TemplateManager initialTemplates={templates} />
-            </Suspense>
-          </div>
-        )
-      },
-      {
-        title: '积分透视台',
-        value: 'ai-credits',
-        content: (
-          <div className="glass-liquid relative h-full w-full overflow-auto rounded-2xl border border-white/10 p-2 md:p-6">
-            <Suspense fallback={<Skeleton className="h-full w-full rounded-2xl" />}>
-              <AiCreditsTab stats={stats} planConfig={planConfig} />
-            </Suspense>
-          </div>
-        )
-      }
-    ];
+      const adminTabs = [
+        {
+          title: '平台总览(租户管理)',
+          value: 'tenants',
+          content: (
+            <div className="glass-liquid relative h-full w-full overflow-auto rounded-2xl border border-white/10 p-2 md:p-6">
+              <Suspense fallback={<Skeleton className="h-full w-full rounded-2xl" />}>
+                <TenantManagementClient initialTenants={rawTenants} initialTotal={tenantsResult.success ? (tenantsResult.data?.total ?? 0) : 0} overview={overview} />
+              </Suspense>
+            </div>
+          )
+        },
+        {
+          title: '套餐与配置',
+          value: 'plans',
+          content: (
+            <div className="glass-liquid relative h-full w-full overflow-auto rounded-2xl border border-white/10 p-2 md:p-6">
+              <Suspense fallback={<Skeleton className="h-full w-full rounded-2xl" />}>
+                <PlanManagementClient tenants={tenants} />
+              </Suspense>
+            </div>
+          )
+        },
+        {
+          title: 'AI 款式模板',
+          value: 'ai-templates',
+          content: (
+            <div className="glass-liquid relative h-full w-full overflow-auto rounded-2xl border border-white/10 p-2 md:p-6">
+              <Suspense fallback={<Skeleton className="h-full w-full rounded-2xl" />}>
+                <TemplateManager initialTemplates={templates} />
+              </Suspense>
+            </div>
+          )
+        },
+        {
+          title: '积分透视台',
+          value: 'ai-credits',
+          content: (
+            <div className="glass-liquid relative h-full w-full overflow-auto rounded-2xl border border-white/10 p-2 md:p-6">
+              <Suspense fallback={<Skeleton className="h-full w-full rounded-2xl" />}>
+                <AiCreditsTab stats={stats} planConfig={planConfig} />
+              </Suspense>
+            </div>
+          )
+        }
+      ];
 
-    tabs.push(...adminTabs);
+      tabs.push(...adminTabs);
+    } catch (adminError) {
+      // 平台管理功能加载失败不应影响普通仪表盘渲染
+      console.error('[Dashboard] 平台管理面板加载失败:', adminError);
+    }
   }
 
   return (

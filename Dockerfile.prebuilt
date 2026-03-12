@@ -16,11 +16,9 @@ RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
 # 第一步：把 standalone 产物 COPY 进来（standalone 自带完整 node_modules，不能被覆盖）
-COPY public ./public
 RUN mkdir -p .next && chown nextjs:nodejs .next
 
 COPY --chown=nextjs:nodejs .next/standalone ./
-COPY --chown=nextjs:nodejs .next/static ./.next/static
 
 # 第二步：仅在 standalone node_modules 不存在对应包时，用 --no-save 追加安装
 # 注意：standalone/node_modules 已有大部分依赖；styled-jsx 等有时因 pnpm symlink 丢失需补装
